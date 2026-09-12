@@ -1,0 +1,39 @@
+@startuml security
+title Validez - Semnături, Merkle Tree și verificare integritate
+
+participant "User Device" as device
+participant "Private Key" as key
+participant "API" as api
+participant "Signed Events Store" as store
+participant "Merkle Tree Builder" as merkle
+participant "Merkle Root Publisher" as publisher
+participant "Witness Servers" as witness
+participant "Public Verifier" as verifier
+
+device -> key : semnează payload-ul votului
+key -> device : semnătură
+device -> api : trimite vot + semnătură
+api -> api : validează semnătura\ncu cheia publică a userului
+api -> store : salvează evenimentul semnat
+
+store -> merkle : batch de evenimente noi
+merkle -> merkle : construiește arborele Merkle\n(hash-uri frunze -> root)
+merkle -> publisher : Merkle Root nou
+
+publisher -> witness : publică root-ul (timestamp extern)
+witness -> publisher : confirmare + timestamp public
+
+verifier -> store : cere Merkle proof pentru un eveniment
+store -> verifier : leaf hash + proof path
+verifier -> verifier : recalculează root din proof
+verifier -> publisher : compară cu root-ul publicat
+publisher -> verifier : confirmă / infirmă integritatea
+
+note over verifier
+  Oricine poate verifica independent
+  că un vot a existat și nu a fost
+  modificat ulterior, fără să aibă
+  încredere oarbă în server.
+end note
+
+@enduml

@@ -1,0 +1,233 @@
+@startuml domain
+title Validez - Domain model (v2)
+
+' ===== Structură arbore =====
+class TreeNode {
+  id (ULID)
+  parent_id
+  path (ltree)
+  name
+  type
+  position
+  created_by
+  created_at
+}
+
+' ===== Conținut civic =====
+class CivicSubject {
+  id
+  node_id
+  type (ISSUE/PROPOSAL/PROJECT/\nPROMISE/ELECTORAL_EVALUATION/\nPETITION/TOPIC_EVALUATION)
+  title
+  description
+  status
+  author_id
+  created_at
+  updated_at
+}
+
+class MediaAsset {
+  id
+  subject_id
+  type (image/gallery/video/pdf/link)
+  url
+  caption
+}
+
+class Location {
+  id
+  subject_id
+  latitude
+  longitude
+  judet
+  localitate
+}
+
+class Authority {
+  id
+  subject_id
+  name
+  role
+  contact
+}
+
+class Comment {
+  id
+  subject_id
+  user_id
+  parent_id
+  content
+  status
+  created_at
+  updated_at
+}
+
+class Flag {
+  id
+  user_id
+  target_type (SUBJECT/COMMENT/\nMEDIA/USER)
+  target_id
+  reason
+  description
+  status
+  created_at
+  resolved_at
+  resolved_by
+}
+
+' ===== Vot =====
+class VoteType {
+  id
+  code (VALIDITY/YES_NO/IMPORTANCE...)
+  name
+  configuration
+}
+
+class SubjectVoteType {
+  subject_id
+  vote_type_id
+  enabled
+  configuration
+}
+
+class Vote {
+  id
+  subject_id
+  user_id
+  vote_type_id
+  value
+  created_at
+  updated_at
+  signature
+}
+
+class VoteEvent {
+  id
+  vote_id
+  type (Created/Changed/Revoked)
+  previous_hash
+  hash
+  created_at
+}
+
+class VoteAggregate {
+  subject_id
+  vote_type_id
+  total_votes
+  score
+  updated_at
+}
+
+class VoteResult {
+  subject_id
+  vote_type_id
+  value
+  count
+  percentage
+}
+
+' ===== Utilizator =====
+class User {
+  id
+  email
+  provider (email/google/facebook/apple)
+  displayName
+  publicKey
+  emailVerified
+  phoneVerified
+  trustScore
+  createdAt
+}
+
+' ===== Trust score / anti-Sybil (ADR-0004) =====
+class TrustScoreCalculation {
+  id
+  user_id
+  score
+  trust_score_version
+  config_commit
+  calculated_at
+}
+
+class TrustConfigSnapshot {
+  id
+  git_commit
+  config_hash
+  algorithm_version
+  deployed_at
+  deployed_by
+  environment
+}
+
+class SecurityOverride {
+  id
+  parameter
+  old_value
+  new_value
+  reason
+  created_by
+  created_at
+  expires_at
+  approved_by
+}
+
+' ===== Relații =====
+TreeNode "1" -- "*" TreeNode : parent_id (arbore)
+TreeNode "1" -- "*" CivicSubject : conținut asociat
+
+CivicSubject "1" -- "*" MediaAsset
+CivicSubject "1" -- "0..1" Location
+CivicSubject "1" -- "*" Authority
+CivicSubject "1" -- "*" Comment
+CivicSubject "1" -- "*" SubjectVoteType
+
+SubjectVoteType "*" -- "1" VoteType
+CivicSubject "1" -- "*" Vote
+VoteType "1" -- "*" Vote
+User "1" -- "*" Vote
+
+Vote "1" -- "*" VoteEvent : hash chain
+CivicSubject "1" -- "*" VoteAggregate
+CivicSubject "1" -- "*" VoteResult
+
+User "1" -- "*" Comment
+User "1" -- "*" Flag
+
+User "1" -- "*" TrustScoreCalculation : istoric scoruri
+TrustScoreCalculation "*" -- "1" TrustConfigSnapshot : calculat pe baza
+
+note right of Vote
+  UNIQUE (subject_id, user_id, vote_type_id)
+  — un user poate avea un singur vot activ
+  per (subiect, tip de vot), dar îl poate schimba.
+end note
+
+note right of TreeNode
+  Structura pură a arborelui.
+  Nu conține conținut votabil direct —
+  acesta trăiește în CivicSubject.
+end note
+
+note bottom of VoteEvent
+  MVP: hash chain simplu
+  (previous_hash -> hash).
+  Faza 2: agregare într-un Merkle Tree
+  + witness servers (vezi security.puml).
+end note
+
+note bottom of TrustScoreCalculation
+  TrustScore e o valoare calculată,
+  nu un adevăr static persistat și
+  mutabil. Fiecare calcul e legat
+  explicit de config_commit — vezi
+  ADR-0004.
+end note
+
+note bottom of SecurityOverride
+  Orice override runtime al
+  configurației e explicit, temporar,
+  auditat (created_by/approved_by/
+  expires_at) — niciodată tăcut.
+end note
+
+@enduml

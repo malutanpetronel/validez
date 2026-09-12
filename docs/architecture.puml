@@ -1,0 +1,53 @@
+@startuml architecture
+title Validez - Arhitectură tehnică (MVP + Faza 2)
+
+skinparam componentStyle rectangle
+
+actor "Utilizator" as user
+
+package "Device" {
+  [User Device] as device
+  [Private Key] as key
+}
+
+package "Backend (Symfony) - MVP" {
+  [API REST/GraphQL] as api
+  [Auth (JWT/OAuth2)] as auth
+  database "Database\n(PostgreSQL + ltree)" as db
+  [VoteEvent Store\n(hash chain)] as events
+}
+
+package "Faza 2 - Integritate publică" #LightGray {
+  [Merkle Tree Builder] as merkle
+  [Merkle Root Publisher] as root
+  [Witness Servers] as witness
+  [Public Timestamp] as ts
+  [Public Verification] as verify
+}
+
+storage "Media Storage\n(local / S3-compatible)" as media
+
+user --> device
+device --> key : semnează acțiunile
+device --> api : request (vot / conținut)
+api --> auth
+api --> db : citire/scriere arbore + subiecte + voturi
+api --> media : upload media
+api --> events : înregistrează VoteEvent semnat\n(previous_hash -> hash)
+
+events ..> merkle : (Faza 2) batch periodic
+merkle --> root
+root --> witness
+witness --> ts
+root --> verify
+verify --> user : oricine poate verifica integritatea
+
+note bottom of events
+  MVP: lanțul de hash-uri e suficient
+  pentru a detecta alterarea unui vot.
+  Nu rezolvă Sybil — vezi anti-abuse
+  în domain.puml (User.trustScore,
+  emailVerified, phoneVerified).
+end note
+
+@enduml

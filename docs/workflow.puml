@@ -1,0 +1,85 @@
+@startuml workflow
+title Validez - Workflow utilizator
+
+start
+
+:Deschide aplicația;
+:Navighează arborele (TreeNode)\n(fără cont necesar);
+
+:Selectează un nod;
+
+:Vede lista de CivicSubject\nasociate nodului
+(ex. sesizări, propuneri, promisiuni);
+
+if (Selectează un CivicSubject?) then (da)
+
+  :Vizualizează CivicSubject;
+  :Media, descriere, locație,\nautorități asociate,\nstatus și rezultate;
+
+  if (Vrea să voteze?) then (da)
+
+    if (Este autentificat?) then (nu)
+      :Login
+      (email/parolă, Google,\nFacebook, Apple);
+    endif
+
+    :Vede tipurile de vot active\n(SubjectVoteType);
+
+    if (Are deja un vot pentru\n(subject, vote_type)?) then (da)
+      :Alege noua valoare;
+    else (nu)
+      :Alege tipul și valoarea votului;
+    endif
+
+    :Device semnează payload-ul\ncu cheia privată;
+
+    :Backend validează semnătura;
+
+    :Creează VoteEvent\n(previous_hash -> hash);
+
+    :Actualizează Vote curent;
+
+    :Recalculează VoteAggregate /\nVoteResult pentru\n(subject, vote_type);
+
+    :Recalculează scorul de Prioritate\n(nu se votează direct);
+
+  endif
+
+  if (Vrea să comenteze?) then (da)
+
+    if (Este autentificat?) then (nu)
+      :Login;
+    endif
+
+    :Adaugă Comment;
+    :Opțional parent_id\n(pentru răspuns);
+    
+  endif
+
+  if (Vrea să raporteze conținutul?) then (da)
+
+    if (Este autentificat?) then (nu)
+      :Login;
+    endif
+
+    :Creează Flag;
+    :Flag intră în coada de moderare;
+
+  endif
+
+  :Afișează rezultatele actualizate\nper tip de vot;
+  :Afișează statusul și istoricul\nrelevant al CivicSubject;
+
+else (nu)
+
+  :Continuă navigarea;
+
+endif
+
+:Poate căuta/filtra după:
+categorie, localitate, județ,
+tip subiect, popularitate,\ndistanță;
+
+stop
+
+@enduml
