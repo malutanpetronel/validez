@@ -1,0 +1,47 @@
+# ===== Secrete — niciodată în repo =====
+.env
+.env.local
+.env.*.local
+!.env.dist
+!.env.example
+/backend/.env
+/backend/.env.local
+/backend/.env.*.local
+/backend/config/secrets/prod/prod.decrypt.private.php
+/backend/config/secrets/*/*.decrypt.private.php
+
+# ===== Symfony (backend/) =====
+/backend/var/
+/backend/vendor/
+/backend/public/bundles/
+/backend/.php-version
+/backend/composer.phar
+/backend/.phpunit.result.cache
+
+# ===== Node / React (frontend/) =====
+/frontend/node_modules/
+/frontend/dist/
+/frontend/build/
+/frontend/.vite/
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+/frontend/.env
+/frontend/.env.local
+/frontend/.env.*.local
+
+# ===== Docker =====
+/docker/**/data/
+/docker/**/*.local.yml
+docker-compose.override.yml
+
+# ===== Editoare / OS =====
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ===== Media/uploads locale (dezvoltare) =====
+/backend/public/uploads/
+/backend/var/media/

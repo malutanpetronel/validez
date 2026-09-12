@@ -1,0 +1,113 @@
+# Configurare PUBLICĂ a modelului de trust score / anti-Sybil pentru Validez.
+#
+# Acest fișier e versionat în git, intenționat. Orice schimbare a formulei,
+# ponderilor sau pragurilor trece printr-un commit/PR (autor, dată, motiv
+# în mesaj) și intră în producție EXCLUSIV prin deploy — vezi
+# docs/adr/0004-trust-score-configuration.md pentru decizia completă.
+#
+# IMPORTANT — ce NU aparține acestui fișier:
+# formula, ponderile și pragurile generale sunt publice, dar semnalele
+# operaționale sensibile ale apărării curente (liste temporare de IP-uri
+# suspecte, reguli de throttling active sub atac, indicatori concreți de
+# compromitere, fingerprint-uri individuale) NU stau aici și nu sunt
+# publice — trăiesc într-o configurație operațională separată,
+# ne-versionată în acest repo public. Politica e publică; datele de
+# apărare curente, nu.
+#
+# Orice override runtime al acestor valori (ex. înăsprire temporară sub
+# atac activ) trebuie să fie explicit, temporar, auditat — vezi entitatea
+# SecurityOverride din docs/domain.puml — niciodată o modificare tăcută.
+
+algorithm_version: 1
+config_schema_version: 1
+# La deploy, acest fișier e hash-uit și snapshot-ul (git_commit + config_hash
+# + algorithm_version) e salvat în TrustConfigSnapshot — vezi ADR-0004.
+
+trust_score:
+
+  # Nivelurile de bază, cumulative — vezi domain.puml (User.trustScore,
+  # emailVerified, phoneVerified).
+  levels:
+    level_1:
+      requires: [account_created]
+      grants:
+        max_votes_per_node_per_day: 1
+        can_flag_content: false
+
+    level_2:
+      requires: [level_1, email_verified]
+      grants:
+        max_votes_per_node_per_day: 3
+        can_flag_content: true
+
+    level_3:
+      requires: [level_2, phone_verified]
+      grants:
+        max_votes_per_node_per_day: 10
+        can_comment: true
+
+  # Semnale folosite la calculul scorului compozit (0-100), în ordinea
+  # importanței acordate — semnalele comportamentale/de istoric cântăresc
+  # mai mult decât semnalele de device/network, care sunt deliberat slabe
+  # (vezi ADR-0004: privacy, false positive-uri pentru familii/birouri/
+  # școli/VPN-uri).
+  signals:
+    account_age_days:
+      weight: 15
+      max_score_at_days: 90
+
+    email_verified:
+      weight: 10
+
+    phone_verified:
+      weight: 15
+
+    voting_history_consistency:
+      weight: 20
+      description: >
+        Cât de constant votează userul în timp, vs. rafale bruște de
+        activitate.
+
+    voting_pattern_signals:
+      weight: 15
+      description: >
+        Pattern-uri de vot (ex. vot identic pe subiecte fără legătură,
+        secvențe temporale suspecte) — semnal comportamental, nu un
+        prag static de trecut o singură dată.
+
+    previous_valid_participation:
+      weight: 20
+      description: >
+        Istoric de voturi care au rămas în majoritate/nu au fost
+        flagged de comunitate sau moderatori.
+
+    account_relationships:
+      weight: 10
+      description: >
+        Relații între conturi (ex. tipare de creare în masă, referral
+        chains suspecte) — semnal structural, nu identificare individuală.
+
+    device_network_signal:
+      weight: 5
+      description: >
+        Semnal de device/network, cu greutate deliberat redusă. Nu e
+        pilon central — fingerprinting-ul are implicații de privacy și
+        multe false positive-uri legitime (familii, birouri, școli, VPN).
+
+    spam_reports_against_user:
+      weight: -30
+      description: Penalizare, nu prag de excludere automată.
+
+  # Praguri operaționale — folosite pentru rate limiting și marcare,
+  # NU pentru excludere automată definitivă (excluderea rămâne decizie
+  # de moderator, cu review uman pe cazurile de graniță importante).
+  thresholds:
+    suspected_abuse_below: 30
+    requires_manual_review_below: 45
+    trusted_above: 75
+
+  # Notă: aceste praguri fixe sunt doar prima linie de apărare. Un
+  # atacator serios va aproxima oricum modelul public — rezistența reală
+  # nu vine din secretul unui număr, ci din costul de a simula coerent
+  # un utilizator legitim pe termen lung (istoric, consistență temporală,
+  # participare validă repetată). Vezi ADR-0004.
