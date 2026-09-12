@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" width="120" alt="Validez logo">
+</p>
+
 # Validez
 
 Platformă colaborativă pentru validarea și prioritizarea informațiilor, organizate într-un arbore ierarhic de categorii (ex: `Drumuri > Cluj > Calitate > DN1`).
@@ -82,3 +86,6 @@ validez/
 ## Status
 
 Faza de proiectare — arhitectură și modelul de date stabilite (v2). Următorul pas: schema DB (migrations) și structura de foldere Symfony în `backend/`.
+
+
+Copyright (C) 2026 Petronel Laviniu Malutan
