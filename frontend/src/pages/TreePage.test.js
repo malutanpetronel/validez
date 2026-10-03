@@ -1,7 +1,18 @@
 import {render, screen} from '@testing-library/react';
+import {MemoryRouter} from 'react-router-dom';
 import TreePage from './TreePage';
+import {AuthProvider} from '../auth/AuthContext';
+import {setSession} from '../auth/session';
+import {adminJwt, userJwt} from '../testUtils/fakeJwt';
+
+const renderPage = () => render(
+    <AuthProvider>
+        <MemoryRouter><TreePage/></MemoryRouter>
+    </AuthProvider>,
+);
 
 beforeEach(() => {
+    window.localStorage.clear();
     global.fetch = jest.fn(() => Promise.resolve({
         ok: true,
         status: 200,
@@ -12,11 +23,27 @@ beforeEach(() => {
     }));
 });
 
-test('incarca radacinile si dezactiveaza actiunile pe nod pana la selectie', async () => {
-    render(<TreePage/>);
+test('vizitatorul vede arborele, fara actiuni de modificare', async () => {
+    renderPage();
     expect(await screen.findByText('Drumuri')).toBeInTheDocument();
     expect(screen.getByText('Sănătate')).toBeInTheDocument();
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringMatching(/\/api\/tree_nodes$/), expect.anything());
-    expect(screen.getByRole('button', {name: /Adaugă copil/})).toBeDisabled();
+    expect(screen.queryByRole('button', {name: /Rădăcină nouă/})).not.toBeInTheDocument();
+    expect(screen.getByRole('link', {name: /intră în cont/})).toBeInTheDocument();
+    expect(global.fetch.mock.calls[0][1].headers.Authorization).toBeUndefined();
+});
+
+test('utilizatorul fara ROLE_ADMIN e tratat ca vizitator', async () => {
+    setSession({token: userJwt()});
+    renderPage();
+    await screen.findByText('Drumuri');
+    expect(screen.queryByRole('button', {name: /Rădăcină nouă/})).not.toBeInTheDocument();
+});
+
+test('administratorul vede actiunile; cele pe nod sunt dezactivate pana la selectie', async () => {
+    setSession({token: adminJwt()});
+    renderPage();
+    await screen.findByText('Drumuri');
     expect(screen.getByRole('button', {name: /Rădăcină nouă/})).toBeEnabled();
+    expect(screen.getByRole('button', {name: /Adaugă copil/})).toBeDisabled();
+    expect(global.fetch.mock.calls[0][1].headers.Authorization).toMatch(/^Bearer /);
 });

@@ -4,33 +4,39 @@ declare(strict_types=1);
 
 namespace App\Tests\Security;
 
+use App\Entity\User;
 use App\Security\TreeEditVoter;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Security\Core\Authentication\Token\NullToken;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
-use Symfony\Component\Security\Core\User\InMemoryUser;
 
 final class TreeEditVoterTest extends TestCase
 {
-    public function testDevPermiteScriereaFaraAutentificare(): void
+    private function token(User $user): UsernamePasswordToken
     {
-        self::assertSame(VoterInterface::ACCESS_GRANTED, (new TreeEditVoter('dev'))->vote(new NullToken(), null, [TreeEditVoter::EDIT]));
+        return new UsernamePasswordToken($user, 'api', $user->getRoles());
     }
 
-    public function testProdRefuzaVizitatorul(): void
+    public function testVizitatorulEsteRefuzat(): void
     {
-        self::assertSame(VoterInterface::ACCESS_DENIED, (new TreeEditVoter('prod'))->vote(new NullToken(), null, [TreeEditVoter::EDIT]));
+        self::assertSame(VoterInterface::ACCESS_DENIED, (new TreeEditVoter())->vote(new NullToken(), null, [TreeEditVoter::EDIT]));
     }
 
-    public function testProdPermiteAdministratorul(): void
+    public function testUtilizatorulFaraRolAdminEsteRefuzat(): void
     {
-        $token = new UsernamePasswordToken(new InMemoryUser('admin', null, ['ROLE_ADMIN']), 'main', ['ROLE_ADMIN']);
-        self::assertSame(VoterInterface::ACCESS_GRANTED, (new TreeEditVoter('prod'))->vote($token, null, [TreeEditVoter::EDIT]));
+        $token = $this->token(new User('ion@validez.test', 'Ion'));
+        self::assertSame(VoterInterface::ACCESS_DENIED, (new TreeEditVoter())->vote($token, null, [TreeEditVoter::EDIT]));
+    }
+
+    public function testAdministratorulPoateModifica(): void
+    {
+        $token = $this->token(new User('admin@validez.test', 'Admin', [User::ROLE_ADMIN]));
+        self::assertSame(VoterInterface::ACCESS_GRANTED, (new TreeEditVoter())->vote($token, null, [TreeEditVoter::EDIT]));
     }
 
     public function testAlteAtributeNuSuntVotate(): void
     {
-        self::assertSame(VoterInterface::ACCESS_ABSTAIN, (new TreeEditVoter('dev'))->vote(new NullToken(), null, ['ALTCEVA']));
+        self::assertSame(VoterInterface::ACCESS_ABSTAIN, (new TreeEditVoter())->vote(new NullToken(), null, ['ALTCEVA']));
     }
 }

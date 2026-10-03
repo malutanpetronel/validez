@@ -34,7 +34,7 @@ class TreeNodeRepository extends ServiceEntityRepository
      */
     public function findChildren(?TreeNode $parent): array
     {
-        $qb = $this->createQueryBuilder('n')->orderBy('n.position', 'ASC');
+        $qb = $this->createQueryBuilder('n')->orderBy('n.position', \SortDirection::Ascending);
         if ($parent === null) {
             $qb->where('n.parent IS NULL');
         } else {

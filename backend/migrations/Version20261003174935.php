@@ -18,7 +18,7 @@ use Doctrine\Migrations\AbstractMigration;
  * - CHECK position >= 0 si CHECK fara autoreferinta directa (ciclurile lungi: serviciul din 1.3).
  * Numele indexurilor sunt cele din mapare, ca doctrine:migrations:diff sa ramana gol.
  */
-final class Version20261003204935 extends AbstractMigration
+final class Version20261003174935 extends AbstractMigration
 {
     public function getDescription(): string
     {
