@@ -8,21 +8,27 @@ export default function Layout() {
     return (
         <Box sx={{display: 'flex', flexDirection: 'column', minHeight: '100vh'}}>
             <AppBar position="static" color="primary">
-                <Toolbar>
-                    <Box component="img" src={`${process.env.PUBLIC_URL}/logo.png`} alt="" sx={{height: 36, mr: 1.5}}/>
-                    <Typography variant="h6" component="div" sx={{fontWeight: 700, letterSpacing: 1}}>
-                        VALIDEZ
-                    </Typography>
+                {/* Pe ecrane înguste (Android cu „dimensiunea afișării" mărită ajunge la ~320 px) bara nu are voie
+                    să depășească lățimea: altfel browserul lărgește toată pagina și o micșorează. */}
+                <Toolbar sx={{gap: 1, px: {xs: 1.5, sm: 3}}}>
+                    {/* Logo + nume = link spre pagina principală (fără buton separat „Acasă"). */}
+                    <Box component={RouterLink} to="/" aria-label="VALIDEZ — pagina principală"
+                         sx={{display: 'flex', alignItems: 'center', color: 'inherit', textDecoration: 'none', minWidth: 0}}>
+                        <Box component="img" src={`${process.env.PUBLIC_URL}/logo.png`} alt="" sx={{height: 36, mr: 1.25, flexShrink: 0}}/>
+                        <Typography variant="h6" component="span" noWrap
+                                    sx={{fontWeight: 700, letterSpacing: 1, '@media (max-width: 359.95px)': {display: 'none'}}}>
+                            VALIDEZ
+                        </Typography>
+                    </Box>
                     <Box sx={{flex: 1}}/>
-                    <Button color="inherit" component={RouterLink} to="/">Acasă</Button>
-                    <Button color="inherit" component={RouterLink} to="/arbore">Arbore</Button>
+                    <Button color="inherit" component={RouterLink} to="/arbore" sx={{minWidth: 0}}>Arbore</Button>
                     {user ? (
                         <>
-                            <Typography variant="body2" sx={{mx: 1, display: {xs: 'none', sm: 'block'}}}>{user.displayName}</Typography>
-                            <Button color="inherit" variant="outlined" size="small" onClick={logout}>Ieși</Button>
+                            <Typography variant="body2" noWrap sx={{maxWidth: 160, display: {xs: 'none', sm: 'block'}}}>{user.displayName}</Typography>
+                            <Button color="inherit" variant="outlined" size="small" onClick={logout} sx={{flexShrink: 0}}>Ieși</Button>
                         </>
                     ) : (
-                        <Button color="inherit" variant="outlined" size="small" component={RouterLink} to="/login">Intră</Button>
+                        <Button color="inherit" variant="outlined" size="small" component={RouterLink} to="/login" sx={{flexShrink: 0}}>Intră</Button>
                     )}
                 </Toolbar>
             </AppBar>
