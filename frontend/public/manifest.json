@@ -1,0 +1,11 @@
+{
+  "short_name": "VALIDEZ",
+  "name": "VALIDEZ — Vezi. Verifică. Validează.",
+  "icons": [
+    { "src": "logo.png", "sizes": "261x261", "type": "image/png" }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#073568",
+  "background_color": "#ffffff"
+}

@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="ro.webnou.validez" version="0.1.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>VALIDEZ</name>
+    <description>Vezi. Verifică. Validează.</description>
+    <author email="info@webnou.ro" href="https://validez.webnou.ro">
+        Validez contributors
+    </author>
+    <content src="index.html" />
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <preference name="android-targetSdkVersion" value="34" />
+    <preference name="android-minSdkVersion" value="23" />
+    <!-- Scheme http -> origin http://localhost in WebView (inclus in CORS_ALLOW_ORIGIN pe BE) -->
+    <preference name="Scheme" value="http" />
+    <platform name="android">
+        <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
+            <application android:usesCleartextTraffic="true" />
+        </edit-config>
+    </platform>
+</widget>
