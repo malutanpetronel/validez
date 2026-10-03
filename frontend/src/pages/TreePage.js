@@ -8,6 +8,10 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
 import EditIcon from '@mui/icons-material/Edit';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
+import MoveDialog from '../components/MoveDialog';
 import {Link as RouterLink} from 'react-router-dom';
 import {createNode, fetchChildren, moveNode, renameNode} from '../api/tree';
 import {useAuth} from '../auth/AuthContext';
@@ -20,7 +24,9 @@ const DIALOG_TITLES = {root: 'Rădăcină nouă', child: 'Nod copil nou', rename
 /**
  * Plan Step 1.5: creare rădăcină/copil, redenumire, expandare cu încărcare pe ramuri,
  * drag and drop pentru schimbarea părintelui și ordonare între frați.
- * „Mută în…" (mobil/tastatură) vine la 1.6 - drag and drop-ul HTML5 nu merge la atingere.
+ * Step 1.6: „Mută în…" și Sus/Jos (Alt+↑/↓) pentru telefon și tastatură - drag and drop-ul HTML5
+ * nu merge la atingere. Toate mutările trec prin performMove: după răspuns (succes sau eroare)
+ * se reîncarcă de pe server nivelurile atinse, deci UI-ul arată structura confirmată de server.
  * Navigare publică; acțiunile de modificare doar pentru administratori (1.4) - serverul verifică oricum.
  */
 export default function TreePage() {
@@ -33,6 +39,7 @@ export default function TreePage() {
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null); // {severity, text}
     const [moving, setMoving] = useState(false);
+    const [moveOpen, setMoveOpen] = useState(false);
 
     const showError = (err) => setMessage({severity: 'error', text: err.message || 'Eroare necunoscută'});
 
@@ -61,18 +68,14 @@ export default function TreePage() {
         setTreeData((t) => unique.reduce((acc, k, i) => replaceLevel(acc, k, levels[i], previous), t));
     };
 
-    const onDrop = async (info) => {
-        const dragKey = info.dragNode.key;
-        const pos = info.node.pos.split('-');
-        const relative = info.dropPosition - Number(pos[pos.length - 1]);
-        const target = dropTarget(treeData, {dragKey, dropKey: info.node.key, relative, dropExpanded: info.node.expanded});
-        if (isNoopMove(treeData, dragKey, target)) return;
+    const performMove = async (key, target) => {
+        if (isNoopMove(treeData, key, target)) return;
 
-        const oldParent = findNode(treeData, dragKey)?.parentId ?? null;
+        const oldParent = findNode(treeData, key)?.parentId ?? null;
         const previous = indexByKey(treeData);
         setMoving(true);
         try {
-            await moveNode(dragKey, target.parentId, target.position);
+            await moveNode(key, target.parentId, target.position);
             if (target.parentId) setExpandedKeys((keys) => (keys.includes(target.parentId) ? keys : [...keys, target.parentId]));
             setMessage({severity: 'success', text: 'Nod mutat.'});
         } catch (err) {
@@ -84,7 +87,33 @@ export default function TreePage() {
         }
     };
 
+    const onDrop = (info) => {
+        const dragKey = info.dragNode.key;
+        const pos = info.node.pos.split('-');
+        const relative = info.dropPosition - Number(pos[pos.length - 1]);
+        return performMove(dragKey, dropTarget(treeData, {dragKey, dropKey: info.node.key, relative, dropExpanded: info.node.expanded}));
+    };
+
     const selected = selectedKey ? findNode(treeData, selectedKey) : null;
+
+    // Ordonare intre frati fara drag (Sus/Jos, Alt+↑/↓). Pozitia API exclude nodul mutat:
+    // sus = index-1, jos = index+1 (dupa fratele urmator).
+    const siblingKeys = selected
+        ? ((selected.parentId ?? null) === null ? treeData : findNode(treeData, selected.parentId)?.children ?? []).map((n) => n.key)
+        : [];
+    const selectedIndex = selected ? siblingKeys.indexOf(selected.key) : -1;
+    const canUp = isAdmin && !moving && selectedIndex > 0;
+    const canDown = isAdmin && !moving && selectedIndex >= 0 && selectedIndex < siblingKeys.length - 1;
+    const moveBy = (delta) => {
+        if (!selected || (delta < 0 ? !canUp : !canDown)) return;
+        performMove(selected.key, {parentId: selected.parentId ?? null, position: selectedIndex + delta});
+    };
+
+    const onTreeKeyDown = (e) => {
+        if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+        e.preventDefault();
+        moveBy(e.key === 'ArrowUp' ? -1 : 1);
+    };
 
     const openDialog = (mode) => setDialog({mode, value: mode === 'rename' ? selected?.title ?? '' : ''});
 
@@ -133,10 +162,22 @@ export default function TreePage() {
                     <Button variant="outlined" startIcon={<EditIcon/>} disabled={!selected} onClick={() => openDialog('rename')}>
                         Redenumește
                     </Button>
+                    <Button variant="outlined" startIcon={<DriveFileMoveIcon/>} disabled={!selected || moving} onClick={() => setMoveOpen(true)}>
+                        Mută în…
+                    </Button>
+                    <Button variant="outlined" startIcon={<ArrowUpwardIcon/>} disabled={!canUp} onClick={() => moveBy(-1)}
+                            aria-keyshortcuts="Alt+ArrowUp" title="Mută mai sus printre frați (Alt+↑)">
+                        Sus
+                    </Button>
+                    <Button variant="outlined" startIcon={<ArrowDownwardIcon/>} disabled={!canDown} onClick={() => moveBy(1)}
+                            aria-keyshortcuts="Alt+ArrowDown" title="Mută mai jos printre frați (Alt+↓)">
+                        Jos
+                    </Button>
                 </Stack>
                 <Typography variant="body2" color="text.secondary">
                     {selected ? <>Selectat: <strong>{selected.title}</strong> · dublu-click pentru redenumire</> : 'Selectează un nod pentru a-i adăuga un copil sau a-l redenumi.'}
-                        {' '}Trage un nod peste altul ca să-l muți în el, sau între rânduri ca să-l ordonezi.
+                        {' '}Trage un nod peste altul ca să-l muți în el, sau între rânduri ca să-l ordonezi;
+                        pe telefon sau de la tastatură: „Mută în…”, „Sus”/„Jos” (Alt+↑/↓).
                 </Typography>
                 </>
             ) : (
@@ -152,7 +193,8 @@ export default function TreePage() {
                     <Typography color="text.secondary">Arborele e gol. Creează prima rădăcină.</Typography>
                 )}
                 {treeData.length > 0 && (
-                    <Box sx={{'& .rc-tree-node-content-wrapper': {cursor: 'pointer', py: 0.25}, '& .rc-tree-treenode': {py: 0.25}}}>
+                    <Box onKeyDown={isAdmin ? onTreeKeyDown : undefined}
+                         sx={{'& .rc-tree-node-content-wrapper': {cursor: 'pointer', py: 0.25}, '& .rc-tree-treenode': {py: 0.25}}}>
                         <Tree
                             treeData={treeData}
                             draggable={isAdmin && !moving}
@@ -167,6 +209,21 @@ export default function TreePage() {
                     </Box>
                 )}
             </Paper>
+
+            {moveOpen && selected && (
+                <MoveDialog
+                    node={selected}
+                    onClose={() => setMoveOpen(false)}
+                    onConfirm={(target) => {
+                        setMoveOpen(false);
+                        if (isNoopMove(treeData, selected.key, target)) {
+                            setMessage({severity: 'info', text: 'Nodul este deja în acest loc.'});
+                            return;
+                        }
+                        performMove(selected.key, target);
+                    }}
+                />
+            )}
 
             <Dialog open={!!dialog} onClose={() => !saving && setDialog(null)} fullWidth maxWidth="xs">
                 {dialog && (
