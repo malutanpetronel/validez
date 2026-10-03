@@ -1,4 +1,5 @@
 import {API_ENDPOINT} from '../config';
+import {apiFetch} from './http';
 
 const LD = 'application/ld+json';
 const URL = `${API_ENDPOINT}/tree_nodes`;
@@ -8,10 +9,11 @@ const errorMessage = (body, status) =>
     body?.violations?.map((v) => v.message).join(' ')
     || body?.detail
     || body?.description
+    || ({401: 'Sesiunea a expirat. Intră din nou.', 403: 'Doar administratorii pot modifica arborele.'}[status])
     || `Eroare ${status}`;
 
 async function request(url, options = {}) {
-    const res = await fetch(url, {...options, headers: {Accept: LD, ...(options.headers || {})}});
+    const res = await apiFetch(url, {...options, headers: {Accept: LD, ...(options.headers || {})}});
     const body = res.status === 204 ? null : await res.json().catch(() => null);
     if (!res.ok) {
         const err = new Error(errorMessage(body, res.status));

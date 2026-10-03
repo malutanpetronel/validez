@@ -38,7 +38,8 @@ use Symfony\Component\Validator\Constraints as Assert;
  * sunt in migrare; maparea declara doar indexurile cu acelasi nume si aceleasi coloane,
  * ca diff-ul Doctrine sa ramana gol.
  *
- * Amanate explicit: created_by (odata cu modelul User), type (semantica nedecisa).
+ * created_by: autorul, din utilizatorul autentificat (Step 1.4), niciodata din payload.
+ * Amanat explicit: type (semantica nedecisa).
  */
 #[ApiResource(
     operations: [
@@ -77,6 +78,10 @@ class TreeNode
     #[ORM\JoinColumn(name: 'parent_id', referencedColumnName: 'id', nullable: true, onDelete: 'RESTRICT')]
     private ?TreeNode $parent;
 
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: 'created_by_id', referencedColumnName: 'id', nullable: false, onDelete: 'RESTRICT')]
+    private User $createdBy;
+
     #[ORM\Column(type: LtreeType::NAME)]
     private string $path;
 
@@ -100,7 +105,7 @@ class TreeNode
     /** Calculat de repository (o interogare per nivel), nu persistat. */
     private ?bool $hasChildren = null;
 
-    public function __construct(string $name, ?TreeNode $parent = null, int $position = 0)
+    public function __construct(string $name, User $createdBy, ?TreeNode $parent = null, int $position = 0)
     {
         if ($position < 0) {
             throw new \InvalidArgumentException('Pozitia nu poate fi negativa.');
@@ -108,6 +113,7 @@ class TreeNode
 
         $this->id = new Ulid();
         $this->parent = $parent;
+        $this->createdBy = $createdBy;
         $this->name = trim($name);
         $this->position = $position;
         $this->path = self::buildPath($parent, $this->id);
@@ -163,6 +169,11 @@ class TreeNode
     public function setHasChildren(bool $hasChildren): void
     {
         $this->hasChildren = $hasChildren;
+    }
+
+    public function getCreatedBy(): User
+    {
+        return $this->createdBy;
     }
 
     public function getPath(): string

@@ -1,0 +1,8 @@
+# Rute fara controller: cererile sunt preluate de authenticator-ii din firewall-ul api (security.yaml).
+api_auth:
+    path: /api/auth
+    methods: [POST]
+
+api_refresh_token:
+    path: /api/token/refresh
+    methods: [POST]

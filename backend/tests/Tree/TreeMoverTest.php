@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Tree;
 
 use App\Entity\TreeNode;
+use App\Entity\User;
 use App\Tree\TreeMoveException;
 use App\Tree\TreeMover;
 use App\Tree\TreeNodeNotFoundException;
@@ -21,6 +22,7 @@ final class TreeMoverTest extends KernelTestCase
     private EntityManagerInterface $em;
     private Connection $db;
     private TreeMover $mover;
+    private User $autor;
 
     /** @var array<string, TreeNode> */
     private array $n = [];
@@ -33,6 +35,10 @@ final class TreeMoverTest extends KernelTestCase
         $this->db = $c->get(Connection::class);
         $this->mover = $c->get(TreeMover::class);
         $this->db->executeStatement('DELETE FROM tree_node');
+        $this->db->executeStatement('DELETE FROM refresh_token');
+        $this->db->executeStatement('DELETE FROM app_user');
+        $this->autor = new User('admin@validez.test', 'Admin', [User::ROLE_ADMIN]);
+        $this->em->persist($this->autor);
 
         // Drumuri(0) > [Cluj(0) > Calitate(0) > DN1(0), Bistrita(1), Alba(2)] ; Sanatate(1)
         $this->add('Drumuri', null, 0);
@@ -47,7 +53,7 @@ final class TreeMoverTest extends KernelTestCase
 
     private function add(string $name, ?string $parent, int $position): void
     {
-        $this->n[$name] = new TreeNode($name, $parent === null ? null : $this->n[$parent], $position);
+        $this->n[$name] = new TreeNode($name, $this->autor, $parent === null ? null : $this->n[$parent], $position);
         $this->em->persist($this->n[$name]);
     }
 

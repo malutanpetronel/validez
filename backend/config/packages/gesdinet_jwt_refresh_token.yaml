@@ -1,0 +1,6 @@
+gesdinet_jwt_refresh_token:
+    refresh_token_class: App\Entity\RefreshToken
+    ttl: 604800              # 7 zile
+    ttl_update: true         # sliding: fiecare refresh reporneste cele 7 zile
+    single_use: true         # rotatie: fiecare refresh emite un refresh token nou si il invalideaza pe cel vechi
+    token_parameter_name: refresh_token

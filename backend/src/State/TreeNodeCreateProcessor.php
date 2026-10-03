@@ -7,14 +7,19 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Dto\TreeNodeCreateInput;
+use App\Entity\User;
 use App\Entity\TreeNode;
 use App\Repository\TreeNodeRepository;
 use App\Tree\TreeLock;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Uid\Ulid;
 
 /**
+ * Autorul = utilizatorul autentificat (Step 1.4); payload-ul nu are camp pentru autor.
+ *
  * Creare nod: pozitia = la capatul fratilor, calculata sub TreeLock, in aceeasi tranzactie
  * cu insert-ul (doua creari concurente sub acelasi parinte nu primesc aceeasi pozitie).
  *
@@ -26,14 +31,19 @@ final class TreeNodeCreateProcessor implements ProcessorInterface
         private readonly EntityManagerInterface $em,
         private readonly TreeNodeRepository $repository,
         private readonly TreeLock $lock,
+        private readonly Security $security,
     ) {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): TreeNode
     {
         \assert($data instanceof TreeNodeCreateInput);
+        $author = $this->security->getUser();
+        if (!$author instanceof User) {
+            throw new AccessDeniedHttpException('Autentificare necesară.');
+        }
 
-        $node = $this->em->wrapInTransaction(function () use ($data): TreeNode {
+        $node = $this->em->wrapInTransaction(function () use ($data, $author): TreeNode {
             $this->lock->acquire();
 
             $parent = null;
@@ -42,7 +52,7 @@ final class TreeNodeCreateProcessor implements ProcessorInterface
                     ?? throw new UnprocessableEntityHttpException('Nodul parinte nu exista.');
             }
 
-            $node = new TreeNode($data->name, $parent, $this->repository->nextPosition($parent));
+            $node = new TreeNode($data->name, $author, $parent, $this->repository->nextPosition($parent));
             $this->em->persist($node);
             $this->em->flush();
 
