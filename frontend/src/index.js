@@ -8,6 +8,8 @@ const renderApp = () => {
             <App/>
         </React.StrictMode>
     );
+    // Cordova (Android): ascunde ecranul de pornire imediat ce interfața e randată (în browser nu există).
+    window.requestAnimationFrame(() => navigator.splashscreen?.hide());
 };
 
 // cordova.js exista DOAR in build-urile Cordova (android/browser); pe web (npm start / nginx) lipseste.

@@ -13,6 +13,15 @@
     <preference name="android-minSdkVersion" value="23" />
     <!-- Scheme http -> origin http://localhost in WebView (inclus in CORS_ALLOW_ORIGIN pe BE) -->
     <preference name="Scheme" value="http" />
+    <!-- Ecran de pornire (Android 12+ SplashScreen API, cordova-android 12): sigla rotundă pe fundal alb.
+         splash-icon.png = assets/sigla rotunda loading transparenta.png, decupată și redusă la 720 px pe o pânză
+         de 1152 px (288 dp xxxhdpi), ca cercul de 2/3 decupat de Android să nu taie marginile siglei. -->
+    <preference name="AndroidWindowSplashScreenAnimatedIcon" value="res/screen/android/splash-icon.png" />
+    <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />
+    <!-- Ascuns din JS imediat după prima randare (src/index.js); 3 s = plasa de siguranță dacă JS-ul eșuează. -->
+    <preference name="AutoHideSplashScreen" value="true" />
+    <preference name="SplashScreenDelay" value="3000" />
+    <preference name="FadeSplashScreenDuration" value="300" />
     <platform name="android">
         <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
             <application android:usesCleartextTraffic="true" />
