@@ -14,6 +14,8 @@
         <ini name="display_errors" value="1" />
         <ini name="error_reporting" value="-1" />
         <server name="APP_ENV" value="test" force="true" />
+        <!-- containerul are APP_ENV=dev ca variabila de mediu (docker-compose.yml), iar KernelTestCase citeste intai $_ENV -->
+        <env name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
     </php>
 
