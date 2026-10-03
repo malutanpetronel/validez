@@ -1,0 +1,34 @@
+# Validez - Frontend, mediu de DEZVOLTARE.
+# Pornire, din frontend/:  docker compose up -d   ->  http://localhost:3002
+#
+# Adresa API-ului se pune in frontend/.env.local (citit de react-scripts), NU aici:
+#   REACT_APP_API_BASE=http://localhost:8020
+# (pentru test de pe telefon: IP-ul laptopului din LAN, ex. http://192.168.100.12:8020)
+# O variabila setata in environment ar avea prioritate fata de .env.local.
+#
+# OBLIGATORIU in frontend/.env: COMPOSE_PROJECT_NAME=validez_fe (altfel proiectul compose se numeste "frontend").
+version: "3.9"
+
+services:
+  web:
+    image: validez-fe:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: validez-fe
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./:/app
+      # node_modules din imagine, nu de pe host (altfel volumul montat il ascunde).
+      - node-modules:/app/node_modules
+    environment:
+      BROWSER: none
+      # Hot reload prin volum montat
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+      # Websocket-ul de reload pe portul de pe host
+      WDS_SOCKET_PORT: 3002
+
+volumes:
+  node-modules:

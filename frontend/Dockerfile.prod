@@ -1,0 +1,19 @@
+# Validez - Frontend (React + MUI) - build static servit prin nginx.
+# Multi-stage: build CRA, apoi nginx minimal. Fara cordova (deploy web, nu APK).
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+# npm ci cand exista lockfile (build reproductibil); pana atunci npm install.
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+COPY . .
+
+# CRA "arde" REACT_APP_* in bundle la BUILD time, nu la runtime -> ARG,
+# nu environment in compose (ala e prea tarziu).
+ARG REACT_APP_API_BASE
+ENV REACT_APP_API_BASE=$REACT_APP_API_BASE
+RUN npx react-scripts build
+
+FROM nginx:stable-alpine
+COPY --from=build /app/build /usr/share/nginx/html
+COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
