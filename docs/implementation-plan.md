@@ -33,3 +33,9 @@ Criteriu de încheiere: un administrator creează `Drumuri > Cluj > Calitate > D
 - **Step 6:** prioritate calculată, trust score și măsuri anti-abuz; stabilizare și distribuire mobilă.
 
 Build-ul mobil este verificat încă din Step 1 și la integrarea funcționalităților native, pentru a descoperi devreme problemele de navigare, autentificare și acces la API din WebView.
+
+## Stare
+
+- [x] **1.1** (03.10.2026) — Symfony 7.4 + API Platform 4.2 (`/api` 200), PostgreSQL 16 cu `ltree`, CORS pentru FE (3002, LAN, `http://localhost` Cordova), React/MUI cu hash router, `config.xml` `ro.webnou.validez`, `cordova build browser` OK; Docker dev/prod pentru ambele. Lăsate pentru pașii lor: înregistrarea `gesdinet/jwt-refresh-token-bundle` (1.4), smoke test Android (1.7).
+- [x] **1.2** (03.10.2026) — `TreeNode` (ULID generat în constructor, `path` ltree din ULID-uri base32, `name`, `position`, `timestamptz`) + migrare: GiST pe `path`, `UNIQUE NULLS NOT DISTINCT (parent_id, position) DEFERRABLE INITIALLY DEFERRED`, `CHECK position >= 0`, `CHECK parent_id <> id`, FK `RESTRICT`. Verificat: `migrations:diff` fără modificări, `schema:validate` OK, constrângerile testate direct în PostgreSQL, 5 teste unitare. Amânate explicit: `created_by` (odată cu modelul `User`), `type` (semantică nedecisă).
+- [ ] **1.3** — API citire/creare/redenumire, operație de mutare și ordonare în tranzacție, protecție la cicluri sub concurență
