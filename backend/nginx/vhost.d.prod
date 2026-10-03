@@ -1,0 +1,11 @@
+# Configurare custom nginx-proxy pentru validez-be.webnou.ro
+#
+# DEPLOY: se copiaza pe server la /srv/nginx/vhost.d/validez-be.webnou.ro (fara extensie),
+# INAINTE de pornirea containerelor: nginx-proxy il include doar daca exista la generarea
+# configuratiei; dupa schimbare: nginx -t si reload (lectie ArtaNFT 01.10.2026).
+#
+# Documentatia Swagger/OpenAPI blocata pe productie (404 inainte de Symfony),
+# cu sau fara versiune in prefix: /api/docs, /api/v1/docs, .jsonld etc.
+location ~ ^/api(/v[0-9]+)?/docs {
+    return 404;
+}
