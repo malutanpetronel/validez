@@ -9,15 +9,18 @@ import AddIcon from '@mui/icons-material/Add';
 import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
 import EditIcon from '@mui/icons-material/Edit';
 import {Link as RouterLink} from 'react-router-dom';
-import {createNode, fetchChildren, renameNode} from '../api/tree';
+import {createNode, fetchChildren, moveNode, renameNode} from '../api/tree';
 import {useAuth} from '../auth/AuthContext';
-import {appendChild, findNode, renameInTree, setChildren, toTreeNode} from '../tree/treeData';
+import {
+    appendChild, dropTarget, findNode, indexByKey, isNoopMove, renameInTree, replaceLevel, setChildren, toTreeNode,
+} from '../tree/treeData';
 
 const DIALOG_TITLES = {root: 'Rădăcină nouă', child: 'Nod copil nou', rename: 'Redenumește nodul'};
 
 /**
- * Plan Step 1.5 (parțial): creare rădăcină/copil, redenumire, expandare cu încărcare pe ramuri.
- * Drag and drop, „Mută în…" și ordonarea vin odată cu operația de mutare (1.3).
+ * Plan Step 1.5: creare rădăcină/copil, redenumire, expandare cu încărcare pe ramuri,
+ * drag and drop pentru schimbarea părintelui și ordonare între frați.
+ * „Mută în…" (mobil/tastatură) vine la 1.6 - drag and drop-ul HTML5 nu merge la atingere.
  * Navigare publică; acțiunile de modificare doar pentru administratori (1.4) - serverul verifică oricum.
  */
 export default function TreePage() {
@@ -29,6 +32,7 @@ export default function TreePage() {
     const [dialog, setDialog] = useState(null); // {mode, value}
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null); // {severity, text}
+    const [moving, setMoving] = useState(false);
 
     const showError = (err) => setMessage({severity: 'error', text: err.message || 'Eroare necunoscută'});
 
@@ -46,6 +50,39 @@ export default function TreePage() {
 
     // rc-tree cere loadData doar pentru nodurile fără children și fără isLeaf.
     const onLoadData = (node) => loadBranch(node.key).catch(showError);
+
+    /**
+     * Reîncarcă de pe server nivelurile date (null = rădăcinile) - structura confirmată de server,
+     * după o mutare reușită sau eșuată. `previous` păstrează ramurile încărcate ale nodului mutat.
+     */
+    const reloadLevels = async (parentKeys, previous) => {
+        const unique = [...new Set(parentKeys)];
+        const levels = await Promise.all(unique.map((k) => fetchChildren(k)));
+        setTreeData((t) => unique.reduce((acc, k, i) => replaceLevel(acc, k, levels[i], previous), t));
+    };
+
+    const onDrop = async (info) => {
+        const dragKey = info.dragNode.key;
+        const pos = info.node.pos.split('-');
+        const relative = info.dropPosition - Number(pos[pos.length - 1]);
+        const target = dropTarget(treeData, {dragKey, dropKey: info.node.key, relative, dropExpanded: info.node.expanded});
+        if (isNoopMove(treeData, dragKey, target)) return;
+
+        const oldParent = findNode(treeData, dragKey)?.parentId ?? null;
+        const previous = indexByKey(treeData);
+        setMoving(true);
+        try {
+            await moveNode(dragKey, target.parentId, target.position);
+            if (target.parentId) setExpandedKeys((keys) => (keys.includes(target.parentId) ? keys : [...keys, target.parentId]));
+            setMessage({severity: 'success', text: 'Nod mutat.'});
+        } catch (err) {
+            showError(err);
+        } finally {
+            // Si la esec: arborele afisat = ce a confirmat serverul (poate s-a schimbat intre timp).
+            await reloadLevels([oldParent, target.parentId], previous).catch(showError);
+            setMoving(false);
+        }
+    };
 
     const selected = selectedKey ? findNode(treeData, selectedKey) : null;
 
@@ -99,6 +136,7 @@ export default function TreePage() {
                 </Stack>
                 <Typography variant="body2" color="text.secondary">
                     {selected ? <>Selectat: <strong>{selected.title}</strong> · dublu-click pentru redenumire</> : 'Selectează un nod pentru a-i adăuga un copil sau a-l redenumi.'}
+                        {' '}Trage un nod peste altul ca să-l muți în el, sau între rânduri ca să-l ordonezi.
                 </Typography>
                 </>
             ) : (
@@ -117,6 +155,8 @@ export default function TreePage() {
                     <Box sx={{'& .rc-tree-node-content-wrapper': {cursor: 'pointer', py: 0.25}, '& .rc-tree-treenode': {py: 0.25}}}>
                         <Tree
                             treeData={treeData}
+                            draggable={isAdmin && !moving}
+                            onDrop={onDrop}
                             loadData={onLoadData}
                             expandedKeys={expandedKeys}
                             onExpand={setExpandedKeys}

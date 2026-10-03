@@ -41,3 +41,10 @@ export const renameNode = (id, name) => request(`${URL}/${encodeURIComponent(id)
     headers: {'Content-Type': 'application/merge-patch+json'},
     body: JSON.stringify({name}),
 });
+
+/** Mutare si ordonare: parentId null = radacina; position = indexul printre fratii destinatiei, fara nodul mutat. */
+export const moveNode = (id, parentId, position) => request(`${URL}/${encodeURIComponent(id)}/move`, {
+    method: 'POST',
+    headers: {'Content-Type': LD},
+    body: JSON.stringify({parent: parentId, position}),
+});
