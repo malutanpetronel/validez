@@ -1,0 +1,6 @@
+# Generate de Cordova
+/platforms/
+/plugins/
+# www/ = copia build-ului React pentru Cordova (npm run build); pastram doar folderul
+/www/*
+!/www/.gitkeep

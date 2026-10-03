@@ -1,0 +1,10 @@
+node_modules
+build
+www
+platforms
+plugins
+.env.local
+.idea
+docs
+Dockerfile*
+docker-compose*.yml
