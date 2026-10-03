@@ -23,6 +23,16 @@
     <preference name="SplashScreenDelay" value="3000" />
     <preference name="FadeSplashScreenDuration" value="300" />
     <platform name="android">
+        <icon src="res/icon/android/mdpi.png" density="mdpi" />
+        <icon src="res/icon/android/hdpi.png" density="hdpi" />
+        <icon src="res/icon/android/xhdpi.png" density="xhdpi" />
+        <icon src="res/icon/android/xxhdpi.png" density="xxhdpi" />
+        <icon src="res/icon/android/xxxhdpi.png" density="xxxhdpi" />
+        <icon density="mdpi" background="res/icon/android/bg.png" foreground="res/icon/android/fg-mdpi.png" />
+        <icon density="hdpi" background="res/icon/android/bg.png" foreground="res/icon/android/fg-hdpi.png" />
+        <icon density="xhdpi" background="res/icon/android/bg.png" foreground="res/icon/android/fg-xhdpi.png" />
+        <icon density="xxhdpi" background="res/icon/android/bg.png" foreground="res/icon/android/fg-xxhdpi.png" />
+        <icon density="xxxhdpi" background="res/icon/android/bg.png" foreground="res/icon/android/fg-xxxhdpi.png" />
         <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
             <application android:usesCleartextTraffic="true" />
         </edit-config>

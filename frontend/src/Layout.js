@@ -1,24 +1,28 @@
 import {Link as RouterLink, Outlet} from 'react-router-dom';
-import {AppBar, Box, Button, Container, Toolbar, Typography} from '@mui/material';
+import {useMemo} from 'react';
+import {AppBar, Box, Button, Container, CssBaseline, MenuItem, Select, ThemeProvider, Toolbar, Typography} from '@mui/material';
+import {BRAND, createValidezTheme} from './theme';
+import useAutomaticTheme from './useAutomaticTheme';
 import version from './version.json';
 import {useAuth} from './auth/AuthContext';
 
 export default function Layout() {
     const {user, logout} = useAuth();
+    const {preference, chooseTheme, mode} = useAutomaticTheme();
+    const theme = useMemo(() => createValidezTheme(mode), [mode]);
     return (
-        <Box sx={{display: 'flex', flexDirection: 'column', minHeight: '100vh'}}>
-            <AppBar position="static" color="primary">
+        <ThemeProvider theme={theme}>
+        <CssBaseline/>
+        <Box data-theme={mode} sx={{display: 'flex', flexDirection: 'column', minHeight: '100vh', colorScheme: mode, bgcolor: 'background.default', color: 'text.primary'}}>
+            <AppBar position="static" sx={{bgcolor: '#dfedff', color: BRAND.bleumarin, backgroundImage: 'none', colorScheme: 'light'}}>
                 {/* Pe ecrane înguste (Android cu „dimensiunea afișării" mărită ajunge la ~320 px) bara nu are voie
                     să depășească lățimea: altfel browserul lărgește toată pagina și o micșorează. */}
                 <Toolbar sx={{gap: 1, px: {xs: 1.5, sm: 3}}}>
-                    {/* Logo + nume = link spre pagina principală (fără buton separat „Acasă"). */}
+                    {/* Logo-ul include numele și trimite spre pagina principală. */}
                     <Box component={RouterLink} to="/" aria-label="VALIDEZ — pagina principală"
                          sx={{display: 'flex', alignItems: 'center', color: 'inherit', textDecoration: 'none', minWidth: 0}}>
-                        <Box component="img" src={`${process.env.PUBLIC_URL}/logo.png`} alt="" sx={{height: 36, mr: 1.25, flexShrink: 0}}/>
-                        <Typography variant="h6" component="span" noWrap
-                                    sx={{fontWeight: 700, letterSpacing: 1, '@media (max-width: 359.95px)': {display: 'none'}}}>
-                            VALIDEZ
-                        </Typography>
+                        <Box component="img" src={`${process.env.PUBLIC_URL}/logo-sus.png`} alt=""
+                             sx={{display: 'block', width: {xs: 130, sm: 158}, maxWidth: '100%', height: 'auto', flexShrink: 0}}/>
                     </Box>
                     <Box sx={{flex: 1}}/>
                     <Button color="inherit" component={RouterLink} to="/arbore" sx={{minWidth: 0}}>Arbore</Button>
@@ -36,8 +40,24 @@ export default function Layout() {
                 <Outlet/>
             </Container>
             <Box component="footer" sx={{py: 1.5, textAlign: 'center', color: 'text.secondary', fontSize: 13}}>
+                <Box sx={{mb: 1}}>
+                    <Select size="small" value={preference}
+                         inputProps={{'aria-label': 'Tema de afișare'}}
+                         onChange={(event) => chooseTheme(event.target.value)}
+                         title="Automat: nocturn între 19:00 și 07:00, ora locală"
+                         MenuProps={{
+                             anchorOrigin: {vertical: 'top', horizontal: 'center'},
+                             transformOrigin: {vertical: 'bottom', horizontal: 'center'},
+                         }}
+                         sx={{bgcolor: 'background.paper', color: 'text.primary', fontSize: 14}}>
+                        <MenuItem value="auto">Temă: Automat</MenuItem>
+                        <MenuItem value="light">Temă: Luminos</MenuItem>
+                        <MenuItem value="dark">Temă: Nocturn</MenuItem>
+                    </Select>
+                </Box>
                 VEZI. VERIFICĂ. VALIDEAZĂ. · v{version.version} · AGPL-3.0-or-later
             </Box>
         </Box>
+        </ThemeProvider>
     );
 }
