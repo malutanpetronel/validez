@@ -1,0 +1,82 @@
+# Validez - Backend, mediu de DEZVOLTARE.
+# Pornire, din backend/:  docker compose up -d
+# Comenzi Symfony:        docker compose exec php bin/console ...
+#
+# Porturi alese sa nu se ciocneasca cu ArtaNFT / Time Track pe laptop:
+#   API 8020, PostgreSQL 5442, Adminer 8092, Mailcatcher 1027 (SMTP) / 1082 (web)
+#
+# DATABASE_URL pentru backend/.env (dev):
+#   postgresql://validez:validez@db:5432/validez?serverVersion=16&charset=utf8
+#
+# OBLIGATORIU in backend/.env si COMPOSE_PROJECT_NAME=validez_be: altfel proiectul compose se numeste
+# "backend" (numele folderului) si se amesteca cu alte proiecte din foldere "backend" (ex. EvoPresence).
+# Pe laptop: docker compose (v2). docker-compose 1.29 crapa cu KeyError ContainerConfig pe Docker Engine 25+.
+version: "3.9"
+
+services:
+  php:
+    image: validez-be-php:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        UID: 1000
+        GID: 1000
+    container_name: validez-php
+    volumes:
+      - ./:/var/www/validez-be
+    working_dir: /var/www/validez-be
+    depends_on:
+      - db
+    environment:
+      # Implicit "dev"; un smoke test poate rula cu TEST_APP_ENV=test -> Symfony ia .env.test (mecanismul standard).
+      APP_ENV: "${TEST_APP_ENV:-dev}"
+    networks:
+      default:
+        # Nume unic pentru fastcgi_pass din nginx/default.conf (acelasi pe dev si pe prod).
+        # Lectie ArtaNFT 01.10.2026: "php" e comun cu alte proiecte pe reteaua proxy -> "File not found.".
+        aliases: [validez-fpm]
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: validez-nginx
+    ports:
+      - "8020:80"
+    volumes:
+      - ./:/var/www/validez-be:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+
+  db:
+    # Imaginea oficiala include extensiile contrib, deci si ltree.
+    image: postgres:16-alpine
+    container_name: validez-db
+    environment:
+      POSTGRES_DB: validez
+      POSTGRES_USER: validez
+      POSTGRES_PASSWORD: validez
+    ports:
+      - "5442:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      # Ruleaza doar la prima initializare a volumului (CREATE EXTENSION ltree, inclusiv in template1).
+      - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
+
+  adminer:
+    image: adminer
+    container_name: validez-adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - "8092:8080"
+
+  mailcatcher:
+    image: yappabe/mailcatcher
+    container_name: validez-mailcatcher
+    ports:
+      - "1027:1025"
+      - "1082:1080"
+
+volumes:
+  pg-data:
