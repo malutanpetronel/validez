@@ -37,3 +37,57 @@ export const appendChild = (nodes, parentKey, child) => {
 };
 
 export const renameInTree = (nodes, key, title) => updateNode(nodes, key, (n) => ({...n, title}));
+
+/** Toate nodurile incarcate, dupa cheie. */
+export const indexByKey = (nodes, map = new Map()) => {
+    for (const n of nodes) {
+        map.set(n.key, n);
+        if (n.children) indexByKey(n.children, map);
+    }
+    return map;
+};
+
+const siblingsOf = (tree, parentKey) => (parentKey === null ? tree : findNode(tree, parentKey)?.children ?? []);
+
+/**
+ * Tinta unei mutari prin drag and drop, in semantica API-ului (POST /tree_nodes/{id}/move):
+ * position = indexul printre fratii de la destinatie, FARA nodul mutat.
+ *
+ * relative (din rc-tree): -1 = intre randuri, deasupra tintei; 0 = pe tinta; 1 = sub tinta.
+ * - pe tinta -> primul copil al tintei (acolo arata indicatorul rc-tree);
+ * - sub o tinta expandata, cu copii afisati -> tot primul copil (indicatorul e deasupra copiilor);
+ * - altfel -> frate al tintei, inainte sau dupa ea.
+ */
+export function dropTarget(tree, {dragKey, dropKey, relative, dropExpanded}) {
+    const drop = findNode(tree, dropKey);
+    if (relative === 0 || (relative === 1 && dropExpanded && drop?.children?.length)) {
+        return {parentId: dropKey, position: 0};
+    }
+    const parentId = drop?.parentId ?? null;
+    const siblings = siblingsOf(tree, parentId).map((n) => n.key).filter((k) => k !== dragKey);
+    const index = siblings.indexOf(dropKey);
+    return {parentId, position: relative === -1 ? index : index + 1};
+}
+
+/** Mutare care nu schimba nimic (acelasi parinte, aceeasi pozitie) - nu ajunge la server. */
+export function isNoopMove(tree, dragKey, {parentId, position}) {
+    const drag = findNode(tree, dragKey);
+    if (!drag || (drag.parentId ?? null) !== parentId) return false;
+    return siblingsOf(tree, parentId).findIndex((n) => n.key === dragKey) === position;
+}
+
+/**
+ * Inlocuieste un nivel (radacinile sau copiii lui parentKey) cu lista primita de la server.
+ * Nodurile care exista deja isi pastreaza ramurile incarcate: intai din arborele curent,
+ * apoi din `previous` (arborele dinaintea mutarii - de acolo vine subarborele nodului mutat).
+ */
+export function replaceLevel(tree, parentKey, apiNodes, previous = new Map()) {
+    const current = indexByKey(tree);
+    const fresh = apiNodes.map((api) => {
+        const node = toTreeNode(api);
+        const known = current.get(node.key) ?? previous.get(node.key);
+        return known?.children !== undefined && !node.isLeaf ? {...node, children: known.children} : node;
+    });
+    if (parentKey === null) return fresh;
+    return updateNode(tree, parentKey, (n) => ({...n, children: fresh, isLeaf: fresh.length === 0}));
+}
