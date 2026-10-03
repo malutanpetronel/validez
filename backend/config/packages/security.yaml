@@ -14,6 +14,8 @@ security:
             security: false
         main:
             lazy: true
+            # API-ul e stateless (api_platform.defaults.stateless); fara sesiune. Autentificarea JWT vine la 1.4.
+            stateless: true
             provider: users_in_memory
 
             # Activate different ways to authenticate:

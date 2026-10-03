@@ -1,5 +1,5 @@
-import {Outlet} from 'react-router-dom';
-import {AppBar, Box, Container, Toolbar, Typography} from '@mui/material';
+import {Link as RouterLink, Outlet} from 'react-router-dom';
+import {AppBar, Box, Button, Container, Toolbar, Typography} from '@mui/material';
 import version from './version.json';
 
 export default function Layout() {
@@ -11,6 +11,9 @@ export default function Layout() {
                     <Typography variant="h6" component="div" sx={{fontWeight: 700, letterSpacing: 1}}>
                         VALIDEZ
                     </Typography>
+                    <Box sx={{flex: 1}}/>
+                    <Button color="inherit" component={RouterLink} to="/">Acasă</Button>
+                    <Button color="inherit" component={RouterLink} to="/arbore">Arbore</Button>
                 </Toolbar>
             </AppBar>
             <Container component="main" sx={{flex: 1, py: 3}}>

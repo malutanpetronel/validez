@@ -4,12 +4,23 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
 use App\Doctrine\Type\LtreeType;
+use App\Dto\TreeNodeCreateInput;
+use App\Dto\TreeNodeRenameInput;
 use App\Repository\TreeNodeRepository;
+use App\State\TreeNodeCreateProcessor;
+use App\State\TreeNodeProvider;
+use App\State\TreeNodeRenameProcessor;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Types\UlidType;
 use Symfony\Component\Uid\Ulid;
+use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -26,6 +37,16 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Amanate explicit: created_by (odata cu modelul User), type (semantica nedecisa).
  */
+#[ApiResource(
+    operations: [
+        // Un nivel: radacini (fara ?parent) sau copiii lui ?parent={ulid}. Fara paginare: incarcare pe ramuri.
+        new GetCollection(paginationEnabled: false, provider: TreeNodeProvider::class),
+        new Get(provider: TreeNodeProvider::class),
+        new Post(security: "is_granted('TREE_EDIT')", input: TreeNodeCreateInput::class, processor: TreeNodeCreateProcessor::class),
+        new Patch(security: "is_granted('TREE_EDIT')", input: TreeNodeRenameInput::class, processor: TreeNodeRenameProcessor::class),
+    ],
+    normalizationContext: ['groups' => ['tree:read']],
+)]
 #[ORM\Entity(repositoryClass: TreeNodeRepository::class)]
 #[ORM\Table(name: 'tree_node')]
 #[ORM\Index(name: 'idx_tree_node_path_gist', columns: ['path'])]
@@ -35,6 +56,7 @@ class TreeNode
 {
     #[ORM\Id]
     #[ORM\Column(type: UlidType::NAME)]
+    #[Groups(['tree:read'])]
     private Ulid $id;
 
     #[ORM\ManyToOne(targetEntity: self::class)]
@@ -45,11 +67,13 @@ class TreeNode
     private string $path;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['tree:read'])]
     #[Assert\NotBlank]
     #[Assert\Length(max: 255)]
     private string $name;
 
     #[ORM\Column(type: Types::INTEGER)]
+    #[Groups(['tree:read'])]
     #[Assert\PositiveOrZero]
     private int $position;
 
@@ -58,6 +82,9 @@ class TreeNode
 
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
     private \DateTimeImmutable $updatedAt;
+
+    /** Calculat de repository (o interogare per nivel), nu persistat. */
+    private ?bool $hasChildren = null;
 
     public function __construct(string $name, ?TreeNode $parent = null, int $position = 0)
     {
@@ -106,12 +133,31 @@ class TreeNode
         return $this->parent;
     }
 
+    /** ULID-ul parintelui ca string base32 (FE pastreaza ULID ca string; fara parser numeric). */
+    #[Groups(['tree:read'])]
+    public function getParentId(): ?string
+    {
+        return $this->parent?->getId()->toBase32();
+    }
+
+    #[Groups(['tree:read'])]
+    public function getHasChildren(): ?bool
+    {
+        return $this->hasChildren;
+    }
+
+    public function setHasChildren(bool $hasChildren): void
+    {
+        $this->hasChildren = $hasChildren;
+    }
+
     public function getPath(): string
     {
         return $this->path;
     }
 
     /** Adancimea: 0 pentru radacina. */
+    #[Groups(['tree:read'])]
     public function getDepth(): int
     {
         return substr_count($this->path, '.');
