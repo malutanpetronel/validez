@@ -7,6 +7,6 @@ beforeEach(() => {
 
 test('afiseaza brandul si starea API', async () => {
     render(<App/>);
-    expect(screen.getByText('VALIDEZ')).toBeInTheDocument();
+    expect(screen.getByRole('link', {name: 'VALIDEZ — pagina principală'})).toHaveAttribute('href', '#/');
     expect(await screen.findByText(/API disponibil/)).toBeInTheDocument();
 });

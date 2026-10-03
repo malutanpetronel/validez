@@ -7,9 +7,13 @@ export const BRAND = {
     verde: '#20AE6C',
 };
 
-const theme = createTheme({
+export const automaticMode = (date = new Date()) => date.getHours() >= 19 || date.getHours() < 7 ? 'dark' : 'light';
+
+export const createValidezTheme = (mode) => createTheme({
     palette: {
-        primary: {main: BRAND.bleumarin},
+        mode,
+        background: mode === 'light' ? {default: '#dfedff', paper: '#FFFFFF'} : {default: '#121212', paper: '#1E1E1E'},
+        primary: {main: mode === 'dark' ? '#79B8F3' : BRAND.bleumarin},
         secondary: {main: BRAND.verde, contrastText: '#FFFFFF'},
         info: {main: BRAND.albastru},
         success: {main: BRAND.verde},
@@ -19,4 +23,4 @@ const theme = createTheme({
     },
 });
 
-export default theme;
+export default createValidezTheme('light');
