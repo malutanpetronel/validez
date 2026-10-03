@@ -7,13 +7,16 @@ namespace App\Entity;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Doctrine\Type\LtreeType;
 use App\Dto\TreeNodeCreateInput;
+use App\Dto\TreeNodeMoveInput;
 use App\Dto\TreeNodeRenameInput;
 use App\Repository\TreeNodeRepository;
 use App\State\TreeNodeCreateProcessor;
+use App\State\TreeNodeMoveProcessor;
 use App\State\TreeNodeProvider;
 use App\State\TreeNodeRenameProcessor;
 use Doctrine\DBAL\Types\Types;
@@ -44,6 +47,17 @@ use Symfony\Component\Validator\Constraints as Assert;
         new Get(provider: TreeNodeProvider::class),
         new Post(security: "is_granted('TREE_EDIT')", input: TreeNodeCreateInput::class, processor: TreeNodeCreateProcessor::class),
         new Patch(security: "is_granted('TREE_EDIT')", input: TreeNodeRenameInput::class, processor: TreeNodeRenameProcessor::class),
+        // Mutare si ordonare (Step 1.3): operatie explicita, tranzactionala, sub TreeLock - vezi App\Tree\TreeMover.
+        new Post(
+            uriTemplate: '/tree_nodes/{id}/move',
+            uriVariables: ['id' => new Link(fromClass: self::class)],
+            status: 200,
+            security: "is_granted('TREE_EDIT')",
+            input: TreeNodeMoveInput::class,
+            processor: TreeNodeMoveProcessor::class,
+            read: false,
+            name: 'tree_node_move',
+        ),
     ],
     normalizationContext: ['groups' => ['tree:read']],
 )]
