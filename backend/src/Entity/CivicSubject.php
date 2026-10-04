@@ -31,7 +31,7 @@ use Symfony\Component\Uid\Ulid;
  */
 #[ApiResource(
     operations: [
-        // ?node={ulid} = nodul + tot subarborele; filtre ?type=, ?stage=; paginat (20/pagină).
+        // ?node={ulid} = subarborele; &scope=direct = doar nodul; filtre ?type=, ?stage=; 20/pagină.
         new GetCollection(provider: CivicSubjectProvider::class, paginationItemsPerPage: 20),
         new Get(provider: CivicSubjectProvider::class),
         new Post(security: "is_granted('ROLE_USER')", input: CivicSubjectCreateInput::class, processor: CivicSubjectCreateProcessor::class),

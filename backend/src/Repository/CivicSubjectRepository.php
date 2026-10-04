@@ -30,11 +30,13 @@ class CivicSubjectRepository extends ServiceEntityRepository
      *
      * @return array{0: list<CivicSubject>, 1: int} [pagina, total]
      */
-    public function findVisiblePage(?TreeNode $node, ?SubjectType $type, ?SubjectStage $stage, ?User $viewer, bool $isAdmin, int $page, int $perPage): array
+    public function findVisiblePage(?TreeNode $node, ?SubjectType $type, ?SubjectStage $stage, ?User $viewer, bool $isAdmin, int $page, int $perPage, bool $direct = false): array
     {
-        $base = function () use ($node, $type, $stage, $viewer, $isAdmin): QueryBuilder {
+        $base = function () use ($node, $type, $stage, $viewer, $isAdmin, $direct): QueryBuilder {
             $qb = $this->createQueryBuilder('s');
-            if ($node !== null) {
+            if ($node !== null && $direct) {
+                $qb->andWhere('s.node = :node')->setParameter('node', $node->getId()->toRfc4122());
+            } elseif ($node !== null) {
                 // Operatorii ltree nu exista in DQL: id-urile subarborelui vin din SQL, apoi IN (parametri uuid RFC 4122).
                 $ids = $this->getEntityManager()->getConnection()->fetchFirstColumn(
                     'SELECT id::text FROM tree_node WHERE path <@ (SELECT path FROM tree_node WHERE id = :id)',

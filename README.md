@@ -10,6 +10,8 @@ Platformă colaborativă pentru validarea și prioritizarea informațiilor, orga
 
 Arborele (`TreeNode`) reprezintă exclusiv structura ierarhică. Conținutul votabil/comentabil (`CivicSubject`) e asociat unui nod — un nod poate avea mai multe subiecte (ex. mai multe sesizări sub `Drumuri > Cluj > Calitate`). Un subiect poate fi de tip `ISSUE`, `PROPOSAL`, `PROJECT`, `PROMISE`, `ELECTORAL_EVALUATION`, `PETITION`, `TOPIC_EVALUATION` etc.
 
+În interfață, subiectele apar ca frunze sub categoria lor, până la 5 pe ramură, cu detalii la selectare. „Vezi tot (N subiecte)” deschide lista categoriei cu filtre și paginare (20/pagină); subiectele recente au o pagină separată. „Înapoi la arbore” păstrează categoria selectată și ramurile deschise. Vezi [decizia și fluxul de navigare](docs/adr/0002-node-vs-civic-subject.md).
+
 Fiecare subiect poate conține imagine, galerie foto, video, documente PDF, linkuri externe, descriere și coordonate GPS. Utilizatorii autentificați pot vota un subiect cu unul sau mai multe tipuri de vot active simultan (configurabile per subiect):
 
 - **Da / Nu**

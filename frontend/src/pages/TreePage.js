@@ -12,8 +12,15 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import MoveDialog from '../components/MoveDialog';
-import SubjectList from '../components/SubjectList';
-import {Link as RouterLink} from 'react-router-dom';
+import SubjectPage from './SubjectPage';
+import SubjectForm from '../components/SubjectForm';
+import {fetchSubjects} from '../api/subjects';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
+import {Link as RouterLink, useNavigate, useLocation} from 'react-router-dom';
 import {createNode, fetchChildren, moveNode, renameNode} from '../api/tree';
 import {useAuth} from '../auth/AuthContext';
 import {
@@ -31,7 +38,13 @@ const DIALOG_TITLES = {root: 'Rădăcină nouă', child: 'Nod copil nou', rename
  * Navigare publică; acțiunile de modificare doar pentru administratori (1.4) - serverul verifică oricum.
  */
 export default function TreePage() {
-    const {isAdmin} = useAuth();
+    const {isAdmin, user} = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [returnContext] = useState(() => location.state?.treeReturn);
+    const [subjectBranches, setSubjectBranches] = useState({});
+    const [selectedSubject, setSelectedSubject] = useState(null);
+    const [creatingSubject, setCreatingSubject] = useState(false);
     const [treeData, setTreeData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [expandedKeys, setExpandedKeys] = useState([]);
@@ -45,19 +58,47 @@ export default function TreePage() {
     const showError = (err) => setMessage({severity: 'error', text: err.message || 'Eroare necunoscută'});
 
     useEffect(() => {
-        fetchChildren()
-            .then((roots) => setTreeData(roots.map(toTreeNode)))
-            .catch(showError)
-            .finally(() => setLoading(false));
-    }, []);
+        let active = true;
+        const restore = async () => {
+            let tree = (await fetchChildren()).map(toTreeNode);
+            const branches = {};
+            const pending = new Set(returnContext?.expandedKeys ?? []);
+            if (returnContext?.selectedKey) pending.add(returnContext.selectedKey);
+            while (pending.size && active) {
+                const currentTree = tree;
+                const reachable = [...pending].filter((key) => findNode(currentTree, key));
+                if (!reachable.length) break;
+                const results = await Promise.all(reachable.map(async (key) => {
+                    const [children, subjects] = await Promise.all([
+                        fetchChildren(key), fetchSubjects({node: key, scope: 'direct'}),
+                    ]);
+                    return {key, children, subjects};
+                }));
+                for (const {key, children, subjects} of results) {
+                    tree = setChildren(tree, key, children.map(toTreeNode));
+                    branches[key] = subjects;
+                    pending.delete(key);
+                }
+            }
+            if (!active) return;
+            setTreeData(tree);
+            setSubjectBranches(branches);
+            setExpandedKeys((returnContext?.expandedKeys ?? []).filter((key) => findNode(tree, key)));
+            setSelectedKey(findNode(tree, returnContext?.selectedKey) ? returnContext.selectedKey : null);
+            setSelectedSubject(returnContext?.selectedSubject ?? null);
+        };
+        restore().catch((err) => { if (active) showError(err); }).finally(() => { if (active) setLoading(false); });
+        return () => { active = false; };
+    }, [returnContext]);
 
     const loadBranch = useCallback(async (key) => {
-        const children = await fetchChildren(key);
+        const [children, subjects] = await Promise.all([fetchChildren(key), fetchSubjects({node: key, scope: 'direct'})]);
         setTreeData((t) => setChildren(t, key, children.map(toTreeNode)));
+        setSubjectBranches((branches) => ({...branches, [key]: subjects}));
     }, []);
 
     // rc-tree cere loadData doar pentru nodurile fără children și fără isLeaf.
-    const onLoadData = (node) => loadBranch(node.key).catch(showError);
+    const onLoadData = (node) => loadBranch(node.key).catch((err) => { showError(err); throw err; });
 
     /**
      * Reîncarcă de pe server nivelurile date (null = rădăcinile) - structura confirmată de server,
@@ -89,6 +130,7 @@ export default function TreePage() {
     };
 
     const onDrop = (info) => {
+        if (info.node.kind || info.dragNode.kind) return;
         const dragKey = info.dragNode.key;
         const pos = info.node.pos.split('-');
         const relative = info.dropPosition - Number(pos[pos.length - 1]);
@@ -96,6 +138,47 @@ export default function TreePage() {
     };
 
     const selected = selectedKey ? findNode(treeData, selectedKey) : null;
+
+    const navigationState = (categoryKey = selectedKey) => {
+        const expanded = new Set(expandedKeys);
+        let current = categoryKey ? findNode(treeData, categoryKey) : null;
+        while (current) {
+            expanded.add(current.key);
+            current = current.parentId ? findNode(treeData, current.parentId) : null;
+        }
+        return {treeReturn: {expandedKeys: [...expanded], selectedKey: categoryKey,
+            selectedSubject: categoryKey ? null : selectedSubject}};
+    };
+    const subjectsUrl = (node) => `/arbore/${node.key}/subiecte?name=${encodeURIComponent(node.title)}`;
+    const decorate = (nodes) => nodes.map((node) => {
+        const branch = subjectBranches[node.key];
+        const children = node.children ? decorate(node.children) : [];
+        if (branch) {
+            children.push(...branch.items.slice(0, 5).map((subject) => ({
+                key: `subject:${subject.id}`, kind: 'subject', subject, isLeaf: true, title: subject.title,
+            })));
+            if (branch.total > 5) children.push({key: `all:${node.key}`, kind: 'all', category: node, isLeaf: true,
+                title: `Vezi tot (${branch.total} subiecte)`});
+            if (user) children.push({key: `add:${node.key}`, kind: 'add', category: node, isLeaf: true,
+                title: 'Adaugă un subiect aici'});
+        }
+        return {...node, isLeaf: branch ? children.length === 0 : false, children: branch ? children : undefined};
+    });
+    const displayTree = decorate(treeData);
+    const selectTreeItem = (keys, info) => {
+        const item = info?.node;
+        if (item?.kind === 'all') { navigate(subjectsUrl(item.category), {state: navigationState(item.category.key)}); return; }
+        if (item?.kind === 'add') {
+            setSelectedKey(item.category.key); setSelectedSubject(null); setCreatingSubject(true); return;
+        }
+        if (item?.kind === 'subject') { setSelectedSubject(item.subject.id); setSelectedKey(null); return; }
+        setSelectedSubject(null);
+        setSelectedKey(keys[0] ?? null);
+        if (keys[0]) {
+            setExpandedKeys((expanded) => [...new Set([...expanded, keys[0]])]);
+            if (!subjectBranches[keys[0]]) loadBranch(keys[0]).catch(showError);
+        }
+    };
 
     // Ordonare intre frati fara drag (Sus/Jos, Alt+↑/↓). Pozitia API exclude nodul mutat:
     // sus = index-1, jos = index+1 (dupa fratele urmator).
@@ -196,23 +279,68 @@ export default function TreePage() {
                     )}
                     {treeData.length > 0 && (
                         <Box onKeyDown={isAdmin ? onTreeKeyDown : undefined}
-                             sx={{'& .rc-tree-node-content-wrapper': {cursor: 'pointer', py: 0.25}, '& .rc-tree-treenode': {py: 0.25}}}>
+                             sx={{
+                                 '& .rc-tree-treenode': {display: 'flex', alignItems: 'center', py: 0.25},
+                                 '& .rc-tree-indent': {height: 'auto', flexShrink: 0},
+                                 '& .rc-tree-indent-unit': {width: 24},
+                                 '& .rc-tree .rc-tree-treenode .rc-tree-switcher': {
+                                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                     width: 24, height: 36, flexShrink: 0, mr: 0,
+                                     backgroundImage: 'none !important', color: 'text.secondary',
+                                 },
+                                 '& .rc-tree .rc-tree-treenode .rc-tree-node-content-wrapper': {
+                                     display: 'flex', alignItems: 'center', flex: 1, minWidth: 0,
+                                     cursor: 'pointer', height: 'auto', minHeight: 36,
+                                     px: 1, borderRadius: 1, borderLeft: '3px solid transparent',
+                                 },
+                                 '& .rc-tree-node-content-wrapper:hover': {bgcolor: 'action.hover'},
+                                 '& .rc-tree .rc-tree-treenode .rc-tree-node-content-wrapper.rc-tree-node-selected': {
+                                     bgcolor: 'primary.main', color: 'primary.contrastText', opacity: 1,
+                                     boxShadow: 'none', borderLeftColor: 'primary.contrastText',
+                                     '& .MuiTypography-root': {color: 'inherit', fontWeight: 700},
+                                     '& .MuiSvgIcon-root': {color: 'inherit'},
+                                     '& .MuiSvgIcon-root[data-hidden="true"]': {color: 'error.main'},
+                                     '&:hover': {bgcolor: 'primary.dark'},
+                                 },
+                             }}>
                             <Tree
-                                treeData={treeData}
-                                draggable={isAdmin && !moving}
+                                treeData={displayTree}
+                                showIcon={false}
+                                blockNode
+                                switcherIcon={(node) => node.isLeaf ? null : node.expanded ? <ExpandMoreIcon fontSize="small"/> : <ChevronRightIcon fontSize="small"/>}
+                                draggable={isAdmin && !moving ? {icon: false, nodeDraggable: (node) => !node.kind} : false}
                                 onDrop={onDrop}
+                                allowDrop={({dropNode, dragNode}) => !dropNode.kind && !dragNode.kind}
+                                titleRender={(node) => <Stack component="span" direction="row" spacing={1} sx={{alignItems: 'center', minWidth: 0, '& .MuiSvgIcon-root': {flexShrink: 0}}}>
+                                    {node.kind === 'subject' ? <DescriptionOutlinedIcon fontSize="small" color={node.subject.visibility === 'HIDDEN' ? 'error' : 'primary'} data-hidden={node.subject.visibility === 'HIDDEN' ? 'true' : undefined}/> : !node.kind ? <FolderOutlinedIcon fontSize="small" color="action"/> : node.kind === 'add' ? <AddIcon fontSize="small" color="primary"/> : <ListAltOutlinedIcon fontSize="small" color="primary"/>}
+                                    <Typography component="span" variant="body2" sx={{color: node.kind === 'all' || node.kind === 'add' ? 'primary.main' : 'inherit', whiteSpace: 'normal'}}>{node.title}</Typography>
+                                </Stack>}
                                 loadData={onLoadData}
                                 expandedKeys={expandedKeys}
                                 onExpand={setExpandedKeys}
-                                selectedKeys={selectedKey ? [selectedKey] : []}
-                                onSelect={(keys) => setSelectedKey(keys[0] ?? null)}
-                                onDoubleClick={isAdmin ? (_, node) => { setSelectedKey(node.key); setDialog({mode: 'rename', value: node.title}); } : undefined}
+                                selectedKeys={selectedSubject ? [`subject:${selectedSubject}`] : selectedKey ? [selectedKey] : []}
+                                onSelect={selectTreeItem}
+                                onDoubleClick={isAdmin ? (_, node) => { if (node.kind) return; setSelectedKey(node.key); setDialog({mode: 'rename', value: node.title}); } : undefined}
                             />
                         </Box>
                     )}
                 </Paper>
-                <SubjectList node={selected ? {id: selected.key, name: selected.title} : null}/>
+                {selectedSubject ? <SubjectPage key={selectedSubject} subjectId={selectedSubject} embedded onUpdated={(subject) => loadBranch(subject.nodeId).catch(showError)}/> :
+                    <Paper sx={{p: 3}}><Stack spacing={2}>
+                        <Typography variant="h6">{selected ? selected.title : 'Explorează subiectele'}</Typography>
+                        <Typography color="text.secondary">{selected ? 'Selectează un subiect din această categorie pentru a vedea detaliile.' : 'Deschide o categorie, apoi selectează un subiect din arbore.'}</Typography>
+                        {user && selected && <Button variant="contained" startIcon={<AddIcon/>} onClick={() => setCreatingSubject(true)}>Subiect nou</Button>}
+                        {selected && <Button component={RouterLink} to={subjectsUrl(selected)} state={navigationState()}>Vezi toate subiectele categoriei</Button>}
+                        <Button component={RouterLink} to="/subiecte" state={navigationState()}>Subiecte recente</Button>
+                    </Stack></Paper>}
             </Box>
+
+            {creatingSubject && selected && <SubjectForm node={{id: selected.key, name: selected.title}}
+                onClose={() => setCreatingSubject(false)} onSaved={(subject) => {
+                    setCreatingSubject(false); setSelectedSubject(subject.id);
+                    setExpandedKeys((keys) => [...new Set([...keys, selected.key])]);
+                    loadBranch(selected.key).catch(showError);
+                }}/>}
 
             {moveOpen && selected && (
                 <MoveDialog

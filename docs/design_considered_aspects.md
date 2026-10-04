@@ -50,6 +50,8 @@ Acest document rezumă deciziile luate în faza de proiectare, alternativele res
 
 **Decizie:** `TreeNode` reprezintă exclusiv poziția în arbore (ex. `România > Cluj > Drumuri > Calitate`). Conținutul votabil/comentabil/moderabil e o entitate separată, `CivicSubject`, legată de un `TreeNode` prin `node_id`. Un nod poate avea simultan copii (alte noduri) și mai multe `CivicSubject` asociate.
 
+**Interfață (04.10.2026):** subiectele apar ca frunze distincte în arbore, maximum 5 pe categorie, cu detalii la selectare. „Vezi tot” deschide lista paginată a categoriei; revenirea reface categoria selectată și ramurile deschise. Această prezentare păstrează separarea entităților din model.
+
 **Respins:** o entitate `Issue` ca nod de bază al arborelui — ar fi obligat fiecare „problemă" să fie un nod distinct în ierarhie, în loc să poată exista mai multe subiecte sub același nod (ex. 1.000 de sesizări sub `Drumuri > Cluj > Calitate`).
 
 **Respins:** numele `Issue` pentru entitatea de conținut — prea îngust. `CivicSubject.type` acoperă `ISSUE`, `PROPOSAL`, `PROJECT`, `PROMISE`, `ELECTORAL_EVALUATION`, `PETITION`, `TOPIC_EVALUATION`, extensibil fără schimbare de schemă.

@@ -68,7 +68,7 @@ final class CivicSubjectProvider implements ProviderInterface
         $stage = $this->enumFilter($f, 'stage', SubjectStage::class);
         $page = max(1, (int) ($f['page'] ?? 1));
 
-        [$items, $total] = $this->subjects->findVisiblePage($node, $type, $stage, $viewer, $isAdmin, $page, self::PER_PAGE);
+        [$items, $total] = $this->subjects->findVisiblePage($node, $type, $stage, $viewer, $isAdmin, $page, self::PER_PAGE, ($f['scope'] ?? '') === 'direct');
 
         return new TraversablePaginator(new \ArrayIterator($items), $page, self::PER_PAGE, $total);
     }

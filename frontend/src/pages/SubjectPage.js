@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
-import {Link as RouterLink, useParams} from 'react-router-dom';
-import {Alert, Button, Chip, Paper, Stack, Typography} from '@mui/material';
+import {Link as RouterLink, useLocation, useParams} from 'react-router-dom';
+import {Alert, Box, Button, Chip, Paper, Stack, Typography} from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import {useAuth} from '../auth/AuthContext';
@@ -8,8 +8,10 @@ import {fetchSubject} from '../api/subjects';
 import {canEditSubject, formatDate, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS} from '../subjects/labels';
 import SubjectForm from '../components/SubjectForm';
 
-export default function SubjectPage() {
-    const {id} = useParams();
+export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
+    const params = useParams();
+    const location = useLocation();
+    const id = subjectId ?? params.id;
     const {user} = useAuth();
     const [subject, setSubject] = useState(null);
     const [error, setError] = useState(null);
@@ -18,12 +20,14 @@ export default function SubjectPage() {
     useEffect(() => {
         setSubject(null);
         setError(null);
-        fetchSubject(id).then(setSubject).catch((e) => setError(e.message));
+        let active = true;
+        fetchSubject(id).then((s) => { if (active) setSubject(s); }).catch((e) => { if (active) setError(e.message); });
+        return () => { active = false; };
     }, [id, user?.id]);
 
     return (
         <Stack spacing={2}>
-            <div><Button component={RouterLink} to="/arbore" startIcon={<ArrowBackIcon/>}>Înapoi la arbore</Button></div>
+            {!embedded && <div><Button component={RouterLink} to="/arbore" state={location.state} startIcon={<ArrowBackIcon/>}>Înapoi la arbore</Button></div>}
             {error && <Alert severity="warning">{error}</Alert>}
             {!error && !subject && <Typography color="text.secondary">Se încarcă…</Typography>}
             {subject && (
@@ -36,8 +40,10 @@ export default function SubjectPage() {
                         </Stack>
                         <Typography variant="h5" component="h1" sx={{wordBreak: 'break-word'}}>{subject.title}</Typography>
                         <Typography variant="body2" color="text.secondary">
-                            În <strong>{subject.nodeName}</strong> · de {subject.authorName} · {formatDate(subject.createdAt)}
-                            {subject.updatedAt !== subject.createdAt && <> · modificat {formatDate(subject.updatedAt)}</>}
+                            În <Box component="strong" sx={{color: 'primary.main'}}>{subject.nodeName}</Box>
+                            {' · de '}<Box component="span" sx={{color: 'primary.main', fontStyle: 'italic'}}>{subject.authorName}</Box>
+                            {' · '}<Box component="span" sx={{color: 'primary.main'}}>{formatDate(subject.createdAt)}</Box>
+                            {subject.updatedAt !== subject.createdAt && <> · modificat <Box component="span" sx={{color: 'primary.main'}}>{formatDate(subject.updatedAt)}</Box></>}
                         </Typography>
                         <Typography sx={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{subject.description}</Typography>
                         {canEditSubject(user, subject) && (
@@ -47,7 +53,7 @@ export default function SubjectPage() {
                 </Paper>
             )}
             {editing && subject && (
-                <SubjectForm subject={subject} onClose={() => setEditing(false)} onSaved={(s) => { setSubject(s); setEditing(false); }}/>
+                <SubjectForm subject={subject} onClose={() => setEditing(false)} onSaved={(s) => { setSubject(s); setEditing(false); onUpdated?.(s); }}/>
             )}
         </Stack>
     );

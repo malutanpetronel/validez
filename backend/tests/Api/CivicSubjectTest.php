@@ -141,6 +141,8 @@ final class CivicSubjectTest extends WebTestCase
         self::assertSame(['Pe Calitate'], $this->titles($q));
         self::assertEqualsCanonicalizing(['Pe Drumuri', 'Pe Calitate'], $this->titles('?node='.$this->n['Drumuri']->getId()->toBase32()));
         self::assertSame(['Pe Drumuri'], $this->titles('?node='.$this->n['Drumuri']->getId()->toBase32().'&type=ISSUE'));
+        self::assertSame(['Pe Drumuri'], $this->titles('?node='.$this->n['Drumuri']->getId()->toBase32().'&scope=direct'));
+        self::assertSame([], $this->titles('?node='.$this->n['Cluj']->getId()->toBase32().'&scope=direct'));
 
         $this->call('GET', '/api/civic_subjects?type=NIMIC');
         self::assertSame(400, $this->code());
