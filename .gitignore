@@ -45,3 +45,4 @@ Thumbs.db
 # ===== Media/uploads locale (dezvoltare) =====
 /backend/public/uploads/
 /backend/var/media/
+/.codex/config.toml
