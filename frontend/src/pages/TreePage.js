@@ -12,6 +12,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import MoveDialog from '../components/MoveDialog';
+import SubjectList from '../components/SubjectList';
 import {Link as RouterLink} from 'react-router-dom';
 import {createNode, fetchChildren, moveNode, renameNode} from '../api/tree';
 import {useAuth} from '../auth/AuthContext';
@@ -187,28 +188,31 @@ export default function TreePage() {
                 </Alert>
             )}
 
-            <Paper sx={{p: 2, overflowX: 'auto'}}>
-                {loading && <Typography color="text.secondary">Se încarcă…</Typography>}
-                {!loading && treeData.length === 0 && (
-                    <Typography color="text.secondary">Arborele e gol. Creează prima rădăcină.</Typography>
-                )}
-                {treeData.length > 0 && (
-                    <Box onKeyDown={isAdmin ? onTreeKeyDown : undefined}
-                         sx={{'& .rc-tree-node-content-wrapper': {cursor: 'pointer', py: 0.25}, '& .rc-tree-treenode': {py: 0.25}}}>
-                        <Tree
-                            treeData={treeData}
-                            draggable={isAdmin && !moving}
-                            onDrop={onDrop}
-                            loadData={onLoadData}
-                            expandedKeys={expandedKeys}
-                            onExpand={setExpandedKeys}
-                            selectedKeys={selectedKey ? [selectedKey] : []}
-                            onSelect={(keys) => setSelectedKey(keys[0] ?? null)}
-                            onDoubleClick={isAdmin ? (_, node) => { setSelectedKey(node.key); setDialog({mode: 'rename', value: node.title}); } : undefined}
-                        />
-                    </Box>
-                )}
-            </Paper>
+            <Box sx={{display: 'grid', gap: 2, gridTemplateColumns: {xs: '1fr', md: 'minmax(0, 5fr) minmax(0, 7fr)'}, alignItems: 'start'}}>
+                <Paper sx={{p: 2, overflowX: 'auto'}}>
+                    {loading && <Typography color="text.secondary">Se încarcă…</Typography>}
+                    {!loading && treeData.length === 0 && (
+                        <Typography color="text.secondary">Arborele e gol. Creează prima rădăcină.</Typography>
+                    )}
+                    {treeData.length > 0 && (
+                        <Box onKeyDown={isAdmin ? onTreeKeyDown : undefined}
+                             sx={{'& .rc-tree-node-content-wrapper': {cursor: 'pointer', py: 0.25}, '& .rc-tree-treenode': {py: 0.25}}}>
+                            <Tree
+                                treeData={treeData}
+                                draggable={isAdmin && !moving}
+                                onDrop={onDrop}
+                                loadData={onLoadData}
+                                expandedKeys={expandedKeys}
+                                onExpand={setExpandedKeys}
+                                selectedKeys={selectedKey ? [selectedKey] : []}
+                                onSelect={(keys) => setSelectedKey(keys[0] ?? null)}
+                                onDoubleClick={isAdmin ? (_, node) => { setSelectedKey(node.key); setDialog({mode: 'rename', value: node.title}); } : undefined}
+                            />
+                        </Box>
+                    )}
+                </Paper>
+                <SubjectList node={selected ? {id: selected.key, name: selected.title} : null}/>
+            </Box>
 
             {moveOpen && selected && (
                 <MoveDialog
