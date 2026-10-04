@@ -29,7 +29,7 @@ final class AuthAndPermissionsTest extends WebTestCase
         $this->client = static::createClient();
         $c = static::getContainer();
         $this->db = $c->get(Connection::class);
-        foreach (['tree_node', 'refresh_token', 'app_user'] as $t) {
+        foreach (['civic_subject', 'tree_node', 'refresh_token', 'app_user'] as $t) {
             $this->db->executeStatement("DELETE FROM $t");
         }
 
