@@ -49,7 +49,8 @@ const dropAunderB = () => act(() => mockTreeProps.onDrop({
 
 test('drop: trimite mutarea cu pozitia fara nodul tras si afiseaza ordinea confirmata de server', async () => {
     await renderAsAdmin();
-    expect(mockTreeProps.draggable).toBe(true);
+    expect(mockTreeProps.draggable.nodeDraggable({key: 'A'})).toBe(true);
+    expect(mockTreeProps.draggable.nodeDraggable({kind: 'subject'})).toBe(false);
 
     await dropAunderB();
 

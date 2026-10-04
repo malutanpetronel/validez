@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import TreePage from './pages/TreePage';
 import LoginPage from './pages/LoginPage';
 import SubjectPage from './pages/SubjectPage';
+import SubjectsPage from './pages/SubjectsPage';
 
 // Hash router: functioneaza identic in browser, pe nginx si in WebView-ul Cordova (file:// / http://localhost),
 // fara configurare de rescriere pe server (acelasi tipar ca ArtaNFT).
@@ -15,6 +16,8 @@ export const routes = [
             {index: true, element: <Home/>},
             {path: 'arbore', element: <TreePage/>},
             {path: 'login', element: <LoginPage/>},
+            {path: 'subiecte', element: <SubjectsPage/>},
+            {path: 'arbore/:nodeId/subiecte', element: <SubjectsPage/>},
             {path: 'subiecte/:id', element: <SubjectPage/>},
         ],
     },

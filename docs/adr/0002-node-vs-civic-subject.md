@@ -25,7 +25,7 @@ Trebuie decis dacă fiecare „problemă"/subiect civic (ex. o sesizare, o propu
 - `Vote`/`Comment`/`Flag` au un singur punct de atașare (`CivicSubject`), fără ambiguitate „e pe nod sau pe conținut?".
 
 ### Negative / Trade-offs
-- Un nivel suplimentar de indirecție față de „votez direct pe nod" — UI-ul trebuie să facă explicit pasul nod → listă de subiecte → subiect.
+- UI-ul distinge categoriile (`TreeNode`) de frunzele de conținut (`CivicSubject`), fără să transforme subiectele în noduri structurale.
 
 ## Alternatives considered
 
@@ -41,3 +41,11 @@ N/A pentru acest ADR.
 - [[docs/domain.puml]] — `TreeNode`, `CivicSubject`
 - [[docs/workflow.puml]]
 - [[docs/design_considered_aspects.md]] §5
+
+## Prezentare în interfață (04.10.2026)
+
+Subiectele sunt afișate ca frunze sub categoria de care aparțin, cu pictogramă distinctă. O ramură încarcă la cerere subcategoriile și subiectele directe (`GET /api/civic_subjects?node={ulid}&scope=direct`), apoi afișează maximum 5 subiecte, cele mai noi primele. Selecția frunzei deschide detaliile lângă arbore (sub el pe ecrane mici). Frunzele nu pot fi mutate prin drag and drop ca noduri structurale.
+
+Peste 5 subiecte, „Vezi tot (N subiecte)” deschide `#/arbore/{nodeId}/subiecte`, cu filtre tip/stadiu și 20 de subiecte pe pagină. Această listă conține doar subiectele categoriei, ca frunzele; filtrarea API fără `scope=direct` include în continuare întregul subarbore. `#/subiecte` afișează separat subiectele recente. Utilizatorii autentificați pot folosi „Adaugă un subiect aici”, cu categoria preselectată.
+
+„Înapoi la arbore”, din listă sau din detaliul deschis prin listă, reface selecția categoriei și ramurile deschise. Contextul de navigare este transmis prin starea routerului; datele categoriilor și subiectelor sunt recitite din API la revenire. Un acces direct, fără context anterior, deschide arborele inițial.

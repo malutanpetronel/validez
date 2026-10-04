@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useState} from 'react';
-import {Link as RouterLink} from 'react-router-dom';
+import {Link as RouterLink, useLocation} from 'react-router-dom';
 import {
     Alert, Box, Button, Chip, FormControl, InputLabel, List, ListItemButton, ListItemText, MenuItem,
     Pagination, Paper, Select, Stack, Typography,
@@ -14,8 +14,9 @@ import SubjectForm from './SubjectForm';
  * Subiectele nodului selectat și ale întregului subarbore (decizie Step 2), cu nodul fiecăruia afișat;
  * fără nod selectat: cele mai noi subiecte. Filtre tip/stadiu, paginare 20/pagină.
  */
-export default function SubjectList({node}) {
+export default function SubjectList({node, scope = ''}) {
     const {user} = useAuth();
+    const location = useLocation();
     const [filters, setFilters] = useState({type: '', stage: ''});
     const [page, setPage] = useState(1);
     const [data, setData] = useState({items: [], total: 0});
@@ -26,11 +27,11 @@ export default function SubjectList({node}) {
     const load = useCallback(() => {
         setLoading(true);
         setError(null);
-        return fetchSubjects({node: node?.id ?? null, ...filters, page})
+        return fetchSubjects({node: node?.id ?? null, ...filters, page, scope})
             .then(setData)
             .catch((e) => setError(e.message))
             .finally(() => setLoading(false));
-    }, [node?.id, filters, page]);
+    }, [node?.id, filters, page, scope]);
 
     useEffect(() => { load(); }, [load]);
     useEffect(() => { setPage(1); }, [node?.id, filters]);
@@ -48,7 +49,7 @@ export default function SubjectList({node}) {
                     <Button variant="contained" size="small" startIcon={<AddIcon/>} onClick={() => setCreating(true)}>Subiect nou</Button>
                 )}
             </Stack>
-            {node && <Typography variant="body2" color="text.secondary" sx={{mb: 1.5}}>Include subiectele din toate subnodurile.</Typography>}
+            {node && scope !== 'direct' && <Typography variant="body2" color="text.secondary" sx={{mb: 1.5}}>Include subiectele din toate subnodurile.</Typography>}
             {!user && <Typography variant="body2" color="text.secondary" sx={{mb: 1.5}}>
                 <RouterLink to="/login" state={{from: '/arbore'}}>Intră în cont</RouterLink> ca să adaugi un subiect.
             </Typography>}
@@ -77,7 +78,7 @@ export default function SubjectList({node}) {
             )}
             <List dense disablePadding sx={{opacity: loading ? 0.6 : 1}}>
                 {data.items.map((s) => (
-                    <ListItemButton key={s.id} component={RouterLink} to={`/subiecte/${s.id}`} divider sx={{px: 1, alignItems: 'flex-start'}}>
+                    <ListItemButton key={s.id} component={RouterLink} to={`/subiecte/${s.id}`} state={location.state} divider sx={{px: 1, alignItems: 'flex-start'}}>
                         <ListItemText
                             primary={<Box component="span" sx={{fontWeight: 500}}>{s.title}</Box>}
                             secondaryTypographyProps={{component: 'div'}}

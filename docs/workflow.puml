@@ -6,10 +6,14 @@ start
 :Deschide aplicația;
 :Navighează arborele (TreeNode)\n(fără cont necesar);
 
-:Selectează un nod;
+:Deschide o categorie;
 
-:Vede lista de CivicSubject\nasociate nodului
-(ex. sesizări, propuneri, promisiuni);
+:Vede până la 5 CivicSubject ca frunze\nasociate direct categoriei;
+
+if (Vrea lista completă?) then (da)
+  :Vezi tot (N subiecte)\nlistă cu filtre, 20/pagină;
+  :Înapoi la arbore reface categoria\nselectată și ramurile deschise;
+endif
 
 if (Selectează un CivicSubject?) then (da)
 

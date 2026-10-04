@@ -23,10 +23,11 @@ async function request(url, options = {}) {
     return body;
 }
 
-/** Listă paginată: node = nodul + tot subarborele; fără node = toate, cele mai noi primele. */
-export async function fetchSubjects({node = null, type = '', stage = '', page = 1} = {}) {
+/** Listă paginată: node = subarborele; scope=direct = doar categoria; fără node = cele mai noi. */
+export async function fetchSubjects({node = null, type = '', stage = '', page = 1, scope = ''} = {}) {
     const q = new URLSearchParams();
     if (node) q.set('node', node);
+    if (scope) q.set('scope', scope);
     if (type) q.set('type', type);
     if (stage) q.set('stage', stage);
     if (page > 1) q.set('page', String(page));
