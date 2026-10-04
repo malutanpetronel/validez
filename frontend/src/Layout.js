@@ -1,7 +1,7 @@
 import {Link as RouterLink, Outlet} from 'react-router-dom';
 import {useMemo} from 'react';
 import {AppBar, Box, Button, Container, CssBaseline, MenuItem, Select, ThemeProvider, Toolbar, Typography} from '@mui/material';
-import {BRAND, createValidezTheme} from './theme';
+import {createValidezTheme} from './theme';
 import useAutomaticTheme from './useAutomaticTheme';
 import version from './version.json';
 import {useAuth} from './auth/AuthContext';
@@ -14,15 +14,25 @@ export default function Layout() {
         <ThemeProvider theme={theme}>
         <CssBaseline/>
         <Box data-theme={mode} sx={{display: 'flex', flexDirection: 'column', minHeight: '100vh', colorScheme: mode, bgcolor: 'background.default', color: 'text.primary'}}>
-            <AppBar position="static" sx={{bgcolor: '#dfedff', color: BRAND.bleumarin, backgroundImage: 'none', colorScheme: 'light'}}>
+            <AppBar position="static" elevation={0}
+                    sx={{bgcolor: 'background.paper', color: 'text.primary', backgroundImage: 'none',
+                        borderBottom: 1, borderColor: 'divider', colorScheme: mode}}>
                 {/* Pe ecrane înguste (Android cu „dimensiunea afișării" mărită ajunge la ~320 px) bara nu are voie
                     să depășească lățimea: altfel browserul lărgește toată pagina și o micșorează. */}
-                <Toolbar sx={{gap: 1, px: {xs: 1.5, sm: 3}}}>
+                <Toolbar sx={{gap: 1, px: {xs: 1.5, sm: 3}, py: 1}}>
                     {/* Logo-ul include numele și trimite spre pagina principală. */}
                     <Box component={RouterLink} to="/" aria-label="VALIDEZ — pagina principală"
-                         sx={{display: 'flex', alignItems: 'center', color: 'inherit', textDecoration: 'none', minWidth: 0}}>
-                        <Box component="img" src={`${process.env.PUBLIC_URL}/logo-sus.png`} alt=""
-                             sx={{display: 'block', width: {xs: 130, sm: 158}, maxWidth: '100%', height: 'auto', flexShrink: 0}}/>
+                         sx={{display: 'flex', alignItems: 'center', color: 'inherit', textDecoration: 'none', minWidth: 0,
+                             borderRadius: 1.5, py: 0.25, flexShrink: 0,
+                             '&:focus-visible': {outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 3}}}>
+                        <Box sx={{position: 'relative', width: {xs: 130, sm: 158}, maxWidth: '100%', flexShrink: 0}}>
+                            <Box component="img" src={`${process.env.PUBLIC_URL}/logo-sus.png`} alt=""
+                                 sx={{display: 'block', width: '100%', height: 'auto',
+                                     filter: mode === 'dark' ? 'brightness(0) invert(1)' : 'none'}}/>
+                            {mode === 'dark' && <Box component="img" src={`${process.env.PUBLIC_URL}/logo-sus.png`} alt="" aria-hidden="true"
+                                 sx={{position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none',
+                                     clipPath: 'polygon(22.5% 23.9%, 15.9375% 54.35%, 14.0625% 67.39%, 12.1875% 55.43%, 17.5% 36.96%)'}}/>}
+                        </Box>
                     </Box>
                     <Box sx={{flex: 1}}/>
                     <Button color="inherit" component={RouterLink} to="/arbore" sx={{minWidth: 0}}>Arbore</Button>
