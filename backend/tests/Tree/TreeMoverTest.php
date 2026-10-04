@@ -34,6 +34,7 @@ final class TreeMoverTest extends KernelTestCase
         $this->em = $c->get(EntityManagerInterface::class);
         $this->db = $c->get(Connection::class);
         $this->mover = $c->get(TreeMover::class);
+        $this->db->executeStatement('DELETE FROM civic_subject');
         $this->db->executeStatement('DELETE FROM tree_node');
         $this->db->executeStatement('DELETE FROM refresh_token');
         $this->db->executeStatement('DELETE FROM app_user');

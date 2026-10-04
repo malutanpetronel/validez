@@ -19,7 +19,7 @@ final class CreateUserCommandTest extends KernelTestCase
     {
         $kernel = self::bootKernel();
         $db = static::getContainer()->get(Connection::class);
-        foreach (['tree_node', 'refresh_token', 'app_user'] as $t) {
+        foreach (['civic_subject', 'tree_node', 'refresh_token', 'app_user'] as $t) {
             $db->executeStatement("DELETE FROM $t");
         }
         $this->tester = new CommandTester((new Application($kernel))->find('app:user:create'));
