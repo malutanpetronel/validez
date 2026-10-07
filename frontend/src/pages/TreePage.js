@@ -13,6 +13,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import MoveDialog from '../components/MoveDialog';
 import SubjectPage from './SubjectPage';
+import SubjectList from '../components/SubjectList';
 import SubjectForm from '../components/SubjectForm';
 import {fetchSubjects} from '../api/subjects';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
@@ -326,11 +327,11 @@ export default function TreePage() {
                     )}
                 </Paper>
                 {selectedSubject ? <SubjectPage key={selectedSubject} subjectId={selectedSubject} embedded onUpdated={(subject) => loadBranch(subject.nodeId).catch(showError)}/> :
+                    selected ? <SubjectList key={selected.key} node={{id: selected.key, name: selected.title}}
+                        scope="direct" navigationState={navigationState()}/> :
                     <Paper sx={{p: 3}}><Stack spacing={2}>
-                        <Typography variant="h6">{selected ? selected.title : 'Explorează subiectele'}</Typography>
-                        <Typography color="text.secondary">{selected ? 'Selectează un subiect din această categorie pentru a vedea detaliile.' : 'Deschide o categorie, apoi selectează un subiect din arbore.'}</Typography>
-                        {user && selected && <Button variant="contained" startIcon={<AddIcon/>} onClick={() => setCreatingSubject(true)}>Subiect nou</Button>}
-                        {selected && <Button component={RouterLink} to={subjectsUrl(selected)} state={navigationState()}>Vezi toate subiectele categoriei</Button>}
+                        <Typography variant="h6">Explorează subiectele</Typography>
+                        <Typography color="text.secondary">Selectează o categorie pentru a vedea toate subiectele ei.</Typography>
                         <Button component={RouterLink} to="/subiecte" state={navigationState()}>Subiecte recente</Button>
                     </Stack></Paper>}
             </Box>

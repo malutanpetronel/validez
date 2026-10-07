@@ -50,6 +50,20 @@ test('Vezi tot deschide lista completă cu filtre și paginare', async () => {
     await waitFor(() => expect(screen.getByRole('button', {name: /page 2/i})).toBeInTheDocument());
 });
 
+test('selectarea categoriei afișează automat lista paginată și păstrează contextul la revenire', async () => {
+    renderPage();
+    await screen.findByText('Drumuri');
+    act(() => mockTree.onSelect([category.id], {node: mockTree.treeData[0]}));
+    expect(await screen.findByText('Subiect 19')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tip')).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: /page 2/i})).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', {name: /^Subiect 0/}));
+    expect(await screen.findByText('Descriere completă')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', {name: 'Înapoi la arbore'}));
+    expect(await screen.findByText('Subiect 19')).toBeInTheDocument();
+    expect(mockTree.selectedKeys).toEqual([category.id]);
+});
+
 test('întoarcerea din listă și detaliu păstrează categoria imbricată și ramurile deschise', async () => {
     const child = {id: 'child', name: 'Cluj', parentId: category.id, hasChildren: false};
     global.fetch = jest.fn((url) => {

@@ -14,7 +14,7 @@ import SubjectForm from './SubjectForm';
  * Subiectele nodului selectat și ale întregului subarbore (decizie Step 2), cu nodul fiecăruia afișat;
  * fără nod selectat: cele mai noi subiecte. Filtre tip/stadiu, paginare 20/pagină.
  */
-export default function SubjectList({node, scope = ''}) {
+export default function SubjectList({node, scope = '', navigationState}) {
     const {user} = useAuth();
     const location = useLocation();
     const [filters, setFilters] = useState({type: '', stage: ''});
@@ -78,7 +78,7 @@ export default function SubjectList({node, scope = ''}) {
             )}
             <List dense disablePadding sx={{opacity: loading ? 0.6 : 1}}>
                 {data.items.map((s) => (
-                    <ListItemButton key={s.id} component={RouterLink} to={`/subiecte/${s.id}`} state={location.state} divider sx={{px: 1, alignItems: 'flex-start'}}>
+                    <ListItemButton key={s.id} component={RouterLink} to={`/subiecte/${s.id}`} state={navigationState ?? location.state} divider sx={{px: 1, alignItems: 'flex-start'}}>
                         <ListItemText
                             primary={<Box component="span" sx={{fontWeight: 500}}>{s.title}</Box>}
                             secondaryTypographyProps={{component: 'div'}}
