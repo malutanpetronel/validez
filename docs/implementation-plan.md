@@ -27,6 +27,7 @@ Criteriu de încheiere: un administrator creează `Drumuri > Cluj > Calitate > D
 ## Pașii următori
 
 - **Step 2:** `CivicSubject` asociat nodurilor, listă și detaliu, creare/editare și reguli de acces.
+- **Step 2.1 (propus):** note personale și estimare de cost, doar pentru `PROPOSAL`, conform [specificației](subject-technical-details.md). Notele se stochează separat și au endpoint exclusiv autorului; estimarea publică include sumă exactă, monedă și explicație. La schimbarea tipului, datele se păstrează fără expunere. Se implementează înainte de Step 3; istoricul estimării după primele voturi se tratează la Step 4.
 - **Step 3:** media, linkuri și localizare; verificare pe dispozitiv a funcționalităților Cordova necesare.
 - **Step 4:** tipuri de vot configurabile, vot unic per utilizator/subiect/tip, agregări și evenimente de integritate conform modelului existent.
 - **Step 5:** comentarii, raportări și moderare.
