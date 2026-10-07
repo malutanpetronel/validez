@@ -1,0 +1,14 @@
+framework:
+    rate_limiter:
+        registration:
+            policy: sliding_window
+            limit: 5
+            interval: '1 hour'
+        registration_confirm:
+            policy: sliding_window
+            limit: 15
+            interval: '1 hour'
+        captcha_challenge:
+            policy: sliding_window
+            limit: 60
+            interval: '1 minute'

@@ -5,6 +5,8 @@ import {AuthProvider} from '../auth/AuthContext';
 import {getToken} from '../auth/session';
 import {adminJwt} from '../testUtils/fakeJwt';
 
+jest.mock('../components/AltchaVerification', () => ({onVerified}) => <button type="button" onClick={() => onVerified('solutie-altcha')}>Verifică ALTCHA</button>);
+
 const renderLogin = () => render(
     <AuthProvider>
         <MemoryRouter initialEntries={['/login']}>
@@ -19,6 +21,7 @@ const renderLogin = () => render(
 const fill = () => {
     fireEvent.change(screen.getByLabelText(/Email/), {target: {value: 'admin@validez.test'}});
     fireEvent.change(screen.getByLabelText(/Parolă/), {target: {value: 'parola'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Verifică ALTCHA'}));
     fireEvent.click(screen.getByRole('button', {name: 'Intră'}));
 };
 
@@ -38,4 +41,11 @@ test('login gresit afiseaza eroarea si ramane pe pagina', async () => {
     fill();
     expect(await screen.findByText('Email sau parolă incorecte.')).toBeInTheDocument();
     expect(getToken()).toBeNull();
+});
+
+test('cont neconfirmat: afișează legătura de confirmare și cere o soluție ALTCHA nouă', async () => {
+    global.fetch = jest.fn(() => Promise.resolve({ok: false, status: 401, json: () => Promise.resolve({message: 'Confirmă adresa de email înainte de autentificare.'})}));
+    renderLogin(); fill();
+    expect(await screen.findByRole('link', {name: 'Confirmă contul'})).toHaveAttribute('href', '/inregistrare');
+    expect(screen.getByRole('button', {name: 'Intră'})).toBeDisabled();
 });

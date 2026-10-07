@@ -2,6 +2,7 @@ import {useState} from 'react';
 import {Link as RouterLink, useLocation, useNavigate} from 'react-router-dom';
 import {Alert, Box, Button, Paper, Stack, TextField, Typography} from '@mui/material';
 import {useAuth} from '../auth/AuthContext';
+import AltchaVerification from '../components/AltchaVerification';
 
 export default function LoginPage() {
     const {user, login, logout} = useAuth();
@@ -11,18 +12,26 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
     const [busy, setBusy] = useState(false);
+    const [altcha, setAltcha] = useState('');
+    const [captchaVersion, setCaptchaVersion] = useState(0);
+    const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
     const after = location.state?.from || '/arbore';
 
     const submit = async (e) => {
         e.preventDefault();
+        if (!altcha || busy) return;
+        setNeedsConfirmation(false);
         setBusy(true);
         setError(null);
         try {
-            await login(email, password);
+            await login(email, password, altcha);
             navigate(after, {replace: true});
         } catch (err) {
             setError(err.message);
+            setNeedsConfirmation(Boolean(err.needsConfirmation));
+            setAltcha('');
+            setCaptchaVersion((value) => value + 1);
         } finally {
             setBusy(false);
         }
@@ -50,9 +59,12 @@ export default function LoginPage() {
                                value={email} onChange={(e) => setEmail(e.target.value)}/>
                     <TextField label="Parolă" type="password" autoComplete="current-password" required
                                value={password} onChange={(e) => setPassword(e.target.value)}/>
-                    <Button type="submit" variant="contained" disabled={busy || !email.trim() || !password}>
+                    {needsConfirmation && <Button component={RouterLink} to="/inregistrare" state={{confirmEmail: email.trim(), from: after}}>Confirmă contul</Button>}
+                    <AltchaVerification key={captchaVersion} onVerified={setAltcha}/>
+                    <Button type="submit" variant="contained" disabled={busy || !email.trim() || !password || !altcha}>
                         {busy ? 'Se verifică…' : 'Intră'}
                     </Button>
+                    <Button component={RouterLink} to="/inregistrare" state={{from: after}}>Creează un cont</Button>
                 </Stack>
             </Box>
         </Paper>

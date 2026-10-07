@@ -7,6 +7,8 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    altcha_cost_default: 1500
+    registration_sender_default: 'noreply@validez.webnou.ro'
 
 services:
     # default configuration for services in *this* file
@@ -21,3 +23,21 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+    App\Auth\AltchaService:
+        arguments:
+            $secret: '%env(APP_SECRET)%'
+            $cost: '%env(default:altcha_cost_default:int:ALTCHA_COST)%'
+
+    App\Auth\RegistrationService:
+        arguments:
+            $secret: '%env(APP_SECRET)%'
+            $sender: '%env(default:registration_sender_default:MAILER_FROM_ADDRESS)%'
+
+when@test:
+    services:
+        App\Auth\AltchaService:
+            autowire: true
+            arguments:
+                $secret: '%env(APP_SECRET)%'
+                $cost: 1

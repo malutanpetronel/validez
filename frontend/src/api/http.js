@@ -56,13 +56,13 @@ export async function apiFetch(url, options = {}, retry = true) {
     return res;
 }
 
-export async function login(email, password) {
+export async function login(email, password, altcha) {
     let res;
     try {
         res = await fetch(`${API_BASE}/api/auth`, {
             method: 'POST',
             headers: JSON_HEADERS,
-            body: JSON.stringify({email, password}),
+            body: JSON.stringify({email, password, altcha}),
         });
     } catch {
         throw new Error('Serverul nu răspunde. Verifică conexiunea.');
@@ -72,6 +72,12 @@ export async function login(email, password) {
         if (/too many/i.test(body?.message || '')) {
             throw new Error('Prea multe încercări greșite. Încearcă din nou peste un minut.');
         }
+        if (/Confirmă adresa de email/.test(body?.message || '')) {
+            const error = new Error('Confirmă adresa de email înainte de autentificare.');
+            error.needsConfirmation = true;
+            throw error;
+        }
+        if (/ALTCHA/.test(body?.message || '')) throw new Error(body.message);
         throw new Error(res.status === 401 ? 'Email sau parolă incorecte.' : `Eroare ${res.status}`);
     }
     setSession(body);

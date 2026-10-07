@@ -3,6 +3,7 @@ import Layout from './Layout';
 import Home from './pages/Home';
 import TreePage from './pages/TreePage';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import SubjectPage from './pages/SubjectPage';
 import SubjectsPage from './pages/SubjectsPage';
 
@@ -16,6 +17,7 @@ export const routes = [
             {index: true, element: <Home/>},
             {path: 'arbore', element: <TreePage/>},
             {path: 'login', element: <LoginPage/>},
+            {path: 'inregistrare', element: <RegisterPage/>},
             {path: 'subiecte', element: <SubjectsPage/>},
             {path: 'arbore/:nodeId/subiecte', element: <SubjectsPage/>},
             {path: 'subiecte/:id', element: <SubjectPage/>},
