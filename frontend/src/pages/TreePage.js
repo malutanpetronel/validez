@@ -3,9 +3,12 @@ import Tree from 'rc-tree';
 import 'rc-tree/assets/index.css';
 import {
     Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
-    Paper, Snackbar, Stack, TextField, Typography,
+    IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Paper, Snackbar, Stack, TextField, Tooltip, Typography,
+    useMediaQuery, useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
 import EditIcon from '@mui/icons-material/Edit';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
@@ -55,6 +58,11 @@ export default function TreePage() {
     const [message, setMessage] = useState(null); // {severity, text}
     const [moving, setMoving] = useState(false);
     const [moveOpen, setMoveOpen] = useState(false);
+    const [actionsAnchor, setActionsAnchor] = useState(null);
+    const [helpOpen, setHelpOpen] = useState(false);
+    const theme = useTheme();
+    const mobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const runMenuAction = (action) => { setActionsAnchor(null); action(); };
 
     const showError = (err) => setMessage({severity: 'error', text: err.message || 'Eroare necunoscută'});
 
@@ -235,37 +243,7 @@ export default function TreePage() {
         <Stack spacing={2}>
             <Typography variant="h5" component="h1" color="primary">Arbore</Typography>
 
-            {isAdmin ? (
-                <>
-                <Stack direction="row" spacing={1} useFlexGap sx={{flexWrap: 'wrap'}}>
-                    <Button variant="contained" startIcon={<AddIcon/>} onClick={() => openDialog('root')}>
-                        Rădăcină nouă
-                    </Button>
-                    <Button variant="outlined" startIcon={<SubdirectoryArrowRightIcon/>} disabled={!selected} onClick={() => openDialog('child')}>
-                        Adaugă copil
-                    </Button>
-                    <Button variant="outlined" startIcon={<EditIcon/>} disabled={!selected} onClick={() => openDialog('rename')}>
-                        Redenumește
-                    </Button>
-                    <Button variant="outlined" startIcon={<DriveFileMoveIcon/>} disabled={!selected || moving} onClick={() => setMoveOpen(true)}>
-                        Mută în…
-                    </Button>
-                    <Button variant="outlined" startIcon={<ArrowUpwardIcon/>} disabled={!canUp} onClick={() => moveBy(-1)}
-                            aria-keyshortcuts="Alt+ArrowUp" title="Mută mai sus printre frați (Alt+↑)">
-                        Sus
-                    </Button>
-                    <Button variant="outlined" startIcon={<ArrowDownwardIcon/>} disabled={!canDown} onClick={() => moveBy(1)}
-                            aria-keyshortcuts="Alt+ArrowDown" title="Mută mai jos printre frați (Alt+↓)">
-                        Jos
-                    </Button>
-                </Stack>
-                <Typography variant="body2" color="text.secondary">
-                    {selected ? <>Selectat: <strong>{selected.title}</strong> · dublu-click pentru redenumire</> : 'Selectează un nod pentru a-i adăuga un copil sau a-l redenumi.'}
-                        {' '}Trage un nod peste altul ca să-l muți în el, sau între rânduri ca să-l ordonezi;
-                        pe telefon sau de la tastatură: „Mută în…”, „Sus”/„Jos” (Alt+↑/↓).
-                </Typography>
-                </>
-            ) : (
+            {!isAdmin && (
                 <Alert severity="info">
                     Arborele se poate naviga liber. Modificarea lui e rezervată administratorilor —{' '}
                     <RouterLink to="/login" state={{from: '/arbore'}}>intră în cont</RouterLink>.
@@ -274,6 +252,44 @@ export default function TreePage() {
 
             <Box sx={{display: 'grid', gap: 2, gridTemplateColumns: {xs: '1fr', md: 'minmax(0, 5fr) minmax(0, 7fr)'}, alignItems: 'start'}}>
                 <Paper sx={{p: 2, overflowX: 'auto'}}>
+                    {isAdmin && <Box sx={{mb: 2, pb: 1.5, borderBottom: 1, borderColor: 'divider'}}>
+                        <Stack direction="row" spacing={0.5} useFlexGap sx={{alignItems: 'center', flexWrap: 'wrap'}}>
+                            <Button size="small" startIcon={<AddIcon/>} aria-label="Rădăcină nouă" onClick={() => openDialog('root')}>Rădăcină</Button>
+                            {selected && <>
+                                <Button size="small" startIcon={<SubdirectoryArrowRightIcon/>} aria-label="Adaugă copil" onClick={() => openDialog('child')}>Copil</Button>
+                                {!mobile && <Tooltip title="Redenumește nodul">
+                                    <IconButton aria-label="Redenumește" onClick={() => openDialog('rename')}><EditIcon fontSize="small"/></IconButton>
+                                </Tooltip>}
+                                <Tooltip title="Mai multe acțiuni">
+                                    <IconButton aria-label="Acțiuni pentru nodul selectat" aria-controls={actionsAnchor ? 'tree-actions' : undefined}
+                                        aria-haspopup="menu" aria-expanded={Boolean(actionsAnchor)} onClick={(event) => setActionsAnchor(event.currentTarget)}>
+                                        <MoreHorizIcon/>
+                                    </IconButton>
+                                </Tooltip>
+                            </>}
+                            <Box sx={{flex: 1}}/>
+                            <Tooltip title="Ajutor pentru arbore">
+                                <IconButton aria-label="Ajutor pentru arbore" onClick={() => setHelpOpen(true)}><HelpOutlineIcon fontSize="small"/></IconButton>
+                            </Tooltip>
+                        </Stack>
+                        <Typography variant="body2" color="text.secondary" sx={{mt: 0.5, overflowWrap: 'anywhere'}}>
+                            {selected ? <>Selectat: <strong>{selected.title}</strong></> : 'Selectează un nod pentru a-l modifica.'}
+                        </Typography>
+                        <Menu id="tree-actions" anchorEl={actionsAnchor} open={Boolean(actionsAnchor) && Boolean(selected)} onClose={() => setActionsAnchor(null)}>
+                            {mobile && <MenuItem onClick={() => runMenuAction(() => openDialog('rename'))}>
+                                <ListItemIcon><EditIcon fontSize="small"/></ListItemIcon><ListItemText>Redenumește</ListItemText>
+                            </MenuItem>}
+                            <MenuItem disabled={moving} onClick={() => runMenuAction(() => setMoveOpen(true))}>
+                                <ListItemIcon><DriveFileMoveIcon fontSize="small"/></ListItemIcon><ListItemText>Mută în…</ListItemText>
+                            </MenuItem>
+                            <MenuItem disabled={!canUp} aria-keyshortcuts="Alt+ArrowUp" onClick={() => runMenuAction(() => moveBy(-1))}>
+                                <ListItemIcon><ArrowUpwardIcon fontSize="small"/></ListItemIcon><ListItemText>Mai sus</ListItemText>
+                            </MenuItem>
+                            <MenuItem disabled={!canDown} aria-keyshortcuts="Alt+ArrowDown" onClick={() => runMenuAction(() => moveBy(1))}>
+                                <ListItemIcon><ArrowDownwardIcon fontSize="small"/></ListItemIcon><ListItemText>Mai jos</ListItemText>
+                            </MenuItem>
+                        </Menu>
+                    </Box>}
                     {loading && <Typography color="text.secondary">Se încarcă…</Typography>}
                     {!loading && treeData.length === 0 && (
                         <Typography color="text.secondary">Arborele e gol. Creează prima rădăcină.</Typography>
@@ -381,6 +397,18 @@ export default function TreePage() {
                         </DialogActions>
                     </form>
                 )}
+            </Dialog>
+
+            <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle>Lucrul cu arborele</DialogTitle>
+                <DialogContent><Stack spacing={2}>
+                    <Typography>Selectează o categorie pentru a vedea subiectele ei. Selectează un subiect pentru detalii.</Typography>
+                    <Typography>„Rădăcină” adaugă o categorie la nivelul principal, iar „Copil” adaugă o categorie sub nodul selectat.</Typography>
+                    <Typography>Pe calculator, folosește creionul sau dublu-click pentru redenumire. Poți trage un nod peste altul pentru a-l muta în el, sau între rânduri pentru a-l ordona.</Typography>
+                    <Typography>Din meniul „⋯” poți muta nodul în altă categorie sau îl poți ordona cu „Mai sus” și „Mai jos”. Pe telefon, aici găsești și „Redenumește”.</Typography>
+                    <Typography>De la tastatură, Alt+↑ și Alt+↓ mută nodul selectat printre frați când arborele are focus.</Typography>
+                </Stack></DialogContent>
+                <DialogActions><Button onClick={() => setHelpOpen(false)}>Închide</Button></DialogActions>
             </Dialog>
 
             <Snackbar open={!!message} autoHideDuration={4000} onClose={() => setMessage(null)}

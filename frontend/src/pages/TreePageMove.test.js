@@ -40,21 +40,31 @@ const renderAsAdmin = async () => {
     await screen.findByText('A,B,C');
 };
 const select = (key) => act(() => mockMain.onSelect([key]));
+const openActions = () => fireEvent.click(screen.getByRole('button', {name: 'Acțiuni pentru nodul selectat'}));
 
 test('Sus/Jos: pozitia API exclude nodul mutat; butoanele se dezactiveaza la capete', async () => {
     await renderAsAdmin();
 
     await select('A');
-    expect(screen.getByRole('button', {name: 'Sus'})).toBeDisabled();
+    openActions();
+    expect(screen.getByRole('menuitem', {name: 'Mai sus'})).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.keyDown(screen.getByRole('menu'), {key: 'Escape'});
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
     await select('C');
-    expect(screen.getByRole('button', {name: 'Jos'})).toBeDisabled();
+    openActions();
+    expect(screen.getByRole('menuitem', {name: 'Mai jos'})).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.keyDown(screen.getByRole('menu'), {key: 'Escape'});
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
 
     await select('B');
-    fireEvent.click(screen.getByRole('button', {name: 'Sus'}));
+    openActions();
+    fireEvent.click(screen.getByRole('menuitem', {name: 'Mai sus'}));
     await waitFor(() => expect(moves()).toEqual([{id: 'B', parent: null, position: 0}]));
-    await waitFor(() => expect(screen.getByRole('button', {name: 'Jos'})).toBeEnabled());
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', {name: 'Jos'}));
+    openActions();
+    await waitFor(() => expect(screen.getByRole('menuitem', {name: 'Mai jos'})).not.toHaveAttribute('aria-disabled', 'true'));
+    fireEvent.click(screen.getByRole('menuitem', {name: 'Mai jos'}));
     await waitFor(() => expect(moves().at(-1)).toEqual({id: 'B', parent: null, position: 2}));
 });
 
@@ -68,7 +78,8 @@ test('Alt+↓ pe arbore muta nodul selectat mai jos', async () => {
 test('Mută în…: nodul mutat lipseste din destinatii; alegerea parintelui trimite mutarea', async () => {
     await renderAsAdmin();
     await select('C');
-    fireEvent.click(screen.getByRole('button', {name: /Mută în/}));
+    openActions();
+    fireEvent.click(screen.getByRole('menuitem', {name: /Mută în/}));
 
     // destinatiile vin asincron de la server: asteptam continutul, nu doar elementul
     await waitFor(() => expect(screen.getByTestId('picker')).toHaveTextContent('A,B'));
@@ -85,7 +96,8 @@ test('Mută în…: nodul mutat lipseste din destinatii; alegerea parintelui tri
 test('Mută în… cu locul curent nu trimite nimic si spune de ce', async () => {
     await renderAsAdmin();
     await select('B');
-    fireEvent.click(screen.getByRole('button', {name: /Mută în/}));
+    openActions();
+    fireEvent.click(screen.getByRole('menuitem', {name: /Mută în/}));
     await screen.findByText(/După „A”/); // pozitia curenta a lui B, preselectata
     fireEvent.click(screen.getByRole('button', {name: 'Mută'}));
 
@@ -100,9 +112,32 @@ test('mutare respinsa: eroarea e afisata si structura se reincarca de pe server'
     const inainte = listari();
 
     await select('B');
-    fireEvent.click(screen.getByRole('button', {name: 'Jos'}));
+    openActions();
+    await waitFor(() => expect(screen.getByRole('menuitem', {name: 'Mai jos'})).not.toHaveAttribute('aria-disabled', 'true'));
+    fireEvent.click(screen.getByRole('menuitem', {name: 'Mai jos'}));
 
     expect(await screen.findByText('Nodul părinte nu există.')).toBeInTheDocument();
     await waitFor(() => expect(listari()).toBe(inainte + 1));
     expect(screen.getByTestId('tree')).toHaveTextContent('A,B,C');
+});
+
+test('pe mobil redenumirea este accesibilă din meniu, iar ajutorul se deschide prin apăsare', async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = jest.fn((query) => ({matches: query.includes('max-width:599'), media: query,
+        addEventListener: jest.fn(), removeEventListener: jest.fn(), addListener: jest.fn(), removeListener: jest.fn()}));
+    try {
+        await renderAsAdmin();
+        await select('B');
+        expect(screen.queryByRole('button', {name: 'Redenumește'})).not.toBeInTheDocument();
+        openActions();
+        fireEvent.click(screen.getByRole('menuitem', {name: 'Redenumește'}));
+        expect(await screen.findByRole('dialog', {name: 'Redenumește nodul'})).toBeInTheDocument();
+        expect(screen.getByLabelText('Nume')).toHaveValue('B');
+        fireEvent.click(screen.getByRole('button', {name: 'Renunță'}));
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        fireEvent.click(screen.getByRole('button', {name: 'Ajutor pentru arbore'}));
+        expect(await screen.findByRole('dialog', {name: 'Lucrul cu arborele'})).toBeInTheDocument();
+    } finally {
+        window.matchMedia = originalMatchMedia;
+    }
 });
