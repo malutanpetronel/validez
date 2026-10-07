@@ -70,6 +70,15 @@ class CivicSubject
     #[Groups(['subject:read'])]
     private string $description;
 
+    #[ORM\Column(type: Types::DECIMAL, precision: 12, scale: 2, nullable: true)]
+    private ?string $costEstimate = null;
+
+    #[ORM\Column(length: 3, nullable: true)]
+    private ?string $costCurrency = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $costEstimateScope = null;
+
     #[ORM\Column(length: 16, enumType: SubjectVisibility::class)]
     #[Groups(['subject:read'])]
     private SubjectVisibility $visibility = SubjectVisibility::PUBLISHED;
@@ -127,6 +136,28 @@ class CivicSubject
 
     #[Groups(['subject:read'])]
     public function getAuthorName(): string { return $this->author->getDisplayName(); }
+
+    #[Groups(['subject:read'])]
+    public function getCostEstimate(): ?string { return $this->type === SubjectType::PROPOSAL ? $this->costEstimate : null; }
+
+    #[Groups(['subject:read'])]
+    public function getCostCurrency(): ?string { return $this->type === SubjectType::PROPOSAL ? $this->costCurrency : null; }
+
+    #[Groups(['subject:read'])]
+    public function getCostEstimateScope(): ?string { return $this->type === SubjectType::PROPOSAL ? $this->costEstimateScope : null; }
+
+    /** Stored values are needed for partial updates, including restoration after a type change. */
+    public function storedEstimate(): array
+    {
+        return ['costEstimate' => $this->costEstimate, 'costCurrency' => $this->costCurrency, 'costEstimateScope' => $this->costEstimateScope];
+    }
+
+    public function setEstimate(?string $amount, ?string $currency, ?string $scope): void
+    {
+        $this->costEstimate = $amount;
+        $this->costCurrency = $currency;
+        $this->costEstimateScope = $scope;
+    }
 
     public function isAuthoredBy(?User $user): bool
     {

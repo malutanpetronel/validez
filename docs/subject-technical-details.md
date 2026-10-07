@@ -1,6 +1,6 @@
 # Note tehnice personale și estimare de cost pentru propuneri
 
-**Stare:** propunere pentru prima implementare, discutată și revizuită la 07.10.2026. Nu este încă implementată.
+**Stare:** implementat local la 07.10.2026 — Step 2.1. Istoricul modificărilor după primele voturi rămâne pentru Step 4.
 
 ## Scop și loc în plan
 
@@ -8,7 +8,7 @@ Autorul unei propuneri poate păstra detalii de implementare ca memorie de lucru
 
 Descrierea publică continuă să prezinte problema, soluția și beneficiile. Notele personale rămân separate de conținutul public.
 
-Prima implementare este propusă ca **Step 2.1**, după subiectele funcționale și înainte de Step 3, conform [planului](implementation-plan.md). Istoricul estimării după primele voturi se tratează la Step 4.
+Prima implementare este **Step 2.1**, după subiectele funcționale și înainte de Step 3, conform [planului](implementation-plan.md). Istoricul estimării după primele voturi se tratează la Step 4.
 
 ## Câmpuri și stocare
 
@@ -25,13 +25,13 @@ Secțiunile sunt opționale. Publicarea unei sume necesită o monedă validă ș
 
 Pentru Step 2.1, baza de date impune printr-o constrângere `CHECK` că cele trei câmpuri publice (`costEstimate`, `costCurrency`, `costEstimateScope`) sunt fie toate `NULL`, fie toate completate, cu explicația nevidă după eliminarea spațiilor. Moneda nu are un default independent în baza de date. Formularul propune `RON` numai când autorul introduce o sumă, inclusiv zero; eliminarea estimării golește toate cele trei câmpuri. API-ul validează aceeași regulă pe starea finală a resursei, inclusiv la actualizări parțiale.
 
-Suma se stochează ca `decimal` exact sau ca număr întreg de unități monetare minore, niciodată ca `float`. În API și în formular, valoarea decimală se transmite ca string, de exemplu `"940.00"`; calculele nu trebuie să piardă precizia prin conversie la virgulă mobilă. Precizia și limitele se stabilesc înainte de migrare. Monedele acceptate și precizia lor trebuie validate explicit.
+Suma se stochează ca `NUMERIC(12, 2)` exact, cu valori între `0.00` și `9999999999.99`, niciodată ca `float`. În API și în formular, valoarea decimală se transmite ca string, de exemplu `"940.00"`; calculele nu trebuie să piardă precizia prin conversie la virgulă mobilă. Monedele acceptate sunt RON, EUR, USD și GBP, toate cu două zecimale. API-ul validează suma fără conversie la float.
 
 ## Note private: resursă separată
 
-Se propune `SubjectPrivateNote` cu subiect, autor și text, cu maximum o notă per subiect și autor. Autorul se determină din autentificare și trebuie să fie autorul subiectului; identificatorul trimis de client nu conferă drepturi.
+Modelul folosește `SubjectPrivateNote` cu subiect, autor și text, cu maximum o notă per subiect și autor. Autorul se determină din autentificare și trebuie să fie autorul subiectului; identificatorul trimis de client nu conferă drepturi.
 
-Nota se citește și se modifică exclusiv printr-un endpoint dedicat, de exemplu `/api/civic_subjects/{id}/note`. Nu se adaugă textul notei sau o relație serializabilă către aceasta în răspunsurile publice ale `CivicSubject`. Listele și detaliile publice nu încarcă nota; endpointul propriu verifică autorizarea la fiecare operație, inclusiv pentru administratori.
+Nota individuală se citește și se modifică exclusiv prin endpointul dedicat `/api/civic_subjects/{id}/note`. Nu se adaugă textul notei sau o relație serializabilă către aceasta în răspunsurile publice ale `CivicSubject`. Listele și detaliile publice nu încarcă nota; endpointul propriu verifică autorizarea la fiecare operație, inclusiv pentru administratori.
 
 Această separare reduce riscul unei expuneri prin configurarea grupurilor de serializare. Nu constituie o garanție împotriva oricărei greșeli de implementare; izolarea trebuie verificată prin teste de acces și de răspuns public.
 
@@ -96,9 +96,20 @@ Notele și estimarea nu sunt tipuri de vot și nu modifică automat voturile, ag
 
 Susținerea propunerii nu implică selectarea autorului ca executant. Un eventual rol comercial al autorului poate fi declarat separat într-o etapă ulterioară.
 
-## Detalii rămase înainte de implementare
+## Contract API și limite implementate
 
-- Limitele textelor, inclusiv primul rând al explicației.
-- Precizia și limita sumei, monedele acceptate și reprezentarea exactă în baza de date.
-- Contractul operațiilor endpointului notei și răspunsurile pentru acces refuzat sau notă absentă.
+- `GET /api/civic_subjects/{id}/note`: răspunde cu `{"technicalNotes": "..."}`; o notă absentă este reprezentată prin text gol, fără crearea unui rând în baza de date.
+- `PUT /api/civic_subjects/{id}/note`: înlocuiește nota cu textul trimis în `technicalNotes`. Textul este limitat la 10.000 de caractere; textul gol după trim elimină nota.
+- `DELETE /api/civic_subjects/{id}/note`: elimină nota și răspunde cu text gol.
+- Accesul neautentificat este refuzat cu 401; alt utilizator, administratorul care nu este autor, un subiect inexistent sau de tip neeligibil primesc 404. Răspunsurile notei sunt `private, no-store`.
+- `GET /api/me/subject-notes`: exportă numai notele utilizatorului autentificat, cu identificatorul, titlul și tipul subiectului, inclusiv notele păstrate pentru tipuri neeligibile.
+- `DELETE /api/me/subject-notes`: șterge numai notele utilizatorului autentificat, inclusiv cele păstrate. Aceste operații sunt disponibile prin API; interfața generală de export/ștergere a contului nu face parte din Step 2.1.
+- Nota se șterge prin cascade la ștergerea subiectului sau a autorului. Nu introduce dreptul de a șterge un subiect sau un cont.
+- `costEstimateScope`: maximum 2.000 de caractere; primul rând după trim, maximum 200. Formularul permite virgula zecimală și trimite suma ca string cu punct.
+- Crearea/editarea publică și salvarea notei sunt cereri separate. Dacă salvarea notei eșuează după salvarea subiectului, formularul explică situația și păstrează identificatorul pentru reîncercare fără duplicare.
+
+## Etape ulterioare
+
 - La Step 4: istoricul modificărilor estimării publice după primele voturi.
+- Integrarea exportului și ștergerii notelor în viitorul flux general pentru datele contului și documentarea retenției backup-urilor.
+- Buget aprobat și sursă pentru `PROJECT`, separat de estimarea autorului.

@@ -25,6 +25,11 @@ final class CivicSubjectCreateInput
     #[Assert\Length(max: 10000)]
     public string $description = '';
 
+    // Uninitialized means omitted; explicit null clears a field in merge-patch.
+    public ?string $costEstimate;
+    public ?string $costCurrency;
+    public ?string $costEstimateScope;
+
     /** @return list<string> */
     public static function types(): array
     {

@@ -11,6 +11,7 @@ use App\Entity\CivicSubject;
 use App\Entity\User;
 use App\Repository\TreeNodeRepository;
 use App\Subject\SubjectType;
+use App\Subject\CostEstimate;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -47,6 +48,7 @@ final class CivicSubjectCreateProcessor implements ProcessorInterface
         $node = $this->nodes->find(Ulid::fromString($data->node)) ?? throw new UnprocessableEntityHttpException('Nodul nu există.');
 
         $subject = new CivicSubject($node, $author, $type, $data->title, $data->description);
+        CostEstimate::apply($subject, get_object_vars($data), $type);
         $this->em->persist($subject);
         $this->em->flush();
 

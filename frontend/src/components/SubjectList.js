@@ -10,6 +10,7 @@ import {useAuth} from '../auth/AuthContext';
 import {fetchSubjects, PER_PAGE} from '../api/subjects';
 import {formatDate, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS} from '../subjects/labels';
 import SubjectForm from './SubjectForm';
+import SubjectEstimate from './SubjectEstimate';
 
 /**
  * Subiectele nodului selectat și ale întregului subarbore (decizie Step 2), cu nodul fiecăruia afișat;
@@ -102,6 +103,7 @@ export default function SubjectList({node, scope = '', navigationState}) {
                                     <Chip size="small" label={STAGE_LABELS[s.stage] ?? s.stage} color={STAGE_COLORS[s.stage] ?? 'default'} sx={{fontSize: '0.75rem'}}/>
                                     {s.visibility === 'HIDDEN' && <Chip size="small" label="Ascuns" color="error" variant="outlined"/>}
                                 </Stack>
+                                <SubjectEstimate subject={s} compact/>
                                 <Typography component="span" variant="caption" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>
                                     {scope === 'direct' ? '' : `în ${s.nodeName} · `}{s.authorName} · {formatDate(s.createdAt)}
                                 </Typography>

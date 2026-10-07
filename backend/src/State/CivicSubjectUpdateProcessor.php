@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Repository\CivicSubjectRepository;
 use App\Subject\SubjectStage;
 use App\Subject\SubjectType;
+use App\Subject\CostEstimate;
 use App\Subject\SubjectVisibility;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -54,6 +55,7 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
             throw new AccessDeniedHttpException('Doar administratorii pot folosi acest tip.');
         }
 
+        CostEstimate::apply($subject, get_object_vars($data), $type ?? $subject->getType());
         $subject->edit($data->title, $data->description, $type);
         $subject->moderate(
             $data->stage === null ? null : SubjectStage::from($data->stage),

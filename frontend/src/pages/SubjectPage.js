@@ -7,6 +7,8 @@ import {useAuth} from '../auth/AuthContext';
 import {fetchSubject} from '../api/subjects';
 import {canEditSubject, formatDate, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS} from '../subjects/labels';
 import SubjectForm from '../components/SubjectForm';
+import SubjectEstimate from '../components/SubjectEstimate';
+import SubjectPrivateNote from '../components/SubjectPrivateNote';
 
 export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
     const params = useParams();
@@ -16,6 +18,7 @@ export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
     const [subject, setSubject] = useState(null);
     const [error, setError] = useState(null);
     const [editing, setEditing] = useState(false);
+    const [noteVersion, setNoteVersion] = useState(0);
 
     useEffect(() => {
         setSubject(null);
@@ -46,6 +49,8 @@ export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
                             {subject.updatedAt !== subject.createdAt && <> · modificat <Box component="span" sx={{color: 'primary.main'}}>{formatDate(subject.updatedAt)}</Box></>}
                         </Typography>
                         <Typography sx={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{subject.description}</Typography>
+                        <SubjectEstimate subject={subject}/>
+                        {subject.type === 'PROPOSAL' && user?.id === subject.authorId && <SubjectPrivateNote key={`${subject.id}:${noteVersion}`} subjectId={subject.id}/>}
                         {canEditSubject(user, subject) && (
                             <div><Button variant="outlined" startIcon={<EditIcon/>} onClick={() => setEditing(true)}>Editează</Button></div>
                         )}
@@ -53,7 +58,7 @@ export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
                 </Paper>
             )}
             {editing && subject && (
-                <SubjectForm subject={subject} onClose={() => setEditing(false)} onSaved={(s) => { setSubject(s); setEditing(false); onUpdated?.(s); }}/>
+                <SubjectForm subject={subject} onClose={() => setEditing(false)} onSaved={(s) => { setNoteVersion((value) => value + 1); setSubject(s); setEditing(false); onUpdated?.(s); }}/>
             )}
         </Stack>
     );
