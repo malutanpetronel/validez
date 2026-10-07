@@ -37,10 +37,10 @@ export async function fetchSubjects({node = null, type = '', stage = '', page = 
 
 export const fetchSubject = (id) => request(`${URL}/${encodeURIComponent(id)}`);
 
-export const createSubject = ({node, type, title, description}) => request(URL, {
+export const createSubject = ({node, type, title, description, ...estimate}) => request(URL, {
     method: 'POST',
     headers: {'Content-Type': LD},
-    body: JSON.stringify({node, type, title, description}),
+    body: JSON.stringify({node, type, title, description, ...estimate}),
 });
 
 /** Merge-patch: doar câmpurile trimise se schimbă. */
@@ -51,3 +51,9 @@ export const updateSubject = (id, changes) => request(`${URL}/${encodeURICompone
 });
 
 export const PER_PAGE = 20;
+
+// Separate private resource; never loaded with public lists or subject details.
+export const fetchSubjectNote = (id) => request(`${URL}/${encodeURIComponent(id)}/note`);
+export const saveSubjectNote = (id, technicalNotes) => request(`${URL}/${encodeURIComponent(id)}/note`, {
+    method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({technicalNotes}),
+});

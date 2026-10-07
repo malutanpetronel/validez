@@ -28,6 +28,11 @@ final class CivicSubjectUpdateInput
     #[Assert\Choice(callback: [self::class, 'visibilities'], message: 'Vizibilitate necunoscută.')]
     public ?string $visibility = null;
 
+    // Uninitialized means omitted; explicit null clears a field in merge-patch.
+    public ?string $costEstimate;
+    public ?string $costCurrency;
+    public ?string $costEstimateScope;
+
     /** @return list<string> */
     public static function stages(): array
     {
