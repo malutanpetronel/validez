@@ -44,6 +44,6 @@ test('administratorul vede actiunile; cele pe nod sunt dezactivate pana la selec
     renderPage();
     await screen.findByText('Drumuri');
     expect(screen.getByRole('button', {name: /Rădăcină nouă/})).toBeEnabled();
-    expect(screen.getByRole('button', {name: /Adaugă copil/})).toBeDisabled();
+    expect(screen.queryByRole('button', {name: /Adaugă copil/})).not.toBeInTheDocument();
     expect(global.fetch.mock.calls[0][1].headers.Authorization).toMatch(/^Bearer /);
 });
