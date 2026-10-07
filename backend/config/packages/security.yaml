@@ -19,6 +19,7 @@ security:
             pattern: ^/api
             stateless: true
             provider: app_users
+            user_checker: App\Auth\UserChecker
             entry_point: jwt
             # POST /api/auth {email, password} -> {token, refresh_token}
             json_login:

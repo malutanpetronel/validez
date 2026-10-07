@@ -53,6 +53,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    // Existing/CLI-created accounts remain active; public registration explicitly disables them.
+    #[ORM\Column(options: ['default' => true])]
+    private bool $emailVerified = true;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $confirmationCodeHash = null;
+
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $codeRequestedAt = null;
+
+    #[ORM\Column(options: ['default' => 0])]
+    private int $codeAttempts = 0;
+
     /** @param list<string> $roles */
     public function __construct(string $email, string $displayName, array $roles = [])
     {
@@ -112,6 +125,34 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function isEmailVerified(): bool { return $this->emailVerified; }
+    public function requireEmailConfirmation(): void { $this->emailVerified = false; }
+    public function setDisplayName(string $displayName): void { $this->displayName = trim($displayName); }
+    public function getConfirmationCodeHash(): ?string { return $this->confirmationCodeHash; }
+    public function getCodeRequestedAt(): ?\DateTimeImmutable { return $this->codeRequestedAt; }
+    public function getCodeAttempts(): int { return $this->codeAttempts; }
+
+    public function issueConfirmationCode(string $hash): void
+    {
+        $this->confirmationCodeHash = $hash;
+        $this->codeRequestedAt = new \DateTimeImmutable();
+        $this->codeAttempts = 0;
+    }
+
+    public function failConfirmation(): void
+    {
+        ++$this->codeAttempts;
+        if ($this->codeAttempts >= 5) $this->confirmationCodeHash = null;
+    }
+
+    public function confirmEmail(): void
+    {
+        $this->emailVerified = true;
+        $this->confirmationCodeHash = null;
+        $this->codeRequestedAt = null;
+        $this->codeAttempts = 0;
     }
 
     /** Nu tinem date sensibile in clar pe obiect (doar hash-ul parolei). */

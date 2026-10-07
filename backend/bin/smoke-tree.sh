@@ -15,7 +15,9 @@ cleanup(){
 trap cleanup EXIT; cleanup
 HASH=$(dc exec -T php bin/console security:hash-password "$PW" 'App\Entity\User' -n | grep -oE '\$2y\$[^ ]+' | head -1)
 sql "INSERT INTO app_user (id,email,display_name,roles,password,created_at) VALUES (gen_random_uuid(),'$EMAIL','Smoke','[\"ROLE_ADMIN\"]','$HASH',now())" >/dev/null
-T=$(curl -s -X POST "$API/auth" -H 'Content-Type: application/json' -d "{\"email\":\"$EMAIL\",\"password\":\"$PW\"}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+CHALLENGE=$(curl -fsS "$API/captcha/challenge")
+PROOF=$(printf '%s' "$CHALLENGE" | dc exec -T php php bin/solve-altcha.php)
+T=$(curl -s -X POST "$API/auth" -H 'Content-Type: application/json' -d "{\"email\":\"$EMAIL\",\"password\":\"$PW\",\"altcha\":\"$PROOF\"}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
 H=(-H 'Accept: application/ld+json' -H "Authorization: Bearer $T")
 post(){ curl -s -X POST "$API/tree_nodes" "${H[@]}" -H 'Content-Type: application/ld+json' -d "$1" | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])'; }
 mv(){ curl -s -o /dev/null -w '%{http_code}' -X POST "$API/tree_nodes/$1/move" "${H[@]}" -H 'Content-Type: application/ld+json' -d "$2"; }

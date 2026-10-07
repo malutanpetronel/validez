@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Api;
 
 use App\Entity\User;
+use App\Tests\Support\AltchaPayload;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -17,6 +18,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class AuthAndPermissionsTest extends WebTestCase
 {
+    use AltchaPayload;
+
     private const PAROLA = 'parola-de-test-123';
 
     private KernelBrowser $client;
@@ -28,6 +31,7 @@ final class AuthAndPermissionsTest extends WebTestCase
     {
         $this->client = static::createClient();
         $c = static::getContainer();
+        $c->get('limiter.captcha_challenge')->create('127.0.0.1')->reset();
         $this->db = $c->get(Connection::class);
         foreach (['civic_subject', 'tree_node', 'refresh_token', 'app_user'] as $t) {
             $this->db->executeStatement("DELETE FROM $t");
@@ -47,6 +51,9 @@ final class AuthAndPermissionsTest extends WebTestCase
     /** @return array<string, mixed> */
     private function json(string $method, string $uri, ?array $body = null, ?string $token = null, string $type = 'application/ld+json'): array
     {
+        if ($method === 'POST' && $uri === '/api/auth') {
+            $body['altcha'] = $this->solveAltcha($this->client);
+        }
         $server = ['CONTENT_TYPE' => $type, 'HTTP_ACCEPT' => 'application/ld+json'];
         if ($token !== null) {
             $server['HTTP_AUTHORIZATION'] = 'Bearer '.$token;
