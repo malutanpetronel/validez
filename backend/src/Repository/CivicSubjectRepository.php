@@ -26,13 +26,13 @@ class CivicSubjectRepository extends ServiceEntityRepository
 
     /**
      * Subiectele vizibile pentru `viewer`, opțional sub un nod (nodul + tot subarborele, ltree <@),
-     * cele mai noi primele. Vizibilitate: adminul vede tot; ceilalți PUBLISHED + propriile HIDDEN.
+     * cele mai noi primele. Vizibilitate: adminul vede tot; ceilalți PUBLISHED + propriile PENDING/HIDDEN.
      *
      * @return array{0: list<CivicSubject>, 1: int} [pagina, total]
      */
-    public function findVisiblePage(?TreeNode $node, ?SubjectType $type, ?SubjectStage $stage, ?User $viewer, bool $isAdmin, int $page, int $perPage, bool $direct = false): array
+    public function findVisiblePage(?TreeNode $node, ?SubjectType $type, ?SubjectStage $stage, ?User $viewer, bool $isAdmin, int $page, int $perPage, ?SubjectVisibility $visibility = null, bool $direct = false): array
     {
-        $base = function () use ($node, $type, $stage, $viewer, $isAdmin, $direct): QueryBuilder {
+        $base = function () use ($node, $type, $stage, $viewer, $isAdmin, $visibility, $direct): QueryBuilder {
             $qb = $this->createQueryBuilder('s');
             if ($node !== null && $direct) {
                 $qb->andWhere('s.node = :node')->setParameter('node', $node->getId()->toRfc4122());
@@ -50,6 +50,7 @@ class CivicSubjectRepository extends ServiceEntityRepository
             if ($stage !== null) {
                 $qb->andWhere('s.stage = :stage')->setParameter('stage', $stage->value);
             }
+            if ($visibility !== null) $qb->andWhere('s.visibility = :visibility')->setParameter('visibility', $visibility->value);
             if (!$isAdmin) {
                 if ($viewer === null) {
                     $qb->andWhere('s.visibility = :pub');

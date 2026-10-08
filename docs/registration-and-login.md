@@ -64,3 +64,9 @@ Widgetul este inclus din pachetul npm, cu limba română și culorile temei Vali
 `backend/bin/smoke-tree.sh` rezolvă acum un challenge înainte de login, prin `backend/bin/solve-altcha.php`. Orice client extern care folosește direct `/api/auth` trebuie de asemenea să furnizeze o soluție ALTCHA validă.
 
 Recuperarea parolei și autentificarea prin furnizori externi nu fac parte din acest pas.
+
+## După confirmarea contului: contribuții și Help
+
+Un cont nou confirmat are `ROLE_USER` și contribuie conform [ADR-0006](adr/0006-initial-contribution-moderation.md). Primele trei subiecte distincte necesită aprobare administrativă; autorul le vede cu starea „În așteptarea aprobării”. După trei aprobări poate publica direct, dacă administratorul nu a retras acest drept. Utilizatorul poate propune categorii noi, dar numai administratorii creează noduri și rădăcini în arbore.
+
+Meniul utilizatorului obișnuit include `Help`, cu explicația acestor trei reguli, și `Propune o categorie`. Bara afișează `Logged in`, iar numele utilizatorului apare doar după deschiderea meniului.

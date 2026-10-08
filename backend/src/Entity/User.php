@@ -66,6 +66,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(options: ['default' => 0])]
     private int $codeAttempts = 0;
 
+    #[ORM\Column(options: ['default' => false])]
+    private bool $directPublishingRevoked = false;
+
+    public function isDirectPublishingRevoked(): bool { return $this->directPublishingRevoked; }
+    public function setDirectPublishingRevoked(bool $revoked): void { $this->directPublishingRevoked = $revoked; }
+
     /** @param list<string> $roles */
     public function __construct(string $email, string $displayName, array $roles = [])
     {
