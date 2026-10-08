@@ -72,6 +72,43 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function isDirectPublishingRevoked(): bool { return $this->directPublishingRevoked; }
     public function setDirectPublishingRevoked(bool $revoked): void { $this->directPublishingRevoked = $revoked; }
 
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $passwordResetCodeHash = null;
+
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $passwordResetRequestedAt = null;
+
+    #[ORM\Column(options: ['default' => 0])]
+    private int $passwordResetAttempts = 0;
+
+    #[ORM\Column(options: ['default' => 0])]
+    private int $credentialVersion = 0;
+
+    public function getCredentialVersion(): int { return $this->credentialVersion; }
+    public function getPasswordResetCodeHash(): ?string { return $this->passwordResetCodeHash; }
+    public function getPasswordResetRequestedAt(): ?\DateTimeImmutable { return $this->passwordResetRequestedAt; }
+
+    public function issuePasswordResetCode(string $hash): void
+    {
+        $this->passwordResetCodeHash = $hash;
+        $this->passwordResetRequestedAt = new \DateTimeImmutable();
+        $this->passwordResetAttempts = 0;
+    }
+
+    public function failPasswordReset(): void
+    {
+        if (++$this->passwordResetAttempts >= 5) $this->passwordResetCodeHash = null;
+    }
+
+    public function resetPassword(string $hash): void
+    {
+        $this->password = $hash;
+        ++$this->credentialVersion;
+        $this->passwordResetCodeHash = null;
+        $this->passwordResetRequestedAt = null;
+        $this->passwordResetAttempts = 0;
+    }
+
     /** @param list<string> $roles */
     public function __construct(string $email, string $displayName, array $roles = [])
     {

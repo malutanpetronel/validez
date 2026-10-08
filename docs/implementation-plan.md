@@ -63,3 +63,8 @@ Build-ul mobil este verificat încă din Step 1 și la integrarea funcționalit�
 - [x] Coadă `#/moderare`, etichetă „În așteptarea aprobării”, aprobare/respingere, controlul dreptului autorului în detaliul subiectului. Modificarea unui subiect public de către un autor aflat sub moderare îl retrimite la aprobare.
 - [x] Propuneri de categorii/rădăcini `#/categorii-propuse`, listare proprie sau administrativă, aprobare cu creare/reutilizare nod sub `TreeLock`, respingere și verificare de duplicate. Scrierea directă a arborelui rămâne doar pentru administratori.
 - [x] `Help` în meniul utilizatorilor obișnuiți explică cele trei reguli; disponibil și imediat după înregistrare. Bara afișează `Logged in`; numele apare doar în meniul deschis. Arborele este pagina principală `#/`; vechea verificare Home este `#/check-api`, numai pentru administratori.
+
+## Recuperarea parolei
+
+- [x] **08.10.2026:** `#/am-uitat-parola`, legătură din login, solicitare/retrimitere cod prin email cu ALTCHA, cod valabil 15 minute, formular pentru parola nouă și confirmarea ei; după succes, login explicit cu emailul păstrat.
+- [x] API `POST /api/password-reset/request` și `/confirm`, răspuns generic pentru conturi inexistente/neconfirmate, coduri HMAC separate de înregistrare, limitare per IP/email și invalidare după cinci coduri greșite. Resetarea consumă codul într-o tranzacție, revocă JWT-urile vechi prin `credentialVersion` și șterge refresh token-urile. Detalii în [înregistrare și autentificare](registration-and-login.md#recuperarea-parolei).

@@ -1,15 +1,18 @@
 import {useEffect, useState} from 'react';
 import {Navigate} from 'react-router-dom';
-import {Alert, Button, Chip, MenuItem, Pagination, Paper, Stack, TextField, Typography} from '@mui/material';
+import {Alert, Box, Button, Chip, List, MenuItem, Pagination, Paper, Skeleton, Stack, TextField, Typography} from '@mui/material';
+import {formatDate} from '../subjects/labels';
 import {useAuth} from '../auth/AuthContext';
 import {fetchChildren} from '../api/tree';
 import {fetchCategorySuggestions, reviewCategory, suggestCategory} from '../api/contributions';
 
+const STATUS_COLOR = {PENDING: 'warning', APPROVED: 'success', REJECTED: 'error'};
 const STATUS = {PENDING: 'În așteptarea aprobării', APPROVED: 'Aprobată', REJECTED: 'Respinsă'};
 
 export default function CategorySuggestionsPage() {
     const {user, isAdmin} = useAuth();
     const [data, setData] = useState({items: [], total: 0});
+    const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [version, setVersion] = useState(0);
     const [path, setPath] = useState([]);
@@ -25,19 +28,21 @@ export default function CategorySuggestionsPage() {
     useEffect(() => {
         if (!user) return;
         let active = true;
-        setError(null);
-        fetchCategorySuggestions(page).then((value) => { if (active) setData(value); }).catch((err) => { if (active) setError(err.message); });
+        setError(null); setLoading(true);
+        fetchCategorySuggestions(page).then((value) => { if (active) setData(value); })
+            .catch((err) => { if (active) setError(err.message); })
+            .finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
     }, [page, version, user]);
     useEffect(() => {
-        if (!user) return;
+        if (!user || isAdmin) return;
         let active = true;
         setChildren([]); setParentLoading(true); setParentError(null);
         fetchChildren(parent?.id ?? null).then((value) => { if (active) setChildren(value); })
             .catch((err) => { if (active) setParentError(err.message); })
             .finally(() => { if (active) setParentLoading(false); });
         return () => { active = false; };
-    }, [parent?.id, user]);
+    }, [parent?.id, user, isAdmin]);
     if (!user) return <Navigate to="/login" replace/>;
     const act = async (action) => {
         setBusy(true); setError(null); setSuccess(null);
@@ -53,8 +58,52 @@ export default function CategorySuggestionsPage() {
         <Typography variant="h4" component="h1">Propuneri de categorii</Typography>
         {error && <Alert severity="error">{error}</Alert>}
         {success && <Alert severity="success">{success}</Alert>}
-        <Paper sx={{p: 2}}><Stack spacing={2}>
-            <Typography variant="h6">Propune o categorie nouă</Typography>
+        <Paper component="section" aria-labelledby="suggestions-heading" sx={{p: {xs: 2, sm: 2.5}, minWidth: 0}}>
+            <Stack spacing={1.5} sx={{mb: 2, pb: 2, borderBottom: 1, borderColor: 'divider'}}>
+                <Box sx={{minWidth: 0}}>
+                    <Typography variant="overline" color="text.secondary">Categorii propuse</Typography>
+                    <Typography id="suggestions-heading" variant="h6" component="h2" sx={{fontWeight: 700, lineHeight: 1.35, overflowWrap: 'anywhere'}}>
+                        {isAdmin ? 'Propunerile utilizatorilor' : 'Propunerile tale'}
+                    </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" aria-live="polite">
+                    {loading ? 'Se încarcă…' : `${data.total} ${data.total === 1 ? 'propunere' : 'propuneri'}`}
+                </Typography>
+            </Stack>
+            {!loading && !error && !data.items.length && <Typography color="text.secondary" sx={{py: 2}}>Nu există propuneri.</Typography>}
+            {loading && !data.items.length && <Stack spacing={1} aria-label="Se încarcă propunerile">
+                {[0, 1, 2].map((key) => <Skeleton key={key} variant="rounded" height={112}/>)}
+            </Stack>}
+            <List disablePadding aria-label="Lista propunerilor" aria-busy={loading}
+                sx={{display: 'grid', gap: 1.25, opacity: loading ? 0.6 : 1}}>
+                {data.items.map((item) => <Box component="li" key={item.id} sx={{listStyle: 'none', minWidth: 0}}>
+                    <Box component="article" sx={{p: {xs: 1.5, sm: 2}, border: 1, borderColor: 'divider', borderRadius: 2}}>
+                        <Stack spacing={1} sx={{minWidth: 0}}>
+                            <Typography variant="subtitle1" component="h3" sx={{fontWeight: 600, lineHeight: 1.4, overflowWrap: 'anywhere'}}>{item.name}</Typography>
+                            <Stack direction="row" spacing={0.75} useFlexGap sx={{flexWrap: 'wrap', alignItems: 'center'}}>
+                                <Chip size="small" label="Categorie" variant="outlined" sx={{fontSize: '0.75rem'}}/>
+                                <Chip size="small" color={STATUS_COLOR[item.status] ?? 'default'} label={STATUS[item.status] ?? item.status} sx={{fontSize: '0.75rem'}}/>
+                            </Stack>
+                            <Typography variant="body2" sx={{whiteSpace: 'pre-wrap', overflowWrap: 'anywhere'}}>{item.reason}</Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>
+                                În {item.parentName ?? 'Rădăcina arborelui'}
+                                {isAdmin ? ` · ${item.authorName}` : ''}
+                                {item.created_at ? ` · ${formatDate(item.created_at)}` : ''}
+                            </Typography>
+                            {isAdmin && item.status === 'PENDING' && <Stack direction={{xs: 'column', sm: 'row'}} spacing={1} sx={{pt: 0.5}}>
+                                <Button variant="outlined" size="small" sx={{minHeight: 40}} disabled={busy || loading} onClick={() => act(() => reviewCategory(item.id, 'APPROVED'))}>Aprobă și creează categoria</Button>
+                                <Button variant="outlined" size="small" sx={{minHeight: 40}} disabled={busy || loading} color="error" onClick={() => act(() => reviewCategory(item.id, 'REJECTED'))}>Respinge</Button>
+                            </Stack>}
+                        </Stack>
+                    </Box>
+                </Box>)}
+            </List>
+            {data.total > 20 && <Stack sx={{alignItems: 'center', mt: 1.5}}>
+                <Pagination size="small" siblingCount={0} page={page} count={Math.ceil(data.total / 20)} onChange={(_, value) => setPage(value)}/>
+            </Stack>}
+        </Paper>
+        {!isAdmin && <Paper sx={{p: {xs: 2, sm: 2.5}}}><Stack spacing={2}>
+            <Typography variant="h6" component="h2">Propune o categorie nouă</Typography>
             <Typography>Verifică mai întâi arborele. Administratorul aprobă și creează categoria sau folosește una existentă.</Typography>
             <Typography>Părinte: {path.length ? path.map((node) => node.name).join(' › ') : 'Fără părinte — rădăcină nouă'}</Typography>
             {path.length > 0 && <div><Button disabled={busy} onClick={() => setPath((value) => value.slice(0, -1))}>Un nivel mai sus</Button></div>}
@@ -69,19 +118,6 @@ export default function CategorySuggestionsPage() {
             <TextField label="Numele categoriei" value={name} onChange={(event) => setName(event.target.value)} inputProps={{maxLength: 120}} disabled={busy}/>
             <TextField label="De ce este necesară" multiline minRows={3} value={reason} onChange={(event) => setReason(event.target.value)} inputProps={{maxLength: 2000}} disabled={busy}/>
             <div><Button variant="contained" disabled={busy || parentLoading || Boolean(parentError) || name.trim().length < 3 || !reason.trim()} onClick={submit}>Trimite propunerea</Button></div>
-        </Stack></Paper>
-        <Typography variant="h6">{isAdmin ? 'Propunerile utilizatorilor' : 'Propunerile tale'}</Typography>
-        {!data.items.length && <Typography>Nu există propuneri.</Typography>}
-        {data.items.map((item) => <Paper key={item.id} sx={{p: 2}}><Stack spacing={1}>
-            <Typography variant="h6">{item.name}</Typography>
-            <Chip sx={{alignSelf: 'flex-start'}} label={STATUS[item.status] ?? item.status}/>
-            <Typography variant="body2">În: {item.parentName ?? 'Rădăcina arborelui'}{isAdmin ? ` · ${item.authorName}` : ''}</Typography>
-            <Typography sx={{whiteSpace: 'pre-wrap', overflowWrap: 'anywhere'}}>{item.reason}</Typography>
-            {isAdmin && item.status === 'PENDING' && <Stack direction="row" spacing={1}>
-                <Button disabled={busy} onClick={() => act(() => reviewCategory(item.id, 'APPROVED'))}>Aprobă și creează categoria</Button>
-                <Button disabled={busy} color="error" onClick={() => act(() => reviewCategory(item.id, 'REJECTED'))}>Respinge</Button>
-            </Stack>}
-        </Stack></Paper>)}
-        {data.total > 20 && <Pagination page={page} count={Math.ceil(data.total / 20)} onChange={(_, value) => setPage(value)}/>}
+        </Stack></Paper>}
     </Stack>;
 }

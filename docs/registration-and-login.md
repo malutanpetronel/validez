@@ -70,3 +70,28 @@ Recuperarea parolei și autentificarea prin furnizori externi nu fac parte din a
 Un cont nou confirmat are `ROLE_USER` și contribuie conform [ADR-0006](adr/0006-initial-contribution-moderation.md). Primele trei subiecte distincte necesită aprobare administrativă; autorul le vede cu starea „În așteptarea aprobării”. După trei aprobări poate publica direct, dacă administratorul nu a retras acest drept. Utilizatorul poate propune categorii noi, dar numai administratorii creează noduri și rădăcini în arbore.
 
 Meniul utilizatorului obișnuit include `Help`, cu explicația acestor trei reguli, și `Propune o categorie`. Bara afișează `Logged in`, iar numele utilizatorului apare doar după deschiderea meniului.
+
+## Recuperarea parolei
+
+**Stare:** implementată local la 08.10.2026.
+
+Din pagina `#/login`, „Am uitat parola” deschide `#/am-uitat-parola` și păstrează emailul completat și destinația de după autentificare. Fluxul funcționează și în WebView, fără linkuri externe/deep links:
+
+1. Utilizatorul completează emailul și verificarea ALTCHA, apoi solicită codul.
+2. Mesajul este întotdeauna „Dacă există un cont confirmat pentru această adresă, vei primi un cod pe email”, fără a dezvălui existența contului. Doar conturile cu email confirmat primesc emailul; resetarea nu creează și nu confirmă conturi.
+3. Introduce codul de șase cifre, noua parolă și repetarea acesteia. Codul este valabil 15 minute. Parola respectă aceeași regulă ca la înregistrare: minimum 10 caractere și maximum 72 de octeți UTF-8.
+4. Poate solicita un cod nou după 60 de secunde, cu o verificare ALTCHA nouă, sau poate corecta adresa. Retrimiterea invalidează codul precedent.
+5. După succes, revine explicit la login, cu emailul păstrat. Nu primește automat o sesiune nouă.
+
+| Endpoint | Rol |
+|---|---|
+| `POST /api/password-reset/request` | Primește `email`, `altcha`; returnează generic `status: code_sent`, `retryAfter: 60`. Solicitarea inițială și retrimiterea folosesc același endpoint. |
+| `POST /api/password-reset/confirm` | Primește `email`, `code`, `password`; consumă codul și schimbă parola; returnează `status: password_reset`, fără JWT sau refresh token. |
+
+Codurile de resetare au câmpuri separate de confirmarea înregistrării și sunt stocate numai ca hash HMAC, legat de utilizator, scopul „password-reset” și `APP_SECRET`. După cinci coduri greșite, codul curent este invalidat. Solicitările sunt limitate la cinci pe oră per IP și una pe minut per email, inclusiv pentru adrese inexistente; confirmarea are bugete separate de 15 încercări pe oră per IP și per email. `Retry-After` este transmis interfeței. Răspunsurile reușite sunt `private, no-store`.
+
+Operațiile se execută într-o tranzacție sub același lock per email ca înregistrarea și cu blocarea rândului utilizatorului. Parola rămâne neschimbată până la confirmarea unui cod valid. Codul este consumat o singură dată; tentativa eșuată nu modifică parola și nu invalidează sesiunile.
+
+Resetarea reușită incrementează `User.credentialVersion` și șterge refresh token-urile contului. JWT-urile poartă această versiune, verificată din baza de date la decodare, astfel încât token-urile de acces anterioare resetării nu mai sunt acceptate. JWT-urile emise înainte de migrare sunt tratate ca versiunea zero, rămânând valide până la prima resetare. Hash-ul parolei nu este inclus în JWT. Frontend-ul șterge și sesiunea locală după succes.
+
+Dacă trimiterea emailului eșuează, tranzacția este anulată și se înregistrează o eroare în log; răspunsul rămâne generic pentru a nu dezvălui existența contului prin eroarea SMTP. Utilizatorul poate reîncerca după cooldown. Se reutilizează configurația `MAILER_DSN` și `MAILER_FROM_ADDRESS` existentă.

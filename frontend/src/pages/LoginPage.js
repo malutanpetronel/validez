@@ -8,7 +8,7 @@ export default function LoginPage() {
     const {user, login, logout} = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState(location.state?.email || '');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
     const [busy, setBusy] = useState(false);
@@ -64,6 +64,7 @@ export default function LoginPage() {
                     <Button type="submit" variant="contained" disabled={busy || !email.trim() || !password || !altcha}>
                         {busy ? 'Se verifică…' : 'Intră'}
                     </Button>
+                    <Button component={RouterLink} to="/am-uitat-parola" state={{email: email.trim(), from: after}}>Am uitat parola</Button>
                     <Button component={RouterLink} to="/inregistrare" state={{from: after}}>Creează un cont</Button>
                 </Stack>
             </Box>

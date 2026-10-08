@@ -34,6 +34,11 @@ services:
             $secret: '%env(APP_SECRET)%'
             $sender: '%env(default:registration_sender_default:MAILER_FROM_ADDRESS)%'
 
+    App\Auth\PasswordResetService:
+        arguments:
+            $secret: '%env(APP_SECRET)%'
+            $sender: '%env(default:registration_sender_default:MAILER_FROM_ADDRESS)%'
+
 when@test:
     services:
         App\Auth\AltchaService:
