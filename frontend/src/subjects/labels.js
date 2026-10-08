@@ -15,7 +15,7 @@ export const USER_TYPES = ['ISSUE', 'PROPOSAL', 'PETITION'];
 
 export const STAGE_LABELS = {OPEN: 'Deschis', IN_PROGRESS: 'În lucru', RESOLVED: 'Rezolvat', CLOSED: 'Închis'};
 export const STAGE_COLORS = {OPEN: 'info', IN_PROGRESS: 'warning', RESOLVED: 'success', CLOSED: 'default'};
-export const VISIBILITY_LABELS = {PUBLISHED: 'Publicat', HIDDEN: 'Ascuns'};
+export const VISIBILITY_LABELS = {PUBLISHED: 'Publicat', HIDDEN: 'Ascuns', PENDING: 'În așteptarea aprobării'};
 
 export const allowedTypes = (isAdmin) => (isAdmin ? Object.keys(TYPE_LABELS) : USER_TYPES);
 

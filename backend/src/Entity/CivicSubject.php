@@ -26,7 +26,7 @@ use Symfony\Component\Uid\Ulid;
 
 /**
  * Conținut civic asociat unui nod (ADR-0002): votabil, comentabil, moderabil în pașii următori.
- * `status` din domain.puml e împărțit în visibility (PUBLISHED/HIDDEN) și stage (OPEN…CLOSED) - decizie Step 2.
+ * `status` din domain.puml e împărțit în visibility (PUBLISHED/PENDING/HIDDEN) și stage (OPEN…CLOSED) - decizie Step 2.
  * Regulile de acces: CivicSubjectVoter + procesoarele (tipuri doar-admin, stage/visibility doar admin).
  */
 #[ApiResource(
@@ -82,6 +82,11 @@ class CivicSubject
     #[ORM\Column(length: 16, enumType: SubjectVisibility::class)]
     #[Groups(['subject:read'])]
     private SubjectVisibility $visibility = SubjectVisibility::PUBLISHED;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $approvedContribution = false;
+
+    public function markApprovedContribution(): void { $this->approvedContribution = true; }
 
     #[ORM\Column(length: 16, enumType: SubjectStage::class)]
     #[Groups(['subject:read'])]

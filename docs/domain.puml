@@ -1,5 +1,5 @@
 @startuml domain
-title Validez - Domain model (v2)
+title Validez - Domain model (v3)
 
 ' ===== Structură arbore =====
 class TreeNode {
@@ -20,10 +20,23 @@ class CivicSubject {
   type (ISSUE/PROPOSAL/PROJECT/\nPROMISE/ELECTORAL_EVALUATION/\nPETITION/TOPIC_EVALUATION)
   title
   description
-  status
+  visibility (PUBLISHED/PENDING/HIDDEN)
+  stage (OPEN/IN_PROGRESS/RESOLVED/CLOSED)
+  approved_contribution
   author_id
   created_at
   updated_at
+}
+
+class CategorySuggestion {
+  id (ULID)
+  author_id
+  parent_id (nullable)
+  name
+  reason
+  status (PENDING/APPROVED/REJECTED)
+  node_id (nullable)
+  created_at
 }
 
 class MediaAsset {
@@ -136,6 +149,7 @@ class User {
   emailVerified
   phoneVerified
   trustScore
+  directPublishingRevoked
   createdAt
 }
 
@@ -174,6 +188,23 @@ class SecurityOverride {
 ' ===== Relații =====
 TreeNode "1" -- "*" TreeNode : parent_id (arbore)
 TreeNode "1" -- "*" CivicSubject : conținut asociat
+User "1" -- "*" CivicSubject : autor
+User "1" -- "*" CategorySuggestion : propune
+TreeNode "0..1" -- "*" CategorySuggestion : părinte propus
+CategorySuggestion "*" -- "0..1" TreeNode : nod creat/reutilizat
+
+note right of CategorySuggestion
+  ADR-0006: numai administratorul aprobă
+  și creează/reutilizează categoria.
+  Nu contează la pragul de trei subiecte.
+end note
+
+note right of CivicSubject
+  ADR-0006: PENDING pentru utilizatorii
+  fără trei contribuții aprobate sau
+  cu dreptul de publicare retras.
+  O contribuție contează o singură dată.
+end note
 
 CivicSubject "1" -- "*" MediaAsset
 CivicSubject "1" -- "0..1" Location

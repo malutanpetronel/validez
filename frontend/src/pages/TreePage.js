@@ -354,7 +354,9 @@ export default function TreePage() {
 
             {creatingSubject && selected && <SubjectForm node={{id: selected.key, name: selected.title}}
                 onClose={() => setCreatingSubject(false)} onSaved={(subject) => {
-                    setCreatingSubject(false); setSelectedSubject(subject.id);
+                    setCreatingSubject(false);
+                    if (subject.visibility === 'PENDING') setMessage({severity: 'info', text: 'Subiectul a fost salvat și este în așteptarea aprobării.'});
+                    setSelectedSubject(subject.id);
                     setExpandedKeys((keys) => [...new Set([...keys, selected.key])]);
                     loadBranch(selected.key).catch(showError);
                 }}/>}

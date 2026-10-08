@@ -22,7 +22,7 @@ use Symfony\Component\Uid\Ulid;
 
 /**
  * Listă (paginată, opțional pe subarborele unui nod) și detaliu, cu regula de vizibilitate:
- * HIDDEN doar pentru admin și autor - pentru ceilalți detaliul e 404 (nu dezvăluim existența).
+ * PENDING/HIDDEN doar pentru admin și autor - pentru ceilalți detaliul e 404 (nu dezvăluim existența).
  *
  * @implements ProviderInterface<CivicSubject>
  */
@@ -49,7 +49,7 @@ final class CivicSubjectProvider implements ProviderInterface
             if ($subject === null) {
                 return null;
             }
-            if ($subject->getVisibility() === SubjectVisibility::HIDDEN && !$isAdmin && !$subject->isAuthoredBy($viewer)) {
+            if ($subject->getVisibility() !== SubjectVisibility::PUBLISHED && !$isAdmin && !$subject->isAuthoredBy($viewer)) {
                 return null;
             }
 
@@ -65,10 +65,11 @@ final class CivicSubjectProvider implements ProviderInterface
             $node = $this->nodes->find(Ulid::fromString($f['node'])) ?? throw new NotFoundHttpException('Nodul nu există.');
         }
         $type = $this->enumFilter($f, 'type', SubjectType::class);
+        $visibility = $this->enumFilter($f, 'visibility', SubjectVisibility::class);
         $stage = $this->enumFilter($f, 'stage', SubjectStage::class);
         $page = max(1, (int) ($f['page'] ?? 1));
 
-        [$items, $total] = $this->subjects->findVisiblePage($node, $type, $stage, $viewer, $isAdmin, $page, self::PER_PAGE, ($f['scope'] ?? '') === 'direct');
+        [$items, $total] = $this->subjects->findVisiblePage($node, $type, $stage, $viewer, $isAdmin, $page, self::PER_PAGE, $visibility, ($f['scope'] ?? '') === 'direct');
 
         return new TraversablePaginator(new \ArrayIterator($items), $page, self::PER_PAGE, $total);
     }

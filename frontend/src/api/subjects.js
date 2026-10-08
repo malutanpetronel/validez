@@ -24,10 +24,11 @@ async function request(url, options = {}) {
 }
 
 /** Listă paginată: node = subarborele; scope=direct = doar categoria; fără node = cele mai noi. */
-export async function fetchSubjects({node = null, type = '', stage = '', page = 1, scope = ''} = {}) {
+export async function fetchSubjects({node = null, type = '', stage = '', page = 1, scope = '', visibility = ''} = {}) {
     const q = new URLSearchParams();
     if (node) q.set('node', node);
     if (scope) q.set('scope', scope);
+    if (visibility) q.set('visibility', visibility);
     if (type) q.set('type', type);
     if (stage) q.set('stage', stage);
     if (page > 1) q.set('page', String(page));

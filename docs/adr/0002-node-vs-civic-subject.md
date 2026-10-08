@@ -64,7 +64,7 @@ Fiecare `CivicSubject.type` are un sens și limite clare, ca votul (Step 3), sta
 | `ELECTORAL_EVALUATION` — Evaluare electorală | Evaluarea activității unui ales pe un mandat sau pe o perioadă. | Nu evaluează o temă sau o problemă punctuală, ci o persoană într-o funcție. | admini | „Activitatea primarului X — primele 12 luni” |
 | `TOPIC_EVALUATION` — Evaluare tematică | Evaluarea stării unui domeniu într-un teritoriu, ca un barometru public. | Nu e o problemă concretă și nu privește o persoană. | admini | „Calitatea drumurilor în județul Cluj” |
 
-Coloana „Cine creează” reflectă decizia din Step 2 (`SubjectType::isAdminOnly()`).
+Coloana „Cine creează” reflectă decizia din Step 2 (`SubjectType::isAdminOnly()`). Publicarea subiectelor utilizatorilor obișnuiți este completată de [ADR-0006](0006-initial-contribution-moderation.md): aprobare inițială pentru trei contribuții distincte, apoi publicare directă cu drept revocabil de administrator.
 
 ### Granița Propunere ↔ Proiect
 

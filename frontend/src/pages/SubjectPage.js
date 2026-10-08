@@ -8,13 +8,14 @@ import {fetchSubject} from '../api/subjects';
 import {canEditSubject, formatDate, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS} from '../subjects/labels';
 import SubjectForm from '../components/SubjectForm';
 import SubjectEstimate from '../components/SubjectEstimate';
+import AuthorPublishing from '../components/AuthorPublishing';
 import SubjectPrivateNote from '../components/SubjectPrivateNote';
 
 export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
     const params = useParams();
     const location = useLocation();
     const id = subjectId ?? params.id;
-    const {user} = useAuth();
+    const {user, isAdmin} = useAuth();
     const [subject, setSubject] = useState(null);
     const [error, setError] = useState(null);
     const [editing, setEditing] = useState(false);
@@ -40,6 +41,7 @@ export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
                             <Chip size="small" label={TYPE_LABELS[subject.type] ?? subject.type} variant="outlined"/>
                             <Chip size="small" label={STAGE_LABELS[subject.stage] ?? subject.stage} color={STAGE_COLORS[subject.stage] ?? 'default'}/>
                             {subject.visibility === 'HIDDEN' && <Chip size="small" label="Ascuns" color="error" variant="outlined"/>}
+                            {subject.visibility === 'PENDING' && <Chip size="small" label="În așteptarea aprobării" color="warning" variant="outlined"/>}
                         </Stack>
                         <Typography variant="h5" component="h1" sx={{wordBreak: 'break-word'}}>{subject.title}</Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -50,6 +52,7 @@ export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
                         </Typography>
                         <Typography sx={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{subject.description}</Typography>
                         <SubjectEstimate subject={subject}/>
+                        {isAdmin && <AuthorPublishing key={subject.authorId} authorId={subject.authorId}/>}
                         {subject.type === 'PROPOSAL' && user?.id === subject.authorId && <SubjectPrivateNote key={`${subject.id}:${noteVersion}`} subjectId={subject.id}/>}
                         {canEditSubject(user, subject) && (
                             <div><Button variant="outlined" startIcon={<EditIcon/>} onClick={() => setEditing(true)}>Editează</Button></div>

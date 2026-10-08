@@ -5,6 +5,9 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import SubjectPage from './pages/SubjectPage';
 import SubjectsPage from './pages/SubjectsPage';
+import HelpPage from './pages/HelpPage';
+import CategorySuggestionsPage from './pages/CategorySuggestionsPage';
+import ModerationPage from './pages/ModerationPage';
 import CheckApiPage from './pages/CheckApiPage';
 
 // Hash router: functioneaza identic in browser, pe nginx si in WebView-ul Cordova (file:// / http://localhost),
@@ -16,6 +19,9 @@ export const routes = [
         children: [
             {index: true, element: <TreePage/>},
             {path: 'arbore', element: <TreePage/>},
+            {path: 'help', element: <HelpPage/>},
+            {path: 'categorii-propuse', element: <CategorySuggestionsPage/>},
+            {path: 'moderare', element: <ModerationPage/>},
             {path: 'check-api', element: <CheckApiPage/>},
             {path: 'login', element: <LoginPage/>},
             {path: 'inregistrare', element: <RegisterPage/>},

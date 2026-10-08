@@ -28,6 +28,8 @@ test('meniul utilizatorului începe cu numele și permite ieșirea fără Check 
     expect(screen.queryByText('Ion')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', {name: 'Meniu utilizator'}));
     expect(screen.getAllByRole('menuitem')[0]).toHaveTextContent('Ion');
+    expect(screen.getByRole('menuitem', {name: 'Help'})).toHaveAttribute('href', '/help');
+    expect(screen.getByRole('menuitem', {name: 'Propune o categorie'})).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', {name: 'Check API'})).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', {name: 'Ieși'}));
     expect(screen.getByRole('link', {name: 'Intră'})).toBeInTheDocument();
@@ -38,6 +40,8 @@ test('administratorul deschide verificarea API din meniu', async () => {
     renderLayout();
     fireEvent.click(screen.getByRole('button', {name: 'Meniu utilizator'}));
     expect(screen.getAllByRole('menuitem')[0]).toHaveTextContent('Admină');
+    expect(screen.queryByRole('menuitem', {name: 'Help'})).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', {name: 'Moderare subiecte'})).toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', {name: 'Check API'}));
     expect(await screen.findByText('API disponibil (200).')).toBeInTheDocument();
 });

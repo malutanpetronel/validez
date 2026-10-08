@@ -138,6 +138,7 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
             <DialogContent sx={{pt: fullScreen ? 2 : undefined}}>
                 <Stack spacing={2} sx={{pt: 1}}>
                     {error && <Alert severity="error">{error}</Alert>}
+                    {!isAdmin && <Alert severity="info">Primele trei contribuții necesită aprobarea unui administrator. După trei aprobări poți publica direct, dacă acest drept nu a fost retras. Modificările subiectelor publicate pot necesita din nou aprobare.</Alert>}
                     {!editing && <Typography variant="body2" color="text.secondary">În: <strong>{node.name}</strong></Typography>}
                     <FormControl fullWidth>
                         <InputLabel id="subject-type">Tip</InputLabel>

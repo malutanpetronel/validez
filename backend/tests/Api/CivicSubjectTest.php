@@ -104,13 +104,125 @@ final class CivicSubjectTest extends WebTestCase
         return array_map(static fn ($s) => $s['title'], $r['member']);
     }
 
+    public function testInitialModerationThresholdAndRevocation(): void
+    {
+        $first = $this->create('ion', 'Cluj');
+        self::assertSame('PENDING', $first['visibility']);
+        foreach ([null, 'maria'] as $viewer) {
+            self::assertSame([], $this->titles('', $viewer));
+            $this->call('GET', '/api/civic_subjects/'.$first['id'], null, $viewer);
+            self::assertSame(404, $this->code());
+        }
+        self::assertSame(['Gropi pe DN1'], $this->titles('?visibility=PENDING', 'ion'));
+        self::assertSame(['Gropi pe DN1'], $this->titles('?visibility=PENDING', 'admin'));
+        $this->patch($first['id'], ['visibility' => 'PUBLISHED'], 'ion');
+        self::assertSame(403, $this->code());
+        $this->patch($first['id'], ['visibility' => 'PUBLISHED'], 'admin');
+        $this->patch($first['id'], ['visibility' => 'PUBLISHED'], 'admin');
+        $status = $this->call('GET', '/api/me/publishing', null, 'ion');
+        self::assertSame(1, $status['approvedCount']);
+        self::assertFalse($status['canPublishDirectly']);
+        // Changing approved public content before trust is earned sends it back to review.
+        $edited = $this->patch($first['id'], ['title' => 'Titlu modificat'], 'ion');
+        self::assertSame('PENDING', $edited['visibility']);
+        $this->patch($first['id'], ['visibility' => 'PUBLISHED'], 'admin');
+        self::assertSame(1, $this->call('GET', '/api/me/publishing', null, 'ion')['approvedCount']);
+        $rejected = $this->create('ion', 'Cluj');
+        $this->patch($rejected['id'], ['visibility' => 'HIDDEN'], 'admin');
+        self::assertSame(1, $this->call('GET', '/api/me/publishing', null, 'ion')['approvedCount']);
+        foreach ([2, 3] as $count) {
+            $pending = $this->create('ion', 'Cluj');
+            self::assertSame('PENDING', $pending['visibility']);
+            $this->patch($pending['id'], ['visibility' => 'PUBLISHED'], 'admin');
+            self::assertSame($count, $this->call('GET', '/api/me/publishing', null, 'ion')['approvedCount']);
+        }
+        self::assertSame('PUBLISHED', $this->create('ion', 'Cluj')['visibility']);
+        $url = '/api/users/'.$first['authorId'].'/publishing';
+        $this->call('PUT', $url, ['revoked' => true], 'ion', 'application/json');
+        self::assertSame(403, $this->code());
+        $this->call('GET', $url, null, 'maria');
+        self::assertSame(403, $this->code());
+        $this->call('PUT', $url, ['revoked' => 'yes'], 'admin', 'application/json');
+        self::assertSame(422, $this->code());
+        $this->call('PUT', $url, ['revoked' => true], 'admin', 'application/json');
+        self::assertSame(200, $this->code());
+        // Uses the same cached JWT: the server checks current database policy.
+        $pending = $this->create('ion', 'Cluj');
+        self::assertSame('PENDING', $pending['visibility']);
+        $this->patch($pending['id'], ['visibility' => 'PUBLISHED'], 'admin');
+        self::assertSame('PENDING', $this->create('ion', 'Cluj')['visibility']);
+        $this->call('PUT', $url, ['revoked' => false], 'admin', 'application/json');
+        self::assertSame('PUBLISHED', $this->create('ion', 'Cluj')['visibility']);
+        self::assertSame('PUBLISHED', $this->create('admin', 'Cluj')['visibility']);
+    }
+
+    public function testCreationCannotForgePublicationOrApproval(): void
+    {
+        $r = $this->call('POST', '/api/civic_subjects', ['node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Contribuție nouă', 'description' => 'Descriere', 'visibility' => 'PUBLISHED', 'approvedContribution' => true, 'author' => 'admin'], 'ion');
+        self::assertSame(201, $this->code());
+        self::assertSame('PENDING', $r['visibility']);
+        self::assertSame(0, $this->call('GET', '/api/me/publishing', null, 'ion')['approvedCount']);
+    }
+
+    public function testCategorySuggestionsReviewPermissionsAndDuplicates(): void
+    {
+        $body = ['name' => 'Transport public', 'reason' => 'Categorie necesară', 'parent' => $this->n['Cluj']->getId()->toBase32()];
+        $this->call('POST', '/api/category-suggestions', $body);
+        self::assertSame(401, $this->code());
+        $suggestion = $this->call('POST', '/api/category-suggestions', $body, 'ion', 'application/json');
+        self::assertSame(201, $this->code());
+        self::assertSame('PENDING', $suggestion['status']);
+        self::assertSame(4, (int) $this->db->fetchOne('SELECT COUNT(*) FROM tree_node'));
+        $own = $this->call('GET', '/api/category-suggestions', null, 'ion');
+        self::assertCount(1, $own['items']);
+        self::assertSame('Cluj', $own['items'][0]['parentName']);
+        self::assertCount(0, $this->call('GET', '/api/category-suggestions', null, 'maria')['items']);
+        self::assertCount(1, $this->call('GET', '/api/category-suggestions', null, 'admin')['items']);
+        $this->call('POST', '/api/category-suggestions', array_replace($body, ['name' => ' transport PUBLIC ']), 'maria', 'application/json');
+        self::assertSame(422, $this->code());
+        $url = '/api/category-suggestions/'.$suggestion['id'];
+        $this->call('PATCH', $url, ['status' => 'APPROVED'], 'ion', 'application/json');
+        self::assertSame(403, $this->code());
+        $review = $this->call('PATCH', $url, ['status' => 'APPROVED'], 'admin', 'application/json');
+        self::assertSame(200, $this->code());
+        self::assertNotNull($review['nodeId']);
+        self::assertSame(5, (int) $this->db->fetchOne('SELECT COUNT(*) FROM tree_node'));
+        self::assertSame('Transport public', $this->call('GET', '/api/tree_nodes/'.$review['nodeId'])['name']);
+        $this->call('PATCH', $url, ['status' => 'APPROVED'], 'admin', 'application/json');
+        self::assertSame(422, $this->code());
+        $this->call('POST', '/api/category-suggestions', $body, 'ion', 'application/json');
+        self::assertSame(422, $this->code());
+        $root = $this->call('POST', '/api/category-suggestions', ['name' => 'Mediu', 'reason' => 'Nou domeniu'], 'ion', 'application/json');
+        $this->call('PATCH', '/api/category-suggestions/'.$root['id'], ['status' => 'REJECTED'], 'admin', 'application/json');
+        self::assertSame(200, $this->code());
+        self::assertSame(5, (int) $this->db->fetchOne('SELECT COUNT(*) FROM tree_node'));
+        self::assertSame(0, $this->call('GET', '/api/me/publishing', null, 'ion')['approvedCount']);
+        $root = $this->call('POST', '/api/category-suggestions', ['name' => 'Mediu', 'reason' => 'Nou domeniu'], 'ion', 'application/json');
+        $approved = $this->call('PATCH', '/api/category-suggestions/'.$root['id'], ['status' => 'APPROVED'], 'admin', 'application/json');
+        self::assertSame(200, $this->code());
+        $this->call('GET', '/api/tree_nodes/'.$approved['nodeId']);
+        self::assertSame(200, $this->code());
+    }
+
+    public function testCategoryApprovalReusesExistingSibling(): void
+    {
+        $body = ['name' => 'Transport', 'reason' => 'Necesar', 'parent' => $this->n['Cluj']->getId()->toBase32()];
+        $suggestion = $this->call('POST', '/api/category-suggestions', $body, 'ion', 'application/json');
+        $node = $this->call('POST', '/api/tree_nodes', ['name' => 'Transport', 'parent' => $body['parent']], 'admin');
+        self::assertSame(201, $this->code());
+        $approved = $this->call('PATCH', '/api/category-suggestions/'.$suggestion['id'], ['status' => 'APPROVED'], 'admin', 'application/json');
+        self::assertSame(200, $this->code());
+        self::assertSame($node['id'], $approved['nodeId']);
+        self::assertSame(5, (int) $this->db->fetchOne('SELECT COUNT(*) FROM tree_node'));
+    }
+
     public function testUtilizatorulCreeazaTipuriPermiseAutorulDinToken(): void
     {
         $r = $this->create('ion', 'Calitate', 'ISSUE');
         self::assertSame(201, $this->code());
         self::assertSame('Ion', $r['authorName']);
         self::assertSame('Calitate', $r['nodeName']);
-        self::assertSame(['PUBLISHED', 'OPEN'], [$r['visibility'], $r['stage']]);
+        self::assertSame(['PENDING', 'OPEN'], [$r['visibility'], $r['stage']]);
 
         foreach (['PROPOSAL', 'PETITION'] as $t) {
             $this->create('ion', 'Calitate', $t);
@@ -131,6 +243,7 @@ final class CivicSubjectTest extends WebTestCase
     public function testVizitatorulCitesteDarNuCreeaza(): void
     {
         $id = $this->create('ion', 'Cluj')['id'];
+        $this->patch($id, ['visibility' => 'PUBLISHED'], 'admin');
         $this->call('POST', '/api/civic_subjects', ['node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'X X X', 'description' => 'd']);
         self::assertSame(401, $this->code());
         self::assertSame(['Gropi pe DN1'], $this->titles());
@@ -140,9 +253,9 @@ final class CivicSubjectTest extends WebTestCase
 
     public function testListaPeNodIncludeSubarboreleSiFiltreaza(): void
     {
-        $this->create('ion', 'Drumuri', 'ISSUE', 'Pe Drumuri');
-        $this->create('ion', 'Calitate', 'PROPOSAL', 'Pe Calitate');
-        $this->create('ion', 'Sanatate', 'ISSUE', 'Pe Sanatate');
+        $this->create('admin', 'Drumuri', 'ISSUE', 'Pe Drumuri');
+        $this->create('admin', 'Calitate', 'PROPOSAL', 'Pe Calitate');
+        $this->create('admin', 'Sanatate', 'ISSUE', 'Pe Sanatate');
 
         $q = '?node='.$this->n['Cluj']->getId()->toBase32();
         self::assertSame(['Pe Calitate'], $this->titles($q));
@@ -160,7 +273,7 @@ final class CivicSubjectTest extends WebTestCase
     public function testPaginare(): void
     {
         for ($i = 1; $i <= 23; $i++) {
-            $this->create('ion', 'Cluj', 'ISSUE', "Subiect $i");
+            $this->create('admin', 'Cluj', 'ISSUE', "Subiect $i");
         }
         $r = $this->call('GET', '/api/civic_subjects?page=2');
         self::assertSame(23, $r['totalItems']);
@@ -175,6 +288,9 @@ final class CivicSubjectTest extends WebTestCase
         self::assertSame(200, $this->code());
         self::assertSame(['Gropi mari pe DN1', 'PETITION'], [$r['title'], $r['type']]);
 
+        $this->patch($id, ['title' => 'Altceva'], 'maria');
+        self::assertSame(404, $this->code());
+        $this->patch($id, ['visibility' => 'PUBLISHED'], 'admin');
         $this->patch($id, ['title' => 'Altceva'], 'maria');
         self::assertSame(403, $this->code());
         $this->patch($id, ['title' => 'Altceva'], null);
@@ -281,6 +397,7 @@ final class CivicSubjectTest extends WebTestCase
                 self::assertSame($who === null ? 401 : 404, $this->code(), "$method $who");
             }
         }
+        $this->patch($id, ['visibility' => 'PUBLISHED'], 'admin');
         foreach ([null, 'ion', 'admin'] as $who) {
             foreach (['/api/civic_subjects', '/api/civic_subjects/'.$id] as $publicUrl) {
                 $r = $this->call('GET', $publicUrl, null, $who);
@@ -311,7 +428,7 @@ final class CivicSubjectTest extends WebTestCase
         self::assertSame(404, $this->code());
         $this->call('PUT', $url, ['technicalNotes' => 'Alterare'], 'ion', 'application/json');
         self::assertSame(404, $this->code());
-        $list = $this->call('GET', '/api/civic_subjects');
+        $list = $this->call('GET', '/api/civic_subjects', null, 'ion');
         self::assertNull($list['member'][0]['costCurrency']);
         $r = $this->patch($id, ['type' => 'PROPOSAL'], 'ion');
         self::assertSame(200, $this->code());

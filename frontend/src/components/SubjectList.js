@@ -102,6 +102,7 @@ export default function SubjectList({node, scope = '', navigationState}) {
                                     <Chip size="small" label={TYPE_LABELS[s.type] ?? s.type} variant="outlined" sx={{fontSize: '0.75rem'}}/>
                                     <Chip size="small" label={STAGE_LABELS[s.stage] ?? s.stage} color={STAGE_COLORS[s.stage] ?? 'default'} sx={{fontSize: '0.75rem'}}/>
                                     {s.visibility === 'HIDDEN' && <Chip size="small" label="Ascuns" color="error" variant="outlined"/>}
+                            {s.visibility === 'PENDING' && <Chip size="small" label="În așteptarea aprobării" color="warning" variant="outlined"/>}
                                 </Stack>
                                 <SubjectEstimate subject={s} compact/>
                                 <Typography component="span" variant="caption" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>

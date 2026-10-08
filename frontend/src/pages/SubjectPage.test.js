@@ -46,3 +46,11 @@ test('subiect ascuns sau inexistent: mesaj clar', async () => {
     expect(await screen.findByText('Subiectul nu există sau nu e vizibil.')).toBeInTheDocument();
     expect(screen.queryByText(/Not Found/)).not.toBeInTheDocument();
 });
+
+test('autorul vede clar că subiectul său așteaptă aprobarea', async () => {
+    setSession({token: jwt('01ION')});
+    global.fetch = routedFetch([[(u) => u.endsWith('/civic_subjects/01SUBJ'), () => res(subject({visibility: 'PENDING'}))]]);
+    renderPage();
+    expect(await screen.findByText('În așteptarea aprobării')).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Editează'})).toBeInTheDocument();
+});

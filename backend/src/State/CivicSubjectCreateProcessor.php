@@ -11,6 +11,8 @@ use App\Entity\CivicSubject;
 use App\Entity\User;
 use App\Repository\TreeNodeRepository;
 use App\Subject\SubjectType;
+use App\Subject\PublishingPolicy;
+use App\Subject\SubjectVisibility;
 use App\Subject\CostEstimate;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -29,6 +31,7 @@ final class CivicSubjectCreateProcessor implements ProcessorInterface
         private readonly EntityManagerInterface $em,
         private readonly TreeNodeRepository $nodes,
         private readonly Security $security,
+        private readonly PublishingPolicy $policy,
     ) {
     }
 
@@ -47,11 +50,15 @@ final class CivicSubjectCreateProcessor implements ProcessorInterface
 
         $node = $this->nodes->find(Ulid::fromString($data->node)) ?? throw new UnprocessableEntityHttpException('Nodul nu există.');
 
-        $subject = new CivicSubject($node, $author, $type, $data->title, $data->description);
-        CostEstimate::apply($subject, get_object_vars($data), $type);
-        $this->em->persist($subject);
-        $this->em->flush();
+        return $this->em->wrapInTransaction(function () use ($author, $node, $type, $data): CivicSubject {
+            $this->policy->lock($author);
+            $subject = new CivicSubject($node, $author, $type, $data->title, $data->description);
+            if (!$this->policy->canPublish($author)) $subject->moderate(null, SubjectVisibility::PENDING);
+            CostEstimate::apply($subject, get_object_vars($data), $type);
+            $this->em->persist($subject);
+            $this->em->flush();
 
-        return $subject;
+            return $subject;
+        });
     }
 }

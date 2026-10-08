@@ -54,6 +54,9 @@ export default function Layout() {
                                   transformOrigin={{vertical: 'top', horizontal: 'right'}}>
                                 <MenuItem disabled>{user.displayName}</MenuItem>
                                 <Divider/>
+                                {!isAdmin && <MenuItem component={RouterLink} to="/help" onClick={closeUserMenu}>Help</MenuItem>}
+                                <MenuItem component={RouterLink} to="/categorii-propuse" onClick={closeUserMenu}>{isAdmin ? 'Propuneri de categorii' : 'Propune o categorie'}</MenuItem>
+                                {isAdmin && <MenuItem component={RouterLink} to="/moderare" onClick={closeUserMenu}>Moderare subiecte</MenuItem>}
                                 {isAdmin && <MenuItem component={RouterLink} to="/check-api" onClick={closeUserMenu}>Check API</MenuItem>}
                                 <MenuItem onClick={() => { closeUserMenu(); logout(); }}>Ieși</MenuItem>
                             </Menu>
