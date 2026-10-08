@@ -61,6 +61,8 @@ test('administratorul aprobă categoria iar utilizatorul obișnuit nu vede acți
     fetchCategorySuggestions.mockResolvedValue({items: [{id: 'SUGGESTION', name: 'Transport', reason: 'Motiv', status: 'PENDING', parentName: 'Drumuri', authorName: 'Ion'}], total: 1});
     setSession({token: adminJwt()});
     const {unmount} = mount(<CategorySuggestionsPage/>);
+    expect(screen.queryByRole('heading', {name: 'Propune o categorie nouă'})).not.toBeInTheDocument();
+    expect(fetchChildren).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole('button', {name: 'Aprobă și creează categoria'}));
     await waitFor(() => expect(reviewCategory).toHaveBeenCalledWith('SUGGESTION', 'APPROVED'));
     await waitFor(() => expect(screen.getByRole('button', {name: 'Aprobă și creează categoria'})).toBeEnabled());
@@ -68,6 +70,7 @@ test('administratorul aprobă categoria iar utilizatorul obișnuit nu vede acți
     setSession({token: userJwt()});
     mount(<CategorySuggestionsPage/>);
     await screen.findByText('Transport');
+    expect(screen.getByRole('heading', {name: 'Propune o categorie nouă'})).toBeInTheDocument();
     expect(screen.queryByRole('button', {name: 'Aprobă și creează categoria'})).not.toBeInTheDocument();
 });
 

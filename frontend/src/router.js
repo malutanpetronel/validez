@@ -1,6 +1,7 @@
 import {createHashRouter} from 'react-router-dom';
 import Layout from './Layout';
 import TreePage from './pages/TreePage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import SubjectPage from './pages/SubjectPage';
@@ -23,6 +24,7 @@ export const routes = [
             {path: 'categorii-propuse', element: <CategorySuggestionsPage/>},
             {path: 'moderare', element: <ModerationPage/>},
             {path: 'check-api', element: <CheckApiPage/>},
+            {path: 'am-uitat-parola', element: <ForgotPasswordPage/>},
             {path: 'login', element: <LoginPage/>},
             {path: 'inregistrare', element: <RegisterPage/>},
             {path: 'subiecte', element: <SubjectsPage/>},

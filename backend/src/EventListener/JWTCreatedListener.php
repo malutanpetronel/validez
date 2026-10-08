@@ -26,6 +26,7 @@ final class JWTCreatedListener
         $event->setData([
             ...$event->getData(),
             'id' => $user->getId()->toBase32(),
+            'credentialVersion' => $user->getCredentialVersion(),
             'displayName' => $user->getDisplayName(),
         ]);
     }
