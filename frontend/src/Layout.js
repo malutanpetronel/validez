@@ -1,13 +1,16 @@
 import {Link as RouterLink, Outlet} from 'react-router-dom';
-import {useMemo} from 'react';
-import {AppBar, Box, Button, Container, CssBaseline, MenuItem, Select, ThemeProvider, Toolbar, Typography} from '@mui/material';
+import {useMemo, useState} from 'react';
+import {AppBar, Box, Button, Container, CssBaseline, Divider, Menu, MenuItem, Select, ThemeProvider, Toolbar, Typography} from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {createValidezTheme} from './theme';
 import useAutomaticTheme from './useAutomaticTheme';
 import version from './version.json';
 import {useAuth} from './auth/AuthContext';
 
 export default function Layout() {
-    const {user, logout} = useAuth();
+    const {user, isAdmin, logout} = useAuth();
+    const [userMenuAnchor, setUserMenuAnchor] = useState(null);
+    const closeUserMenu = () => setUserMenuAnchor(null);
     const {preference, chooseTheme, mode} = useAutomaticTheme();
     const theme = useMemo(() => createValidezTheme(mode), [mode]);
     return (
@@ -35,11 +38,25 @@ export default function Layout() {
                         </Box>
                     </Box>
                     <Box sx={{flex: 1}}/>
-                    <Button color="inherit" component={RouterLink} to="/arbore" sx={{minWidth: 0}}>Arbore</Button>
                     {user ? (
                         <>
-                            <Typography variant="body2" noWrap sx={{maxWidth: 160, display: {xs: 'none', sm: 'block'}}}>{user.displayName}</Typography>
-                            <Button color="inherit" variant="outlined" size="small" onClick={logout} sx={{flexShrink: 0}}>Ieși</Button>
+                            <Button color="inherit" variant="outlined" size="small"
+                                    id="user-menu-button" aria-label="Meniu utilizator"
+                                    aria-controls={userMenuAnchor ? 'user-menu' : undefined}
+                                    aria-haspopup="true" aria-expanded={userMenuAnchor ? 'true' : undefined}
+                                    onClick={(event) => setUserMenuAnchor(event.currentTarget)}
+                                    endIcon={<ExpandMoreIcon/>} sx={{minWidth: 0, maxWidth: {xs: 150, sm: 240}}}>
+                                <Typography component="span" variant="body2" noWrap>Logged in</Typography>
+                            </Button>
+                            <Menu id="user-menu" anchorEl={userMenuAnchor} open={Boolean(userMenuAnchor)}
+                                  onClose={closeUserMenu} MenuListProps={{'aria-labelledby': 'user-menu-button'}}
+                                  anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                  transformOrigin={{vertical: 'top', horizontal: 'right'}}>
+                                <MenuItem disabled>{user.displayName}</MenuItem>
+                                <Divider/>
+                                {isAdmin && <MenuItem component={RouterLink} to="/check-api" onClick={closeUserMenu}>Check API</MenuItem>}
+                                <MenuItem onClick={() => { closeUserMenu(); logout(); }}>Ieși</MenuItem>
+                            </Menu>
                         </>
                     ) : (
                         <Button color="inherit" variant="outlined" size="small" component={RouterLink} to="/login" sx={{flexShrink: 0}}>Intră</Button>
