@@ -1,5 +1,5 @@
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
-import {MemoryRouter} from 'react-router-dom';
+import {MemoryRouter, Route, Routes, useLocation} from 'react-router-dom';
 import SubjectVotes from './SubjectVotes';
 import {AuthProvider} from '../auth/AuthContext';
 import {setSession} from '../auth/session';
@@ -181,4 +181,45 @@ test('fără tipuri de vot (sau răspuns neașteptat): nu afișează nimic', asy
     const {container} = renderVotes();
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();
+});
+
+function ReturnProbe() {
+    const location = useLocation();
+    return <p>{`${location.pathname} ← ${location.state?.from}`}</p>;
+}
+const renderAt = (entry) => render(<AuthProvider><MemoryRouter initialEntries={[entry]}><Routes>
+    <Route path="/subiecte/:id" element={<SubjectVotes subjectId="01SUBJ"/>}/>
+    <Route path="/arbore" element={<SubjectVotes subjectId="01SUBJ"/>}/>
+    <Route path="/inregistrare" element={<ReturnProbe/>}/>
+    <Route path="/login" element={<ReturnProbe/>}/>
+</Routes></MemoryRouter></AuthProvider>);
+
+test('call to action pentru vizitator: înregistrare cu revenire la subiect', async () => {
+    global.fetch = routedFetch([[isVotes, () => res(summary())]]);
+    renderAt('/subiecte/01SUBJ');
+    expect(await screen.findByText('Înregistrează-te pentru a vota și tu.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', {name: 'Înregistrează-te'}));
+    expect(screen.getByText('/inregistrare ← /subiecte/01SUBJ')).toBeInTheDocument();
+});
+
+test('call to action din panoul arborelui: login cu revenire la aceeași vedere', async () => {
+    global.fetch = routedFetch([[isVotes, () => res(summary())]]);
+    renderAt('/arbore?node=01NODE&subject=01SUBJ');
+    fireEvent.click(await screen.findByRole('link', {name: 'Intră'}));
+    expect(screen.getByText('/login ← /arbore?node=01NODE&subject=01SUBJ')).toBeInTheDocument();
+});
+
+test('fără call to action când votarea nu e deschisă sau utilizatorul e autentificat', async () => {
+    for (const over of [{votingEnabled: false, votingOpen: false}, {frozen: true, votingOpen: false}, {votingOpen: false}]) {
+        global.fetch = routedFetch([[isVotes, () => res(summary(over))]]);
+        const {unmount} = renderAt('/subiecte/01SUBJ');
+        await screen.findByRole('heading', {name: 'Voturi'});
+        expect(screen.queryByText('Înregistrează-te pentru a vota și tu.')).not.toBeInTheDocument();
+        unmount();
+    }
+    setSession({token: ion()});
+    global.fetch = routedFetch([[isVotes, () => res(summary({consent: consent()}))]]);
+    renderAt('/subiecte/01SUBJ');
+    await screen.findByRole('button', {name: 'Validez'});
+    expect(screen.queryByText('Înregistrează-te pentru a vota și tu.')).not.toBeInTheDocument();
 });

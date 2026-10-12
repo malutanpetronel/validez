@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useState} from 'react';
+import {Link as RouterLink, useLocation} from 'react-router-dom';
 import {Alert, Box, Button, Chip, Divider, Stack, ToggleButton, ToggleButtonGroup, Typography} from '@mui/material';
 import {useAuth} from '../auth/AuthContext';
 import {castVote, fetchVotes, grantVoteConsent, withdrawVote} from '../api/votes';
@@ -39,6 +40,7 @@ function Results({type}) {
  */
 export default function SubjectVotes({subjectId}) {
     const {user} = useAuth();
+    const location = useLocation();
     const [summary, setSummary] = useState(null);
     const [message, setMessage] = useState(null);
     const [busy, setBusy] = useState(false);
@@ -117,6 +119,8 @@ export default function SubjectVotes({subjectId}) {
 
     const canExpress = (type) => !!user && summary.votingOpen && type.active;
     const stale = summary.types.filter((t) => t.mine && !t.mine.current);
+    // Revenire exact aici după înregistrare/confirmare/login: pagina subiectului sau panoul din arbore.
+    const from = `${location.pathname}${location.search}`;
 
     return (
         <Stack spacing={1.5} component="section" aria-labelledby={`votes-${subjectId}`}>
@@ -125,6 +129,16 @@ export default function SubjectVotes({subjectId}) {
             {!summary.votingEnabled && <Alert severity="info">Votarea nu este încă activă. Poți vedea rezultatele și îți poți retrage oricând voturile existente.</Alert>}
             {summary.votingEnabled && summary.frozen && <Alert severity="info">Subiectul este rezolvat sau închis: votarea s-a încheiat. Îți poți retrage votul.</Alert>}
             {summary.votingEnabled && !summary.frozen && !summary.votingOpen && <Alert severity="info">Votarea începe după publicarea subiectului.</Alert>}
+            {!user && summary.votingOpen && (
+                <Alert severity="info" icon={false} action={(
+                    <Stack direction="row" spacing={1}>
+                        <Button variant="contained" size="small" component={RouterLink} to="/inregistrare" state={{from}}>Înregistrează-te</Button>
+                        <Button size="small" component={RouterLink} to="/login" state={{from}}>Intră</Button>
+                    </Stack>
+                )}>
+                    Înregistrează-te pentru a vota și tu.
+                </Alert>
+            )}
             {stale.length > 0 && (
                 <Alert severity="warning" action={<Button color="inherit" size="small"
                     onClick={() => setDiff({from: Math.min(...stale.map((t) => t.mine.revisionNumber)), to: summary.revisionNumber})}>Vezi ce s-a schimbat</Button>}>
