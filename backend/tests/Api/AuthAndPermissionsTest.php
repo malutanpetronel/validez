@@ -33,9 +33,7 @@ final class AuthAndPermissionsTest extends WebTestCase
         $c = static::getContainer();
         $c->get('limiter.captcha_challenge')->create('127.0.0.1')->reset();
         $this->db = $c->get(Connection::class);
-        foreach (['civic_subject', 'tree_node', 'refresh_token', 'app_user'] as $t) {
-            $this->db->executeStatement("DELETE FROM $t");
-        }
+        \App\Tests\Support\Database::reset($this->db);
 
         $em = $c->get(EntityManagerInterface::class);
         $hasher = $c->get(UserPasswordHasherInterface::class);

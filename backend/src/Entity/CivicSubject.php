@@ -100,6 +100,14 @@ class CivicSubject
     #[Groups(['subject:read'])]
     private \DateTimeImmutable $updatedAt;
 
+    /** Numărul reviziei curente (ADR-0007 §3); revizia 1 se creează împreună cu subiectul (Step 4.b2). */
+    #[ORM\Column(options: ['default' => 1])]
+    private int $revisionNumber = 1;
+
+    /** Primul vot înregistrat vreodată; blochează tipul, chiar dacă votul a fost retras (ADR-0007 §3). */
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $firstVotedAt = null;
+
     public function __construct(TreeNode $node, User $author, SubjectType $type, string $title, string $description)
     {
         $this->id = new Ulid();
@@ -128,6 +136,9 @@ class CivicSubject
     public function getStage(): SubjectStage { return $this->stage; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
     public function getUpdatedAt(): \DateTimeImmutable { return $this->updatedAt; }
+    public function getRevisionNumber(): int { return $this->revisionNumber; }
+    public function getFirstVotedAt(): ?\DateTimeImmutable { return $this->firstVotedAt; }
+    public function isTypeLocked(): bool { return $this->firstVotedAt !== null; }
 
     #[Groups(['subject:read'])]
     public function getNodeId(): string { return $this->node->getId()->toBase32(); }

@@ -76,3 +76,4 @@ Marcaje: **[PE LAPTOP]** = `<checkout-validez>` sau checkout-ul Ansible de pe la
 
 - [ ] Confirmă operatorul și contactul Validez pentru pagina `#/privacy`, precum și perioadele de păstrare și furnizorii reali de găzduire/email înainte de publicarea politicii.
 - [ ] Verifică informarea cookie, redeschiderea și pagina privacy pe browser și Android; verifică și accesul din înregistrare.
+- [ ] **Voturi (ADR-0007), înainte de activare pe producție:** rolul PostgreSQL al aplicației nu trebuie să fie owner pe `integrity_event_log` (owner-ul poate face `TRUNCATE`, poate dezactiva sau elimina triggerul append-only). Migrațiile rulează cu un rol separat de cel folosit de aplicație la runtime, iar rolul aplicației primește doar `SELECT, INSERT` pe jurnal. Azi aplicația și migrațiile folosesc același utilizator (`validez`).

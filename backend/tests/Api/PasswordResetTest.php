@@ -27,7 +27,7 @@ final class PasswordResetTest extends WebTestCase
         $this->client = static::createClient();
         $c = static::getContainer();
         $this->db = $c->get(Connection::class);
-        foreach (['category_suggestion', 'civic_subject', 'tree_node', 'refresh_token', 'app_user', 'altcha_used_challenge'] as $table) $this->db->executeStatement("DELETE FROM $table");
+        \App\Tests\Support\Database::reset($this->db, 'category_suggestion', 'altcha_used_challenge');
         $c->get('cache.rate_limiter')->clear();
         $em = $c->get(EntityManagerInterface::class);
         foreach ([self::EMAIL, 'neconfirmat@validez.test'] as $email) {

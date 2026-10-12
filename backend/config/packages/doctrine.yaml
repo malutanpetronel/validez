@@ -5,6 +5,7 @@ doctrine:
         # ADR-0001: coloana TreeNode.path; mapping_types face ca introspectia schemei sa recunoasca tipul.
         types:
             ltree: App\Doctrine\Type\LtreeType
+            json_object: App\Doctrine\Type\JsonObjectType
         mapping_types:
             ltree: ltree
 

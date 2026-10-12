@@ -26,7 +26,7 @@ final class RegistrationTest extends WebTestCase
         $this->client = static::createClient();
         $container = static::getContainer();
         $this->db = $container->get(Connection::class);
-        foreach (['civic_subject', 'tree_node', 'refresh_token', 'app_user', 'altcha_used_challenge'] as $table) $this->db->executeStatement("DELETE FROM $table");
+        \App\Tests\Support\Database::reset($this->db, 'altcha_used_challenge');
         $container->get('cache.rate_limiter')->clear();
         $user = new User('existent@validez.test', 'Existent', [User::ROLE_ADMIN]);
         $user->setPassword($container->get(UserPasswordHasherInterface::class)->hashPassword($user, self::PASSWORD));

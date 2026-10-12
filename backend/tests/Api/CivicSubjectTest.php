@@ -33,9 +33,7 @@ final class CivicSubjectTest extends WebTestCase
         $c = static::getContainer();
         $c->get('limiter.captcha_challenge')->create('127.0.0.1')->reset();
         $this->db = $c->get(Connection::class);
-        foreach (['civic_subject', 'tree_node', 'refresh_token', 'app_user'] as $t) {
-            $this->db->executeStatement("DELETE FROM $t");
-        }
+        \App\Tests\Support\Database::reset($this->db);
         $em = $c->get(EntityManagerInterface::class);
         $hasher = $c->get(UserPasswordHasherInterface::class);
         $users = ['admin' => new User('admin@validez.test', 'Admina', [User::ROLE_ADMIN]), 'ion' => new User('ion@validez.test', 'Ion'), 'maria' => new User('maria@validez.test', 'Maria')];
