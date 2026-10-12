@@ -5,6 +5,16 @@
 #   ./docker-build-push.sh 20261003_01
 set -e
 
+# Ruleaza din directorul scriptului, indiferent de directorul din care este apelat.
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+cd "$SCRIPT_DIR"
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+if [ "$(git branch --show-current)" != "main" ]; then
+  echo "Eroare: ruleaza buildul FE de pe ramura main pentru commit si push origin main." >&2
+  exit 1
+fi
+
 REGISTRY="malutanpetronel/api"
 DATE=$(date +%Y%m%d_%H%M)
 SUFFIX=${1:-$DATE}
@@ -26,6 +36,12 @@ with open('src/version.json', 'w') as f:
     f.write('\n')
 print(f\"  -> versiune noua: {data['version']}\")
 "
+  VERSION=$(python3 -c 'import json; print(json.load(open("src/version.json"))["version"])')
+  echo "=> Commit versiune FE ${VERSION}"
+  git -C "$REPO_ROOT" add -- frontend/src/version.json
+  git -C "$REPO_ROOT" commit --only -m "chore: versiune FE ${VERSION}" -- frontend/src/version.json
+  echo "=> Push versiune catre origin main"
+  git -C "$REPO_ROOT" push origin main
 fi
 
 echo "=> Building: ${FULL_TAG}  (REACT_APP_API_BASE=${API_BASE})"

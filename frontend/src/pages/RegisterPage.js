@@ -102,6 +102,7 @@ export default function RegisterPage() {
                 <Button onClick={resend} disabled={busy || cooldown > 0 || !altcha}>{cooldown > 0 ? `Retrimite codul (${cooldown}s)` : 'Retrimite codul'}</Button>
                 <Button onClick={() => { setStep('form'); setCode(''); setError(null); setInfo(null); resetVerification(); }} disabled={busy}>Schimbă adresa de email</Button>
             </Stack>}
+            <Typography variant="body2" color="text.secondary">Numele afișat apare lângă contribuțiile publicate. Citește <Button component={RouterLink} to="/privacy" size="small" sx={{p: 0, minWidth: 0, verticalAlign: 'baseline'}}>politica de confidențialitate</Button> pentru detalii despre datele tale.</Typography>
             <Button component={RouterLink} to="/login" state={{from: after}}>Ai deja un cont? Intră</Button>
         </Stack>
     </Paper>;

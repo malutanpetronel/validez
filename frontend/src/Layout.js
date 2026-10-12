@@ -5,6 +5,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {createValidezTheme} from './theme';
 import useAutomaticTheme from './useAutomaticTheme';
 import version from './version.json';
+import CookieNotice from './components/CookieNotice';
 import {useAuth} from './auth/AuthContext';
 
 export default function Layout() {
@@ -62,7 +63,10 @@ export default function Layout() {
                             </Menu>
                         </>
                     ) : (
-                        <Button color="inherit" variant="outlined" size="small" component={RouterLink} to="/login" sx={{flexShrink: 0}}>Intră</Button>
+                        <Box sx={{display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end'}}>
+                            <Button variant="contained" size="small" component={RouterLink} to="/inregistrare">Înregistrează-te</Button>
+                            <Button color="inherit" variant="outlined" size="small" component={RouterLink} to="/login">Intră</Button>
+                        </Box>
                     )}
                 </Toolbar>
             </AppBar>
@@ -85,9 +89,11 @@ export default function Layout() {
                         <MenuItem value="dark">Temă: Nocturn</MenuItem>
                     </Select>
                 </Box>
+                <Box sx={{mb: 1}}><Button component={RouterLink} to="/privacy" size="small" sx={{color: 'text.secondary'}}>Confidențialitate</Button></Box>
                 VEZI. VERIFICĂ. VALIDEAZĂ. · v{version.version} · AGPL-3.0-or-later
             </Box>
         </Box>
+        <CookieNotice/>
         </ThemeProvider>
     );
 }

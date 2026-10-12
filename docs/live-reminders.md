@@ -43,7 +43,7 @@ Marcaje: **[PE LAPTOP]** = `<checkout-validez>` sau checkout-ul Ansible de pe la
 ## 6. Build și deploy
 
 - [ ] **[PE LAPTOP]** `cd <checkout-validez>/backend && ./docker-build-push.sh` → tag-ul în `/var/www/validez-be/shared/backend/.env` pe server.
-- [ ] **[PE LAPTOP]** `cd <checkout-validez>/frontend && ./docker-build-push.sh` → tag-ul în `/var/www/validez-fe/shared/frontend/.env` pe server. Adresa API-ului (`https://validez-be.webnou.ro`) e **arsă în bundle la build** — dacă se schimbă domeniul BE, imaginea FE trebuie reconstruită.
+- [ ] **[PE LAPTOP]** `cd <checkout-validez>/frontend && ./docker-build-push.sh` → tag-ul în `/var/www/validez-fe/shared/frontend/.env` pe server. Scriptul cere ramura `main`, incrementează versiunea, face commit doar pentru `frontend/src/version.json` și `git push origin main` înainte de build; la eșec se oprește. Modificările de cod se comit separat înainte de rulare. Adresa API-ului (`https://validez-be.webnou.ro`) e **arsă în bundle la build** — dacă se schimbă domeniul BE, imaginea FE trebuie reconstruită.
 - [ ] **[PE LAPTOP]** Deploy cu Ansible (BE întâi, apoi FE).
 - [ ] **[PE SERVER]** Verifică versiunea Docker Engine (`docker version`). Serverul are docker-compose 1.29, care pe Engine 25+ crapă cu `KeyError: 'ContainerConfig'` la recrearea unui container (ne-a lovit pe laptop pe 03.10.2026). La ArtaNFT deploy-ul a mers, dar dacă apare: `docker rm -f` pe containerul vizat și `up -d` din nou, sau Compose v2. Fișierele compose rămân pe `version: "3.5"` / `"3"` pentru 1.29.
 
@@ -71,3 +71,8 @@ Marcaje: **[PE LAPTOP]** = `<checkout-validez>` sau checkout-ul Ansible de pe la
 - Migrarea Step 1.4 se oprește singură dacă `tree_node` are deja noduri fără autor; pe o bază nouă de prod nu e cazul.
 - Sesiunea FE (token + refresh token) stă în `localStorage`, ca la ArtaNFT — compromis acceptat pentru Cordova; protecția vine din rotația refresh token-ului și din TTL-ul scurt al token-ului de acces.
 - Build-ul Android (smoke test) e programat la Step 1.7 și cere SDK-ul pe laptop.
+
+## 10. Confidențialitate
+
+- [ ] Confirmă operatorul și contactul Validez pentru pagina `#/privacy`, precum și perioadele de păstrare și furnizorii reali de găzduire/email înainte de publicarea politicii.
+- [ ] Verifică informarea cookie, redeschiderea și pagina privacy pe browser și Android; verifică și accesul din înregistrare.
