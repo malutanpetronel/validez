@@ -29,7 +29,7 @@ Marcaje: **[PE LAPTOP]** = `<checkout-validez>` sau checkout-ul Ansible de pe la
   - [ ] `COMPOSE_PROJECT_NAME=validez_be` — **obligatoriu**: altfel proiectul compose se numește `backend` și se amestecă cu orice alt proiect dintr-un folder `backend` (problema din 03.10.2026 cu EvoPresence).
   - [ ] `DOCKER_IMAGE=` tag-ul afișat de `backend/docker-build-push.sh`.
   - [ ] `DB_PASSWORD`, `APP_SECRET`, `JWT_PASSPHRASE` noi, nu cele de pe dev.
-  - [ ] `SYMFONY_TRUSTED_PROXIES` cu IP-urile/CIDR-urile exacte ale nginx-ului intern și ale Nginx_Proxy (nu `0.0.0.0/0`). **Important pentru login:** `login_throttling` (5 încercări greșite/minut) numără per IP; fără proxy-uri de încredere, toți utilizatorii apar cu IP-ul proxy-ului și se blochează unii pe alții.
+  - [x] `SYMFONY_TRUSTED_PROXIES` cu IP-urile/CIDR-urile exacte ale nginx-ului intern și ale Nginx_Proxy (nu `0.0.0.0/0`) — subrețelele rețelelor `proxy` și `validez_be_internal`, 12.10.2026. **Important pentru login:** `login_throttling` (5 încercări greșite/minut) numără per IP; fără proxy-uri de încredere, toți utilizatorii apar cu IP-ul proxy-ului și se blochează unii pe alții.
   - [ ] `MAILER_DSN` real și `MAILER_FROM_ADDRESS` valid: înregistrarea publică trimite coduri de confirmare pe email (Step 2.2). Implicit, local se folosește Mailcatcher.
   - [ ] Verificare ALTCHA pe browser și Android; `ALTCHA_COST` implicit 1500. Cheile sunt derivate din `APP_SECRET`, fără secrete suplimentare.
 - [ ] **[PE SERVER]** Chei JWT generate pe server, nu copiate de pe dev, în `/var/www/validez-be/shared/backend/config/jwt/` (`private.pem`, `public.pem`, cu passphrase-ul din `.env`), proprietar 1000:1000.
@@ -51,14 +51,14 @@ Marcaje: **[PE LAPTOP]** = `<checkout-validez>` sau checkout-ul Ansible de pe la
 
 - [ ] **[PE SERVER]** Primul administrator, interactiv (parola se cere ascuns, fără `-T`): `cd /var/www/validez-be/current/backend && docker compose -f docker-compose.prod.yml exec php bin/console app:user:create adresa@exemplu.ro "Nume" --admin` (cu `docker-compose` dacă pe server e doar 1.29).
 - [ ] Verificări HTTP pe live:
-  - [ ] `GET https://validez-be.webnou.ro/api/tree_nodes` → 200 fără autentificare.
-  - [ ] `POST https://validez-be.webnou.ro/api/tree_nodes` fără token → 401.
-  - [ ] `https://validez-be.webnou.ro/api/docs` → 404 din proxy (vhost.d), nu din Symfony.
-  - [ ] CORS doar pentru `https://validez.webnou.ro` (și `http://localhost` pentru WebView-ul Cordova).
+  - [x] `GET https://validez-be.webnou.ro/api/tree_nodes` → 200 fără autentificare.
+  - [x] `POST https://validez-be.webnou.ro/api/tree_nodes` fără token → 401.
+  - [x] `https://validez-be.webnou.ro/api/docs` → 404 din proxy (vhost.d), nu din Symfony.
+  - [x] CORS doar pentru `https://validez.webnou.ro` (și `http://localhost` pentru WebView-ul Cordova).
   - [ ] Login din FE cu ALTCHA, creare nod, refresh după 30 de minute fără re-login.
   - [ ] Înregistrare publică: email cu cod, confirmare, login automat, retrimitere după cooldown; un cont neconfirmat nu poate intra.
   - [ ] Mai multe cereri succesive la API: toate corecte, niciun „File not found." (ar indica nginx care ajunge la PHP-ul altui proiect — aliasul `validez-fpm` și rețeaua `validez_be_internal` sunt acolo exact pentru asta).
-  - [ ] Login greșit de 6 ori → blocare; de pe alt IP → încă merge (confirmă `SYMFONY_TRUSTED_PROXIES`).
+  - [x] Login greșit de 6 ori → blocare; de pe alt IP → încă merge (confirmă `SYMFONY_TRUSTED_PROXIES`) — verificat 12.10.2026, telefon pe date mobile.
 
 ## 8. Mentenanță periodică
 
