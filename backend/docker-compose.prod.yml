@@ -3,6 +3,12 @@
 # Productie: expus prin Nginx_Proxy ca https://${VIRTUAL_HOST}
 # Se ruleaza din <release>/backend (repository-ul e monorepo: backend/ + frontend/).
 #
+# Configurare separata pe rol (docs/postgresql-roles.md):
+#   - variabilele acestui fisier vin din /etc/validez-be/compose.env (--env-file; root 0600, nemontat in containere);
+#   - PHP runtime citeste doar .env-ul runtime montat mai jos (DATABASE_URL cu validez_app);
+#   - migrarile ruleaza in serviciul temporar `migrate`, cu /etc/validez-be/migrator.env.
+# Caile au valorile implicite de productie; variabilele exista pentru simularea locala (bin/test-deploy-db.sh).
+#
 # 3.5: necesar pentru numele explicit al retelei interne (docker-compose 1.29 pe server).
 version: "3.5"
 
@@ -12,9 +18,10 @@ services:
         image: postgres:16-alpine
         restart: always
         volumes:
-            - /srv/www/${VIRTUAL_HOST}/db_data:/var/lib/postgresql/data
+            - ${DB_DATA_DIR:-/srv/www/validez-be.webnou.ro/db_data}:/var/lib/postgresql/data
             - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
         environment:
+            # Doar bootstrapul containerului DB; nu ajunge in PHP.
             POSTGRES_DB: ${DB_NAME}
             POSTGRES_USER: ${DB_USER}
             POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -31,19 +38,44 @@ services:
         volumes:
             - ./:/var/www/validez-be:rw
             # .env din shared e symlink (ansistrano): montat explicit ca fisier, altfel symlink-ul nu se rezolva in container.
-            - ./.env:/var/www/validez-be/.env:ro
+            # Contine DOAR configurarea runtime (fara parola administrativa sau a migratorului).
+            - ${RUNTIME_ENV_FILE:-./.env}:/var/www/validez-be/.env:ro
             # Uploadurile: persistente intre release-uri (shared), nu in codul release-ului.
-            - /var/www/validez-be/shared/backend/public/uploads:/var/www/validez-be/public/uploads:rw
-            - /var/www/validez-be/shared/backend/var:/var/www/validez-be/var:rw
-            - /var/www/validez-be/shared/backend/vendor:/var/www/validez-be/vendor:rw
-            - /var/www/validez-be/shared/backend/config/jwt:/var/www/validez-be/config/jwt:ro
+            - ${UPLOADS_DIR:-/var/www/validez-be/shared/backend/public/uploads}:/var/www/validez-be/public/uploads:rw
+            - ${VAR_DIR:-/var/www/validez-be/shared/backend/var}:/var/www/validez-be/var:rw
+            - ${VENDOR_DIR:-/var/www/validez-be/shared/backend/vendor}:/var/www/validez-be/vendor:rw
+            - ${JWT_DIR:-/var/www/validez-be/shared/backend/config/jwt}:/var/www/validez-be/config/jwt:ro
         environment:
             APP_ENV: prod
-            DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?serverVersion=16&charset=utf8"
+            # DATABASE_URL vine din .env-ul runtime (validez_app), nu din credentialele de bootstrap.
         networks:
             internal:
                 # fastcgi_pass din nginx/default.conf; nume unic, ca nginx sa nu ajunga la PHP-ul altui proiect.
                 aliases: [validez-fpm]
+
+    # Migrari: container temporar (`run --rm migrate`), autentificat ca validez_migrator. La prima tranzitie
+    # (bootstrap) MIGRATOR_ENV_FILE indica temporar /etc/validez-be/bootstrap-admin.env. DATABASE_URL din env_file
+    # e variabila reala, deci are prioritate fata de .env-ul runtime montat (din care se iau celelalte valori).
+    migrate:
+        image: ${DOCKER_IMAGE}
+        profiles: [migrate]
+        user: "1000:1000"
+        restart: "no"
+        depends_on:
+            - db
+        working_dir: /var/www/validez-be
+        env_file:
+            - ${MIGRATOR_ENV_FILE:-/etc/validez-be/migrator.env}
+        environment:
+            APP_ENV: prod
+        volumes:
+            - ./:/var/www/validez-be:ro
+            - ${RUNTIME_ENV_FILE:-./.env}:/var/www/validez-be/.env:ro
+            - ${VAR_DIR:-/var/www/validez-be/shared/backend/var}:/var/www/validez-be/var:rw
+            - ${VENDOR_DIR:-/var/www/validez-be/shared/backend/vendor}:/var/www/validez-be/vendor:ro
+        command: ["php", "bin/console", "doctrine:migrations:migrate", "--no-interaction", "--allow-no-migration", "--env=prod"]
+        networks:
+            - internal
 
     nginx:
         container_name: ${NGINX_CONTAINER}
@@ -56,7 +88,7 @@ services:
         volumes:
             # Nginx doar serveste static: read-only.
             - ./public:/var/www/validez-be/public:ro
-            - /var/www/validez-be/shared/backend/public/uploads:/var/www/validez-be/public/uploads:ro
+            - ${UPLOADS_DIR:-/var/www/validez-be/shared/backend/public/uploads}:/var/www/validez-be/public/uploads:ro
             - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
         environment:
             VIRTUAL_HOST: ${VIRTUAL_HOST}
@@ -72,4 +104,4 @@ networks:
     # Retea privata DB/PHP. Pe "proxy" numele "php"/"db" sunt comune cu alte proiecte
     # (lectie ArtaNFT 01.10.2026: nginx impartea cererile intre PHP-uri, "db" era ambiguu).
     internal:
-        name: validez_be_internal
+        name: ${INTERNAL_NETWORK:-validez_be_internal}
