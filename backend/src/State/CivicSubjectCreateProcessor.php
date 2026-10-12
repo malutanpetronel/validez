@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Repository\TreeNodeRepository;
 use App\Subject\SubjectType;
 use App\Subject\PublishingPolicy;
+use App\Subject\SubjectRevisions;
 use App\Subject\SubjectVisibility;
 use App\Subject\CostEstimate;
 use Doctrine\ORM\EntityManagerInterface;
@@ -32,6 +33,7 @@ final class CivicSubjectCreateProcessor implements ProcessorInterface
         private readonly TreeNodeRepository $nodes,
         private readonly Security $security,
         private readonly PublishingPolicy $policy,
+        private readonly SubjectRevisions $revisions,
     ) {
     }
 
@@ -56,6 +58,7 @@ final class CivicSubjectCreateProcessor implements ProcessorInterface
             if (!$this->policy->canPublish($author)) $subject->moderate(null, SubjectVisibility::PENDING);
             CostEstimate::apply($subject, get_object_vars($data), $type);
             $this->em->persist($subject);
+            $this->revisions->initialize($subject, $author);
             $this->em->flush();
 
             return $subject;

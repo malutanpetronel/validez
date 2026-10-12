@@ -15,6 +15,7 @@ use App\Subject\SubjectType;
 use App\Subject\CostEstimate;
 use App\Subject\SubjectVisibility;
 use App\Subject\PublishingPolicy;
+use App\Subject\SubjectRevisions;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -35,6 +36,7 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
         private readonly CivicSubjectRepository $subjects,
         private readonly Security $security,
         private readonly PublishingPolicy $policy,
+        private readonly SubjectRevisions $revisions,
     ) {
     }
 
@@ -58,9 +60,16 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
             throw new AccessDeniedHttpException('Doar administratorii pot folosi acest tip.');
         }
 
-        return $this->em->wrapInTransaction(function () use ($subject, $data, $type, $isAdmin): CivicSubject {
+        if (!$user instanceof User) {
+            throw new AccessDeniedHttpException('Autentificare necesară.');
+        }
+
+        return $this->em->wrapInTransaction(function () use ($subject, $data, $type, $isAdmin, $user): CivicSubject {
             $this->policy->lock($subject->getAuthor());
             $this->em->refresh($subject, LockMode::PESSIMISTIC_WRITE);
+            // După lock: starea citită aici e cea față de care se decide revizia și blocarea tipului.
+            $before = SubjectRevisions::snapshot($subject);
+            SubjectRevisions::assertTypeChangeAllowed($subject, $type);
             if ($isAdmin && $data->visibility === SubjectVisibility::PUBLISHED->value && $subject->getVisibility() !== SubjectVisibility::PUBLISHED) {
                 $subject->markApprovedContribution();
             }
@@ -76,6 +85,7 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
                 $data->stage === null ? null : SubjectStage::from($data->stage),
                 $data->visibility === null ? null : SubjectVisibility::from($data->visibility),
             );
+            $this->revisions->recordIfChanged($subject, $before, $user);
             $this->em->flush();
 
             return $subject;

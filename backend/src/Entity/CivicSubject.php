@@ -140,6 +140,12 @@ class CivicSubject
     public function getFirstVotedAt(): ?\DateTimeImmutable { return $this->firstVotedAt; }
     public function isTypeLocked(): bool { return $this->firstVotedAt !== null; }
 
+    /** @return int numărul noii revizii curente */
+    public function advanceRevision(): int
+    {
+        return ++$this->revisionNumber;
+    }
+
     #[Groups(['subject:read'])]
     public function getNodeId(): string { return $this->node->getId()->toBase32(); }
 

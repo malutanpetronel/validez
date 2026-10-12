@@ -24,6 +24,7 @@ ADR-0003 stabilește tipurile de vot configurabile, un vot activ per `(subiect, 
 ### 3. Votul este legat de revizie
 
 - Fiecare schimbare efectivă a titlului, descrierii sau estimării (sumă, monedă, explicație) creează o `SubjectRevision` nouă. O salvare fără schimbări nu creează revizie. Nu există corecturi „minore” care să ocolească revizia.
+- Tipul face parte din instantaneu, deci schimbarea lui creează și ea revizie, pentru ca instantaneul curent să corespundă subiectului. Se poate întâmpla doar înaintea primului vot, deci nu afectează niciun votant. Comparația se face pe valori (după normalizarea estimării), nu pe câmpurile prezente în cerere.
 - Revizia păstrează instantaneul complet al câmpurilor de sens, nu doar diferența. Notele personale (`SubjectPrivateNote`), stadiul și vizibilitatea nu fac parte din revizie.
 - Tipul subiectului se blochează după primul vot înregistrat vreodată pe subiect, chiar dacă votul a fost retras ulterior.
 - `Vote` reține revizia pe care s-a votat. După o revizie nouă, votul rămâne „nereconfirmat”: utilizatorul vede „Subiectul s-a modificat de la votul tău”, diferența dintre revizia votată și cea curentă, și poate reconfirma (aceeași valoare sau alta) ori retrage.
