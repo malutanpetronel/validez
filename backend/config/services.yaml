@@ -46,3 +46,10 @@ when@test:
             arguments:
                 $secret: '%env(APP_SECRET)%'
                 $cost: 1
+        # Step 4.b3: folosite direct din teste până când le injectează controllerele (4.b4).
+        App\Vote\VoteService:
+            autowire: true
+            public: true
+        App\Vote\IntegrityChain:
+            autowire: true
+            public: true

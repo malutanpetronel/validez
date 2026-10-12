@@ -146,6 +146,12 @@ class CivicSubject
         return ++$this->revisionNumber;
     }
 
+    /** La primul vot înregistrat vreodată; nu se resetează la retragere (blocarea tipului rămâne). */
+    public function markVoted(): void
+    {
+        $this->firstVotedAt ??= new \DateTimeImmutable();
+    }
+
     #[Groups(['subject:read'])]
     public function getNodeId(): string { return $this->node->getId()->toBase32(); }
 
