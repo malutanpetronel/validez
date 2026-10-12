@@ -4,6 +4,7 @@
 export const toTreeNode = (n) => ({
     key: n.id,
     title: n.name,
+    subjectCount: n.subjectCount ?? 0,
     isLeaf: !n.hasChildren,
     parentId: n.parentId ?? null,
 });

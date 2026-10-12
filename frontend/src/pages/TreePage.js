@@ -100,11 +100,12 @@ export default function TreePage() {
         return () => { active = false; };
     }, [returnContext]);
 
-    const loadBranch = useCallback(async (key) => {
+    const loadBranch = useCallback(async (key, refreshCounts = false) => {
         const [children, subjects] = await Promise.all([fetchChildren(key), fetchSubjects({node: key, scope: 'direct'})]);
         setTreeData((t) => setChildren(t, key, children.map(toTreeNode)));
         setSubjectBranches((branches) => ({...branches, [key]: subjects}));
-    }, []);
+        if (refreshCounts) await reloadLevels([key], indexByKey(treeData));
+    }, [treeData]);
 
     // rc-tree cere loadData doar pentru nodurile fără children și fără isLeaf.
     const onLoadData = (node) => loadBranch(node.key).catch((err) => { showError(err); throw err; });
@@ -114,7 +115,15 @@ export default function TreePage() {
      * după o mutare reușită sau eșuată. `previous` păstrează ramurile încărcate ale nodului mutat.
      */
     const reloadLevels = async (parentKeys, previous) => {
-        const unique = [...new Set(parentKeys)];
+        const ancestors = [];
+        for (const key of parentKeys) {
+            let node = key ? previous.get(key) : null;
+            while (node) {
+                ancestors.push(node.parentId ?? null);
+                node = node.parentId ? previous.get(node.parentId) : null;
+            }
+        }
+        const unique = [...new Set([...parentKeys, ...ancestors])];
         const levels = await Promise.all(unique.map((k) => fetchChildren(k)));
         setTreeData((t) => unique.reduce((acc, k, i) => replaceLevel(acc, k, levels[i], previous), t));
     };
@@ -227,6 +236,7 @@ export default function TreePage() {
                 } else {
                     setTreeData((t) => appendChild(t, parentKey, created));
                 }
+                await reloadLevels([parentKey], indexByKey(treeData));
                 if (parentKey) setExpandedKeys((keys) => (keys.includes(parentKey) ? keys : [...keys, parentKey]));
                 setSelectedKey(created.key);
             }
@@ -330,7 +340,7 @@ export default function TreePage() {
                                 allowDrop={({dropNode, dragNode}) => !dropNode.kind && !dragNode.kind}
                                 titleRender={(node) => <Stack component="span" direction="row" spacing={1} sx={{alignItems: 'center', minWidth: 0, '& .MuiSvgIcon-root': {flexShrink: 0}}}>
                                     {node.kind === 'subject' ? <DescriptionOutlinedIcon fontSize="small" color={node.subject.visibility === 'HIDDEN' ? 'error' : 'primary'} data-hidden={node.subject.visibility === 'HIDDEN' ? 'true' : undefined}/> : !node.kind ? <FolderOutlinedIcon fontSize="small" color="action"/> : node.kind === 'add' ? <AddIcon fontSize="small" color="primary"/> : <ListAltOutlinedIcon fontSize="small" color="primary"/>}
-                                    <Typography component="span" variant="body2" sx={{color: node.kind === 'all' || node.kind === 'add' ? 'primary.main' : 'inherit', whiteSpace: 'normal'}}>{node.title}</Typography>
+                                    <Typography component="span" variant="body2" sx={{color: node.kind === 'all' || node.kind === 'add' ? 'primary.main' : 'inherit', whiteSpace: 'normal'}}>{node.title}{!node.kind && node.subjectCount > 0 && <Tooltip title="Total subiecte în această ramură, inclusiv subnivelurile"><span> ({node.subjectCount})</span></Tooltip>}</Typography>
                                 </Stack>}
                                 loadData={onLoadData}
                                 expandedKeys={expandedKeys}
@@ -342,7 +352,7 @@ export default function TreePage() {
                         </Box>
                     )}
                 </Paper>
-                {selectedSubject ? <SubjectPage key={selectedSubject} subjectId={selectedSubject} embedded onUpdated={(subject) => loadBranch(subject.nodeId).catch(showError)}/> :
+                {selectedSubject ? <SubjectPage key={selectedSubject} subjectId={selectedSubject} embedded onUpdated={(subject) => loadBranch(subject.nodeId, true).catch(showError)}/> :
                     selected ? <SubjectList key={selected.key} node={{id: selected.key, name: selected.title}}
                         scope="direct" navigationState={navigationState()}/> :
                     <Paper sx={{p: 3}}><Stack spacing={2}>
@@ -358,7 +368,7 @@ export default function TreePage() {
                     if (subject.visibility === 'PENDING') setMessage({severity: 'info', text: 'Subiectul a fost salvat și este în așteptarea aprobării.'});
                     setSelectedSubject(subject.id);
                     setExpandedKeys((keys) => [...new Set([...keys, selected.key])]);
-                    loadBranch(selected.key).catch(showError);
+                    loadBranch(selected.key, true).catch(showError);
                 }}/>}
 
             {moveOpen && selected && (

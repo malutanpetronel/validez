@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\TreeNode;
+use App\Entity\User;
+use Symfony\Bundle\SecurityBundle\Security;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -13,7 +15,7 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class TreeNodeRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly Security $security)
     {
         parent::__construct($registry, TreeNode::class);
     }
@@ -59,7 +61,7 @@ class TreeNodeRepository extends ServiceEntityRepository
     }
 
     /**
-     * Seteaza hasChildren pe noduri cu o singura interogare (fara N+1).
+     * Seteaza hasChildren si totalul subiectelor vizibile pe noduri cu o singura interogare (fara N+1).
      *
      * @param list<TreeNode> $nodes
      *
@@ -71,20 +73,44 @@ class TreeNodeRepository extends ServiceEntityRepository
             return $nodes;
         }
 
-        $rows = $this->createQueryBuilder('c')
-            ->select('DISTINCT IDENTITY(c.parent) AS parentId')
-            ->where('c.parent IN (:nodes)')
-            ->setParameter('nodes', array_map(self::dbId(...), $nodes))
-            ->getQuery()
-            ->getScalarResult();
+        $viewer = $this->security->getUser();
+        $visibility = '';
+        $parameters = [array_map(self::dbId(...), $nodes)];
+        $types = [\Doctrine\DBAL\ArrayParameterType::STRING];
+        if (!$this->security->isGranted('ROLE_ADMIN')) {
+            $visibility = ' AND (s.visibility = ?';
+            $parameters[] = 'PUBLISHED';
+            $types[] = \Doctrine\DBAL\ParameterType::STRING;
+            if ($viewer instanceof User) {
+                $visibility .= ' OR s.author_id = ?';
+                $parameters[] = $viewer->getId()->toRfc4122();
+                $types[] = \Doctrine\DBAL\ParameterType::STRING;
+            }
+            $visibility .= ')';
+        }
 
-        $withChildren = [];
+        $rows = $this->getEntityManager()->getConnection()->executeQuery(
+            'SELECT n.id AS "nodeId",
+                    EXISTS (SELECT 1 FROM tree_node c WHERE c.parent_id = n.id) AS "hasChildren",
+                    (SELECT COUNT(*) FROM tree_node d
+                     JOIN civic_subject s ON s.node_id = d.id
+                     WHERE d.path <@ n.path'.$visibility.') AS "subjectCount"
+             FROM tree_node n
+             WHERE n.id IN (?)',
+            // Parametrii de vizibilitate preced lista ID-urilor in SQL.
+            [...array_slice($parameters, 1), $parameters[0]],
+            [...array_slice($types, 1), $types[0]],
+        )->fetchAllAssociative();
+
+        $counts = [];
         foreach ($rows as $row) {
-            $withChildren[(string) $row['parentId']] = true;
+            $counts[(string) $row['nodeId']] = $row;
         }
 
         foreach ($nodes as $node) {
-            $node->setHasChildren(isset($withChildren[$node->getId()->toRfc4122()]));
+            $row = $counts[$node->getId()->toRfc4122()];
+            $node->setSubjectCount((int) $row['subjectCount']);
+            $node->setHasChildren(in_array($row['hasChildren'], [true, 1, '1', 't', 'true'], true));
         }
 
         return $nodes;

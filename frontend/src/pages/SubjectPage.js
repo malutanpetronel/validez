@@ -50,8 +50,8 @@ export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
                             {' · '}<Box component="span" sx={{color: 'primary.main'}}>{formatDate(subject.createdAt)}</Box>
                             {subject.updatedAt !== subject.createdAt && <> · modificat <Box component="span" sx={{color: 'primary.main'}}>{formatDate(subject.updatedAt)}</Box></>}
                         </Typography>
-                        <Typography sx={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{subject.description}</Typography>
                         <SubjectEstimate subject={subject}/>
+                        <Typography sx={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{subject.description}</Typography>
                         {isAdmin && <AuthorPublishing key={subject.authorId} authorId={subject.authorId}/>}
                         {subject.type === 'PROPOSAL' && user?.id === subject.authorId && <SubjectPrivateNote key={`${subject.id}:${noteVersion}`} subjectId={subject.id}/>}
                         {canEditSubject(user, subject) && (

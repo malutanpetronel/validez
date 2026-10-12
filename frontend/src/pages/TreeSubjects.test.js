@@ -93,3 +93,21 @@ test('întoarcerea din listă și detaliu păstrează categoria imbricată și r
     await waitFor(() => expect(mockTree.selectedKeys).toEqual([child.id]));
     expect(mockTree.expandedKeys).toEqual([category.id, child.id]);
 });
+
+
+test('click pe propunere în arbore afișează costul, moneda și scope-ul complet înaintea descrierii', async () => {
+    const proposal = {...subjects[0], type: 'PROPOSAL', costEstimate: '970.00', costCurrency: 'EUR',
+        costEstimateScope: 'Kit 3 Locuri parcare inteligenta\nInclude montajul'};
+    global.fetch = jest.fn((url) => {
+        if (url.includes('/civic_subjects/s0')) return ok(proposal);
+        if (url.includes('/civic_subjects')) return ok({member: [proposal], totalItems: 1});
+        return ok({member: url.includes('?parent=') ? [] : [category]});
+    });
+    renderPage();
+    const children = await openBranch();
+    act(() => mockTree.onSelect([children[0].key], {node: children[0]}));
+    const estimate = await screen.findByText('Estimarea autorului: 970 EUR');
+    expect(screen.getByText(/Kit 3 Locuri parcare inteligenta/)).toHaveTextContent('Include montajul');
+    const description = screen.getByText('Descriere completă');
+    expect(estimate.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});

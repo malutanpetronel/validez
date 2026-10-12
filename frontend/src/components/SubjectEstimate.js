@@ -7,8 +7,8 @@ export default function SubjectEstimate({subject, compact = false}) {
     const [integer, fraction = '00'] = String(subject.costEstimate).split('.');
     const amount = integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (fraction === '00' ? '' : `,${fraction.padEnd(2, '0')}`);
     const scope = compact ? subject.costEstimateScope.trim().split(/\r?\n/)[0] : subject.costEstimateScope;
-    return <Box sx={{p: 1.5, borderRadius: 1, bgcolor: 'action.hover', overflowWrap: 'anywhere'}}>
+    return <Box sx={{p: 1.5, borderRadius: 1, bgcolor: 'action.hover', borderLeft: compact ? undefined : '3px solid', borderColor: 'divider', overflowWrap: 'anywhere'}}>
         <Typography component="div" variant="body2" sx={{fontWeight: 600}}>Estimarea autorului: {amount} {subject.costCurrency}</Typography>
-        <Typography component="div" variant="body2" color="text.secondary" sx={{whiteSpace: 'pre-wrap'}}>{scope}</Typography>
+        <Typography component="div" variant="body2" color="text.secondary" sx={{whiteSpace: 'pre-wrap', mt: 0.5}}>{scope}</Typography>
     </Box>;
 }

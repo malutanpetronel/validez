@@ -105,6 +105,8 @@ class TreeNode
     /** Calculat de repository (o interogare per nivel), nu persistat. */
     private ?bool $hasChildren = null;
 
+    private int $subjectCount = 0;
+
     public function __construct(string $name, User $createdBy, ?TreeNode $parent = null, int $position = 0)
     {
         if ($position < 0) {
@@ -169,6 +171,17 @@ class TreeNode
     public function setHasChildren(bool $hasChildren): void
     {
         $this->hasChildren = $hasChildren;
+    }
+
+    #[Groups(['tree:read'])]
+    public function getSubjectCount(): int
+    {
+        return $this->subjectCount;
+    }
+
+    public function setSubjectCount(int $count): void
+    {
+        $this->subjectCount = $count;
     }
 
     public function getCreatedBy(): User

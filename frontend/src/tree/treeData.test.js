@@ -3,7 +3,7 @@ import {appendChild, findNode, renameInTree, setChildren, toTreeNode} from './tr
 const api = (id, name, hasChildren = false, parentId = null) => ({id, name, hasChildren, parentId});
 
 test('toTreeNode pastreaza ULID-ul ca string si deriva isLeaf', () => {
-    expect(toTreeNode(api('01ABC', 'Drumuri', true))).toEqual({key: '01ABC', title: 'Drumuri', isLeaf: false, parentId: null});
+    expect(toTreeNode(api('01ABC', 'Drumuri', true))).toEqual({key: '01ABC', title: 'Drumuri', subjectCount: 0, isLeaf: false, parentId: null});
     expect(toTreeNode(api('01DEF', 'DN1')).isLeaf).toBe(true);
 });
 
@@ -32,4 +32,11 @@ test('appendChild cu parinte null adauga o radacina', () => {
 test('renameInTree schimba doar titlul', () => {
     const t = renameInTree([toTreeNode(api('R', 'Calitate'))], 'R', 'Starea drumurilor');
     expect(t[0]).toMatchObject({key: 'R', title: 'Starea drumurilor'});
+});
+
+test('totalul subiectelor ramane separat de nume si de ramurile incarcate', () => {
+    const node = toTreeNode({...api('R', 'Drumuri', true), subjectCount: 42});
+    expect(node.subjectCount).toBe(42);
+    expect(node.children).toBeUndefined();
+    expect(renameInTree([node], 'R', 'Transport')[0]).toMatchObject({title: 'Transport', subjectCount: 42});
 });
