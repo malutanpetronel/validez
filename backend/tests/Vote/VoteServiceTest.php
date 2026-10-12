@@ -55,7 +55,7 @@ final class VoteServiceTest extends KernelTestCase
         $this->em->persist($this->node);
         $this->em->flush();
         foreach (['ion', 'maria', 'nou'] as $who) {
-            $this->votes->grantConsent($this->u[$who], '2026-10-12');
+            $this->votes->grantConsent($this->u[$who], $this->votes->getCurrentNoticeVersion());
         }
     }
 
@@ -244,16 +244,31 @@ final class VoteServiceTest extends KernelTestCase
         self::assertSame(1, (int) $this->db->fetchOne('SELECT COUNT(*) FROM user_vote_history'), 'istoricul Mariei rămâne');
 
         $this->rejected(VoteException::CONSENT_REQUIRED, fn () => $this->votes->cast($this->u['ion'], $a, 'VALIDITY', 1));
-        $this->votes->grantConsent($this->u['ion'], '2026-10-12');
+        $this->votes->grantConsent($this->u['ion'], $this->votes->getCurrentNoticeVersion());
         self::assertSame(VoteHistoryAction::VOTE, $this->votes->cast($this->u['ion'], $a, 'VALIDITY', 1), 'voturile retrase nu se reactivează; vot nou');
     }
 
-    public function testConsentNewNoticeVersionReplacesTheActiveOne(): void
+    public function testOutdatedNoticeBlocksVotingButKeepsExistingVotes(): void
     {
-        $same = $this->votes->grantConsent($this->u['ion'], '2026-10-12');
-        self::assertSame('2026-10-12', $same->getNoticeVersion());
-        $this->votes->grantConsent($this->u['ion'], '2026-11-01');
-        $rows = $this->db->fetchAllKeyValue('SELECT notice_version, withdrawn_at IS NULL FROM vote_consent WHERE user_id = ? ORDER BY granted_at', [$this->u['ion']->getId()->toRfc4122()]);
-        self::assertEquals(['2026-10-12' => false, '2026-11-01' => true], $rows);
+        $current = $this->votes->getCurrentNoticeVersion();
+        self::assertSame($current, $this->votes->grantConsent($this->u['ion'], $current)->getNoticeVersion(), 'același acord, fără rând nou');
+        $this->rejected(VoteException::NOTICE_VERSION_MISMATCH, fn () => $this->votes->grantConsent($this->u['ion'], 'alta'));
+
+        $s = $this->subject();
+        $this->votes->cast($this->u['ion'], $s, 'VALIDITY', 1);
+        // Informarea se actualizează: acordul lui Ion e pe versiunea veche.
+        $this->db->executeStatement("UPDATE vote_consent SET notice_version = 'veche' WHERE user_id = ?", [$this->u['ion']->getId()->toRfc4122()]);
+        $this->em->clear();
+        $ion = $this->em->find(User::class, $this->u['ion']->getId());
+        $s = $this->em->find(CivicSubject::class, $s->getId());
+
+        self::assertSame(['active' => true, 'current' => false, 'noticeVersion' => 'veche', 'currentNoticeVersion' => $current], $this->votes->consentState($ion));
+        $this->rejected(VoteException::CONSENT_REQUIRED, fn () => $this->votes->cast($ion, $s, 'VALIDITY', 0));
+        self::assertSame([[1 => 1], 1, 0], $this->tally($s, 'VALIDITY'), 'votul existent rămâne');
+
+        $this->votes->grantConsent($ion, $current);
+        $rows = $this->db->fetchAllKeyValue('SELECT notice_version, withdrawn_at IS NULL FROM vote_consent WHERE user_id = ? ORDER BY granted_at, notice_version', [$ion->getId()->toRfc4122()]);
+        self::assertEquals(['veche' => false, $current => true], $rows);
+        self::assertSame(VoteHistoryAction::CHANGE, $this->votes->cast($ion, $s, 'VALIDITY', 0));
     }
 }

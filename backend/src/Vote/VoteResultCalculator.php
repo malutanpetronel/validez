@@ -25,6 +25,26 @@ final class VoteResultCalculator
 
     public function recalculate(CivicSubject $subject): void
     {
+        $computed = $this->compute($subject);
+        foreach ($this->em->getRepository(SubjectVoteType::class)->findBy(['subject' => $subject]) as $configured) {
+            $type = $configured->getVoteType();
+            $result = $this->em->find(VoteResult::class, ['subject' => $subject->getId(), 'voteType' => $type->getCode()]);
+            if ($result === null) {
+                $result = new VoteResult($subject, $type);
+                $this->em->persist($result);
+            }
+            [$counts, $stale] = $computed[$type->getCode()] ?? [[], 0];
+            $result->replace($counts, $stale);
+        }
+    }
+
+    /**
+     * Numărătoarea din `vote`, fără scriere (folosită și de app:votes:verify).
+     *
+     * @return array<string, array{0: array<int, int>, 1: int}> cod tip => [contoare pe revizia curentă, nereconfirmate]
+     */
+    public function compute(CivicSubject $subject): array
+    {
         $rows = $this->em->getConnection()->fetchAllAssociative(
             'SELECT code, value, is_current, COUNT(*) AS n FROM (
                  SELECT v.vote_type_code AS code, v.value, (r.number = ?)::int AS is_current
@@ -33,24 +53,20 @@ final class VoteResultCalculator
              ) AS x GROUP BY code, value, is_current',
             [$subject->getRevisionNumber(), $subject->getId()->toRfc4122()],
         );
-        $current = [];
-        $stale = [];
+        $computed = [];
         foreach ($rows as $row) {
+            $computed[$row['code']] ??= [[], 0];
             if ((int) $row['is_current'] === 1) {
-                $current[$row['code']][(int) $row['value']] = (int) $row['n'];
+                $computed[$row['code']][0][(int) $row['value']] = (int) $row['n'];
             } else {
-                $stale[$row['code']] = ($stale[$row['code']] ?? 0) + (int) $row['n'];
+                $computed[$row['code']][1] += (int) $row['n'];
             }
         }
+        foreach ($computed as &$entry) {
+            ksort($entry[0]);
+        }
+        unset($entry);
 
-        foreach ($this->em->getRepository(SubjectVoteType::class)->findBy(['subject' => $subject]) as $configured) {
-            $type = $configured->getVoteType();
-            $result = $this->em->find(VoteResult::class, ['subject' => $subject->getId(), 'voteType' => $type->getCode()]);
-            if ($result === null) {
-                $result = new VoteResult($subject, $type);
-                $this->em->persist($result);
-            }
-            $result->replace($current[$type->getCode()] ?? [], $stale[$type->getCode()] ?? 0);
-        }
+        return $computed;
     }
 }

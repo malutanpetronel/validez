@@ -92,6 +92,9 @@ class UserVoteHistory
     }
 
     public function getAction(): VoteHistoryAction { return $this->action; }
+    public function getSubject(): CivicSubject { return $this->subject; }
+    public function getVoteType(): VoteType { return $this->voteType; }
+    public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
     public function getValueBefore(): ?int { return $this->valueBefore; }
     public function getValueAfter(): ?int { return $this->valueAfter; }
     public function getRevisionBefore(): ?SubjectRevision { return $this->revisionBefore; }

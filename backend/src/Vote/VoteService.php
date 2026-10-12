@@ -26,6 +26,9 @@ use Doctrine\ORM\EntityManagerInterface;
  *
  * Tranzacția nu folosește EntityManager::wrapInTransaction, care închide EntityManager-ul la orice excepție:
  * refuzurile de domeniu sunt normale și nu trebuie să invalideze EM-ul.
+ *
+ * Consimțământ activ ≠ consimțământ pentru versiunea curentă a informării. Votul, schimbarea și reconfirmarea
+ * cer versiunea curentă; retragerea votului și a consimțământului nu. O versiune nouă nu retrage voturile existente.
  */
 final class VoteService
 {
@@ -33,7 +36,13 @@ final class VoteService
         private readonly EntityManagerInterface $em,
         private readonly IntegrityChain $chain,
         private readonly VoteResultCalculator $results,
+        private readonly string $currentNoticeVersion,
     ) {
+    }
+
+    public function getCurrentNoticeVersion(): string
+    {
+        return $this->currentNoticeVersion;
     }
 
     public function hasActiveConsent(User $user): bool
@@ -41,9 +50,34 @@ final class VoteService
         return $this->em->getRepository(VoteConsent::class)->count(['user' => $user, 'withdrawnAt' => null]) > 0;
     }
 
-    /** Acordă consimțământul pentru versiunea dată a informării; o versiune nouă înlocuiește acordul activ. */
+    public function hasCurrentConsent(User $user): bool
+    {
+        return $this->em->getRepository(VoteConsent::class)->count(['user' => $user, 'withdrawnAt' => null, 'noticeVersion' => $this->currentNoticeVersion]) > 0;
+    }
+
+    /** @return array{active: bool, current: bool, noticeVersion: ?string, currentNoticeVersion: string} */
+    public function consentState(User $user): array
+    {
+        $active = $this->em->getRepository(VoteConsent::class)->findOneBy(['user' => $user, 'withdrawnAt' => null]);
+
+        return [
+            'active' => $active !== null,
+            'current' => $active?->getNoticeVersion() === $this->currentNoticeVersion,
+            'noticeVersion' => $active?->getNoticeVersion(),
+            'currentNoticeVersion' => $this->currentNoticeVersion,
+        ];
+    }
+
+    /**
+     * Acordă consimțământul pentru versiunea curentă a informării (trimisă de client, ca dovadă că a văzut-o).
+     * Un acord activ pe o versiune veche e înlocuit.
+     */
     public function grantConsent(User $user, string $noticeVersion): VoteConsent
     {
+        if ($noticeVersion !== $this->currentNoticeVersion) {
+            throw VoteException::because(VoteException::NOTICE_VERSION_MISMATCH);
+        }
+
         return $this->transactional(function () use ($user, $noticeVersion): VoteConsent {
             $this->em->refresh($user, LockMode::PESSIMISTIC_WRITE);
             $active = $this->em->getRepository(VoteConsent::class)->findOneBy(['user' => $user, 'withdrawnAt' => null]);
@@ -75,7 +109,7 @@ final class VoteService
             if (!$user->isEmailVerified()) {
                 throw VoteException::because(VoteException::EMAIL_NOT_VERIFIED);
             }
-            if (!$this->hasActiveConsent($user)) {
+            if (!$this->hasCurrentConsent($user)) {
                 throw VoteException::because(VoteException::CONSENT_REQUIRED);
             }
             if ($subject->getVisibility() !== SubjectVisibility::PUBLISHED) {

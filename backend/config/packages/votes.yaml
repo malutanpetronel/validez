@@ -1,0 +1,16 @@
+# Step 4.b4 (ADR-0007).
+parameters:
+    # Versiunea informării pentru voturi. Se incrementează doar la schimbări relevante ale prelucrării,
+    # nu la corecturi editoriale. O versiune nouă cere reconfirmarea înainte de următorul vot,
+    # dar nu retrage voturile existente.
+    vote_consent_notice_version_default: '2026-10-12'
+    # Operații de scriere pe voturi (vot, retragere, acordarea consimțământului) per utilizator, pe minut.
+    # Retragerea consimțământului nu e limitată.
+    vote_write_limit: 30
+
+framework:
+    rate_limiter:
+        vote_write:
+            policy: sliding_window
+            limit: '%vote_write_limit%'
+            interval: '1 minute'

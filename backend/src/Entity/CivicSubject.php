@@ -136,8 +136,13 @@ class CivicSubject
     public function getStage(): SubjectStage { return $this->stage; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
     public function getUpdatedAt(): \DateTimeImmutable { return $this->updatedAt; }
+    /** Revizia curentă; FE o compară cu revizia votului propriu. */
+    #[Groups(['subject:read'])]
     public function getRevisionNumber(): int { return $this->revisionNumber; }
     public function getFirstVotedAt(): ?\DateTimeImmutable { return $this->firstVotedAt; }
+
+    /** Tipul nu se mai poate schimba după primul vot; formularul de editare dezactivează câmpul. */
+    #[Groups(['subject:read'])]
     public function isTypeLocked(): bool { return $this->firstVotedAt !== null; }
 
     /** @return int numărul noii revizii curente */

@@ -39,6 +39,10 @@ services:
             $secret: '%env(APP_SECRET)%'
             $sender: '%env(default:registration_sender_default:MAILER_FROM_ADDRESS)%'
 
+    App\Vote\VoteService:
+        arguments:
+            $currentNoticeVersion: '%env(default:vote_consent_notice_version_default:VOTE_CONSENT_NOTICE_VERSION)%'
+
 when@test:
     services:
         App\Auth\AltchaService:
@@ -46,10 +50,3 @@ when@test:
             arguments:
                 $secret: '%env(APP_SECRET)%'
                 $cost: 1
-        # Step 4.b3: folosite direct din teste până când le injectează controllerele (4.b4).
-        App\Vote\VoteService:
-            autowire: true
-            public: true
-        App\Vote\IntegrityChain:
-            autowire: true
-            public: true

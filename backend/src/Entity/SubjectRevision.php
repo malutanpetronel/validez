@@ -80,6 +80,7 @@ class SubjectRevision
     public function getTitle(): string { return $this->title; }
     public function getDescription(): string { return $this->description; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+    public function getCreatedBy(): User { return $this->createdBy; }
 
     public function belongsTo(CivicSubject $subject): bool
     {
