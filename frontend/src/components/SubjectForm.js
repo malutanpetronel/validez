@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {
-    Alert, AppBar, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton,
+    Alert, AppBar, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormHelperText, IconButton,
     InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography, useMediaQuery,
 } from '@mui/material';
 import {useTheme} from '@mui/material/styles';
@@ -142,9 +142,10 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                     {!editing && <Typography variant="body2" color="text.secondary">În: <strong>{node.name}</strong></Typography>}
                     <FormControl fullWidth>
                         <InputLabel id="subject-type">Tip</InputLabel>
-                        <Select labelId="subject-type" label="Tip" value={form.type} onChange={set('type')}>
+                        <Select labelId="subject-type" label="Tip" value={form.type} onChange={set('type')} disabled={editing && !!subject.typeLocked}>
                             {typeOptions.map((t) => <MenuItem key={t} value={t} disabled={!types.includes(t)}>{TYPE_LABELS[t]}</MenuItem>)}
                         </Select>
+                        {editing && subject.typeLocked && <FormHelperText>Tipul nu se mai poate schimba după primul vot: ar schimba sensul voturilor.</FormHelperText>}
                     </FormControl>
                     <TextField label="Titlu" required value={form.title} onChange={set('title')} inputProps={{maxLength: 200}}
                                helperText="Minim 3 caractere"/>

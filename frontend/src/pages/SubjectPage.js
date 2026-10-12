@@ -10,6 +10,7 @@ import SubjectForm from '../components/SubjectForm';
 import SubjectEstimate from '../components/SubjectEstimate';
 import AuthorPublishing from '../components/AuthorPublishing';
 import SubjectPrivateNote from '../components/SubjectPrivateNote';
+import SubjectVotes from '../components/SubjectVotes';
 
 export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
     const params = useParams();
@@ -57,6 +58,8 @@ export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
                         {canEditSubject(user, subject) && (
                             <div><Button variant="outlined" startIcon={<EditIcon/>} onClick={() => setEditing(true)}>Editează</Button></div>
                         )}
+                        {/* Revizie nouă după editare → reîncărcăm voturile (pot deveni nereconfirmate). */}
+                        <SubjectVotes key={`${subject.id}:${subject.revisionNumber ?? 1}:${subject.stage}:${subject.visibility}`} subjectId={subject.id}/>
                     </Stack>
                 </Paper>
             )}

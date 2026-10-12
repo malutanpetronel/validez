@@ -11,6 +11,7 @@ import HelpPage from './pages/HelpPage';
 import CategorySuggestionsPage from './pages/CategorySuggestionsPage';
 import ModerationPage from './pages/ModerationPage';
 import CheckApiPage from './pages/CheckApiPage';
+import MyVotesPage from './pages/MyVotesPage';
 
 // Hash router: functioneaza identic in browser, pe nginx si in WebView-ul Cordova (file:// / http://localhost),
 // fara configurare de rescriere pe server (acelasi tipar ca ArtaNFT).
@@ -32,6 +33,7 @@ export const routes = [
             {path: 'subiecte', element: <SubjectsPage/>},
             {path: 'arbore/:nodeId/subiecte', element: <SubjectsPage/>},
             {path: 'subiecte/:id', element: <SubjectPage/>},
+            {path: 'voturile-mele', element: <MyVotesPage/>},
         ],
     },
 ];

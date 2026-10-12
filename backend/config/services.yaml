@@ -43,6 +43,10 @@ services:
         arguments:
             $currentNoticeVersion: '%env(default:vote_consent_notice_version_default:VOTE_CONSENT_NOTICE_VERSION)%'
 
+    App\Vote\VotingSwitch:
+        arguments:
+            $enabled: '%env(bool:default:voting_enabled_default:VOTING_ENABLED)%'
+
 when@test:
     services:
         App\Auth\AltchaService:

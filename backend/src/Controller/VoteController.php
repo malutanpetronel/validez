@@ -112,7 +112,7 @@ final class VoteController extends AbstractController
     #[Route('/api/me/vote-consent', methods: ['GET'])]
     public function consent(): JsonResponse
     {
-        return $this->respond($this->votes->consentState($this->user()), true);
+        return $this->respond($this->consentPayload($this->user()), true);
     }
 
     #[IsGranted('ROLE_USER')]
@@ -133,7 +133,7 @@ final class VoteController extends AbstractController
             return $this->error($e->httpStatus(), $e->reason, $e->getMessage());
         }
 
-        return $this->respond($this->votes->consentState($user), true);
+        return $this->respond($this->consentPayload($user), true);
     }
 
     /** Fără limitare: retragerea consimțământului trebuie să rămână accesibilă și după atingerea limitei de vot. */
@@ -144,7 +144,7 @@ final class VoteController extends AbstractController
         $user = $this->user();
         $withdrawn = $this->votes->withdrawConsent($user);
 
-        return $this->respond(['withdrawnVotes' => $withdrawn] + $this->votes->consentState($user), true);
+        return $this->respond(['withdrawnVotes' => $withdrawn] + $this->consentPayload($user), true);
     }
 
     /**
@@ -213,6 +213,12 @@ final class VoteController extends AbstractController
     }
 
     /** @return array<string, mixed> */
+    private function consentPayload(User $user): array
+    {
+        return $this->votes->consentState($user) + ['votingEnabled' => $this->votes->isVotingEnabled()];
+    }
+
+    /** @return array<string, mixed> */
     private function summaryOf(CivicSubject $subject, ?User $viewer): array
     {
         $configured = $this->em->getRepository(SubjectVoteType::class)->findBy(['subject' => $subject]);
@@ -250,7 +256,8 @@ final class VoteController extends AbstractController
             'subjectId' => $subject->getId()->toBase32(),
             'revisionNumber' => $subject->getRevisionNumber(),
             'frozen' => VoteService::isFrozen($subject),
-            'votingOpen' => $subject->getVisibility() === SubjectVisibility::PUBLISHED && !VoteService::isFrozen($subject),
+            'votingEnabled' => $this->votes->isVotingEnabled(),
+            'votingOpen' => $this->votes->isVotingEnabled() && $subject->getVisibility() === SubjectVisibility::PUBLISHED && !VoteService::isFrozen($subject),
             'types' => $types,
             'consent' => $viewer === null ? null : $this->votes->consentState($viewer),
         ];
@@ -297,8 +304,11 @@ final class VoteController extends AbstractController
         if ($limit->isAccepted()) {
             return null;
         }
-        $response = $this->error(429, 'rate_limited', 'Prea multe operații de vot într-un minut. Reîncearcă puțin mai târziu.');
-        $response->headers->set('Retry-After', (string) max(1, $limit->getRetryAfter()->getTimestamp() - time()));
+        $seconds = max(1, $limit->getRetryAfter()->getTimestamp() - time());
+        // Și în corp: frontendul e pe alt domeniu, iar Retry-After nu e citibil cross-origin fără expunere CORS.
+        $response = new JsonResponse(['reason' => 'rate_limited', 'message' => 'Prea multe operații de vot într-un minut. Reîncearcă puțin mai târziu.', 'retryAfter' => $seconds], 429);
+        $response->headers->set('Cache-Control', 'private, no-store');
+        $response->headers->set('Retry-After', (string) $seconds);
 
         return $response;
     }

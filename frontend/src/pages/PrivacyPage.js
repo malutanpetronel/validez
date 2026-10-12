@@ -1,5 +1,6 @@
-import {Link as RouterLink} from 'react-router-dom';
-import {Button, Link, Paper, Stack, Typography} from '@mui/material';
+import {useEffect} from 'react';
+import {Link as RouterLink, useSearchParams} from 'react-router-dom';
+import {Alert, Button, Link, Paper, Stack, Typography} from '@mui/material';
 
 const sections = [
     ['Ce date folosim', 'Pentru cont folosim numele afișat, adresa de email și parola stocată ca hash. Păstrăm confirmarea emailului, rolurile și datele necesare autentificării și recuperării parolei. Pentru contribuții păstrăm subiectele, propunerile de categorii, estimările de cost și deciziile de moderare. Datele tehnice, precum adresa IP și jurnalele de acces, sunt folosite pentru securitate și limitarea abuzurilor.'],
@@ -10,9 +11,29 @@ const sections = [
     ['Cine poate primi datele', 'Administratorii au acces la datele necesare moderării și administrării. Furnizorii de găzduire și email procesează date necesare funcționării serviciului și trimiterii codurilor de confirmare sau recuperare. Contribuțiile publicate pot fi consultate de orice vizitator. Trimiterea automată a sesizărilor către instituții nu este activă în versiunea actuală.'],
     ['Păstrarea și securitatea datelor', 'Datele contului și contribuțiile sunt păstrate cât timp sunt necesare furnizării serviciului, moderării și soluționării solicitărilor. Codurile de confirmare și recuperare expiră după 15 minute; tokenurile au durată limitată și pot fi revocate. În producție, datele sunt transmise prin HTTPS, parolele sunt stocate ca hash, iar accesul este verificat pe server. Solicitările de ștergere se analizează împreună cu eventualele obligații de păstrare și drepturile altor persoane.'],
     ['Drepturile tale', 'În condițiile GDPR poți solicita informare, acces, rectificare, ștergere, restricționare, portabilitate și te poți opune anumitor prelucrări. Solicitările privind contul și datele personale se adresează contactului platformei. Notele personale au și funcții de export și ștergere prin API. Ai dreptul să depui o plângere la ANSPDCP.'],
-    ['Actualizări', 'Această pagină descrie funcționalitățile actuale. O vom actualiza când introducem voturi, atașamente, localizare sau trimiterea sesizărilor către instituții, pentru a explica datele folosite de fiecare funcționalitate.'],
+    ['Actualizări', 'Această pagină descrie funcționalitățile actuale. O vom actualiza când introducem atașamente, localizare sau trimiterea sesizărilor către instituții, pentru a explica datele folosite de fiecare funcționalitate. Secțiunea despre voturi este în curs de verificare și va fi definitivată înainte ca votarea să devină activă.'],
 ];
+
+// ADR-0007. Text de lucru, de verificat de un specialist; votarea rămâne oprită în producție până la definitivare.
+// Nu promitem anonimizare și nu dăm termene de păstrare încă nedecise.
+const VOTES = [
+    ['Acordul', 'Votul este opțional. Îl prelucrăm doar cu acordul tău explicit, cerut separat, printr-o bifă nebifată inițial, la primul vot. Înregistrăm versiunea acestei informări și momentul acordului. Dacă modul de prelucrare se schimbă semnificativ, ți se cere din nou acordul înainte de următorul vot; voturile deja exprimate rămân.'],
+    ['Voturile sunt private', 'Votul poate dezvălui opinii, inclusiv politice, indiferent de tipul subiectului. De aceea votul tău individual nu este afișat altor utilizatori și nu este accesibil administratorilor prin aplicație. Doar tu îți vezi propriile voturi.'],
+    ['Ce este public', 'Sunt publice numai rezultatele agregate pentru fiecare subiect: câte voturi are fiecare opțiune pe versiunea curentă a subiectului și câte voturi date pe versiuni anterioare nu au fost reconfirmate.'],
+    ['Versiunile subiectului', 'Fiecare vot este legat de versiunea subiectului pe care ai votat. Dacă titlul, descrierea sau estimarea se modifică, votul tău apare ca nereconfirmat: poți vedea ce s-a schimbat, apoi îl poți reconfirma, schimba sau retrage. Istoricul versiunilor subiectului este public, la fel ca subiectul.'],
+    ['Retragerea votului și a acordului', 'Poți retrage oricând un vot; rezultatele se actualizează imediat. Retragerea unui vot nu retrage acordul și nu șterge istoricul tău privat de vot. Din „Voturile mele” poți retrage acordul: se retrag toate voturile tale active și se șterge istoricul tău privat de vot, inclusiv datele care îți permit să-ți verifici înregistrările. Retragerea funcționează și pe subiecte închise sau ascunse.'],
+    ['Urme de integritate', 'Pentru a putea verifica integritatea rezultatelor, păstrăm pentru fiecare subiect un jurnal de operațiuni care nu conține numele, emailul, identificatorul contului sau opțiunea ta în clar, ci amprente criptografice, ordinea și momentul operațiunilor. După retragerea acordului sau ștergerea datelor de vot, aceste urme nu mai pot fi legate de tine prin datele din aplicație. Nu le prezentăm ca anonime: subiectul, momentul operațiunilor și alte informații pot permite corelări. Durata păstrării acestor urme nu este încă stabilită și va fi precizată aici înainte ca votarea să devină activă.'],
+    ['Copii de siguranță', 'Ștergerea din aplicație nu elimină imediat datele din copiile de siguranță. Perioada de păstrare a acestor copii și procedura prin care ștergerile se reaplică la o eventuală restaurare vor fi precizate aici înainte ca votarea să devină activă.'],
+    ['Datele tale de vot', 'Din „Voturile mele” poți descărca voturile și istoricul tău privat, împreună cu datele necesare pentru a-ți verifica propriile înregistrări în jurnalul de integritate, fără acces la operațiunile altor persoane.'],
+];
+
 export default function PrivacyPage() {
+    const [params] = useSearchParams();
+    const section = params.get('section');
+    useEffect(() => {
+        if (section) document.getElementById(`privacy-${section}`)?.scrollIntoView?.({behavior: 'smooth', block: 'start'});
+    }, [section]);
+
     return <Paper sx={{p: {xs: 2, sm: 3}, maxWidth: 860, mx: 'auto'}}><Stack spacing={2.5}>
         <Typography component="h1" variant="h4">Politica de confidențialitate</Typography>
         <Typography variant="body2" color="text.secondary">Validez · Actualizată la 12 octombrie 2026</Typography>
@@ -25,6 +46,14 @@ export default function PrivacyPage() {
             <Typography component="h2" variant="h6">{title}</Typography>
             <Typography sx={{overflowWrap: 'anywhere'}}>{text}</Typography>
         </Stack>)}
+        <Stack id="privacy-voturi" role="region" aria-labelledby="privacy-voturi-title" spacing={1.5} sx={{scrollMarginTop: 80}}>
+            <Typography id="privacy-voturi-title" component="h2" variant="h6">Voturi</Typography>
+            <Alert severity="warning">Text de lucru, în curs de verificare de specialitate. Votarea nu este activă până la definitivarea acestei secțiuni.</Alert>
+            {VOTES.map(([title, text]) => <Stack key={title} spacing={0.5}>
+                <Typography component="h3" variant="subtitle1">{title}</Typography>
+                <Typography sx={{overflowWrap: 'anywhere'}}>{text}</Typography>
+            </Stack>)}
+        </Stack>
         <Typography variant="body2"><Link href="https://www.dataprotection.ro/" target="_blank" rel="noopener noreferrer">ANSPDCP</Link>{' · '}
             <Link href="https://commission.europa.eu/law/law-topic/data-protection/information-individuals_en" target="_blank" rel="noopener noreferrer">Informații despre drepturile tale — Comisia Europeană</Link></Typography>
         <div><Button component={RouterLink} to="/">Înapoi la arbore</Button></div>

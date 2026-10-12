@@ -37,7 +37,20 @@ final class VoteService
         private readonly IntegrityChain $chain,
         private readonly VoteResultCalculator $results,
         private readonly string $currentNoticeVersion,
+        private readonly VotingSwitch $switch,
     ) {
+    }
+
+    public function isVotingEnabled(): bool
+    {
+        return $this->switch->isEnabled();
+    }
+
+    private function assertVotingEnabled(): void
+    {
+        if (!$this->switch->isEnabled()) {
+            throw VoteException::because(VoteException::VOTING_DISABLED);
+        }
     }
 
     public function getCurrentNoticeVersion(): string
@@ -74,6 +87,7 @@ final class VoteService
      */
     public function grantConsent(User $user, string $noticeVersion): VoteConsent
     {
+        $this->assertVotingEnabled();
         if ($noticeVersion !== $this->currentNoticeVersion) {
             throw VoteException::because(VoteException::NOTICE_VERSION_MISMATCH);
         }
@@ -104,6 +118,8 @@ final class VoteService
      */
     public function cast(User $user, CivicSubject $subject, string $voteTypeCode, int $value): ?VoteHistoryAction
     {
+        $this->assertVotingEnabled();
+
         return $this->transactional(function () use ($user, $subject, $voteTypeCode, $value): ?VoteHistoryAction {
             $this->lock($user, $subject);
             if (!$user->isEmailVerified()) {

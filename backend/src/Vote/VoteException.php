@@ -14,6 +14,7 @@ final class VoteException extends \DomainException
     public const TYPE_NOT_ACTIVE = 'type_not_active';
     public const VALUE_OUT_OF_RANGE = 'value_out_of_range';
     public const NOTICE_VERSION_MISMATCH = 'notice_version_mismatch';
+    public const VOTING_DISABLED = 'voting_disabled';
 
     private const MESSAGES = [
         self::EMAIL_NOT_VERIFIED => 'Confirmă adresa de email înainte de a vota.',
@@ -23,6 +24,7 @@ final class VoteException extends \DomainException
         self::TYPE_NOT_ACTIVE => 'Acest tip de vot nu este activ pe subiect.',
         self::VALUE_OUT_OF_RANGE => 'Valoarea votului nu este permisă pentru acest tip.',
         self::NOTICE_VERSION_MISMATCH => 'Informarea s-a actualizat; citește versiunea curentă înainte de a-ți da acordul.',
+        self::VOTING_DISABLED => 'Votarea nu este încă activă. Poți retrage oricând voturile existente.',
     ];
 
     private function __construct(public readonly string $reason)
@@ -39,7 +41,7 @@ final class VoteException extends \DomainException
     {
         return match ($this->reason) {
             self::EMAIL_NOT_VERIFIED, self::CONSENT_REQUIRED => 403,
-            self::SUBJECT_NOT_VOTABLE, self::SUBJECT_FROZEN, self::TYPE_NOT_ACTIVE => 409,
+            self::SUBJECT_NOT_VOTABLE, self::SUBJECT_FROZEN, self::TYPE_NOT_ACTIVE, self::VOTING_DISABLED => 409,
             self::VALUE_OUT_OF_RANGE, self::NOTICE_VERSION_MISMATCH => 422,
         };
     }

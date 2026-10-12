@@ -50,3 +50,11 @@ test('titlu prea scurt: Salveaza dezactivat', () => {
     fireEvent.change(screen.getByLabelText(/Descriere/), {target: {value: 'ceva'}});
     expect(screen.getByRole('button', {name: 'Salvează'})).toBeDisabled();
 });
+
+test('după primul vot, tipul nu se mai poate schimba (și adminul vede de ce)', () => {
+    setSession({token: adminJwt()});
+    render(<AuthProvider><SubjectForm subject={subject({typeLocked: true})} onClose={() => {}} onSaved={() => {}}/></AuthProvider>);
+    const [typeSelect] = within(screen.getByRole('dialog')).getAllByRole('combobox');
+    expect(typeSelect).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText(/Tipul nu se mai poate schimba după primul vot/)).toBeInTheDocument();
+});

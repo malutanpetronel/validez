@@ -19,6 +19,21 @@ export const VISIBILITY_LABELS = {PUBLISHED: 'Publicat', HIDDEN: 'Ascuns', PENDI
 
 export const allowedTypes = (isAdmin) => (isAdmin ? Object.keys(TYPE_LABELS) : USER_TYPES);
 
+// Voturi (ADR-0007). Valorile sunt cele de pe server (VALIDITY/YES_NO 0–1, IMPORTANCE 1–5).
+export const VOTE_TYPE_LABELS = {VALIDITY: 'Validare', YES_NO: 'Susținere', IMPORTANCE: 'Importanță'};
+export const VOTE_TYPE_HINTS = {
+    VALIDITY: 'Ce se descrie aici este real și corect?',
+    YES_NO: 'Susții această inițiativă?',
+    IMPORTANCE: '1 = puțin important, 5 = foarte important',
+};
+const BINARY_OPTIONS = {VALIDITY: [[1, 'Validez'], [0, 'Invalidez']], YES_NO: [[1, 'Da'], [0, 'Nu']]};
+
+/** Opțiunile unui tip de vot, ca [valoare, etichetă]; pentru tipuri noi, intervalul primit de la server. */
+export const voteOptions = (type) => BINARY_OPTIONS[type.code]
+    ?? Array.from({length: type.maxValue - type.minValue + 1}, (_, i) => [type.minValue + i, String(type.minValue + i)]);
+
+export const voteValueLabel = (code, value) => (BINARY_OPTIONS[code]?.find(([v]) => v === value)?.[1]) ?? String(value);
+
 /** Butonul de editare: adminul sau autorul (serverul verifică oricum). */
 export const canEditSubject = (user, subject) =>
     !!user && !!subject && (user.roles?.includes('ROLE_ADMIN') || user.id === subject.authorId);

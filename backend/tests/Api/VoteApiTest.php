@@ -144,7 +144,7 @@ final class VoteApiTest extends WebTestCase
         $r = $this->call('PUT', '/api/me/vote-consent', ['noticeVersion' => 'alta'], 'ion');
         self::assertSame([422, 'notice_version_mismatch'], [$this->code(), $r['reason']]);
         $this->consent('ion');
-        self::assertSame(['active' => true, 'current' => true, 'noticeVersion' => $this->notice, 'currentNoticeVersion' => $this->notice], $this->call('GET', '/api/me/vote-consent', null, 'ion'));
+        self::assertSame(['active' => true, 'current' => true, 'noticeVersion' => $this->notice, 'currentNoticeVersion' => $this->notice, 'votingEnabled' => true], $this->call('GET', '/api/me/vote-consent', null, 'ion'));
         $this->assertNoStore();
 
         $r = $this->vote($id, 'VALIDITY', 1, 'ion');
@@ -280,7 +280,9 @@ final class VoteApiTest extends WebTestCase
         }
         self::assertSame(29, \count(array_filter($statuses, static fn (int $s): bool => $s === 200)));
         self::assertSame(429, end($statuses));
-        self::assertSame('rate_limited', json_decode($this->raw(), true)['reason']);
+        $body = json_decode($this->raw(), true);
+        self::assertSame('rate_limited', $body['reason']);
+        self::assertSame((int) $this->header('Retry-After'), $body['retryAfter']);
         self::assertGreaterThanOrEqual(1, (int) $this->header('Retry-After'));
         $this->call('DELETE', "/api/civic_subjects/$id/votes/VALIDITY", null, 'ion');
         self::assertSame(429, $this->code(), 'retragerea votului e tot o scriere limitată');
@@ -305,5 +307,39 @@ final class VoteApiTest extends WebTestCase
         self::assertStringContainsString('agregat diferit de recalculare', $output);
         self::assertStringContainsString('voturi fără consimțământ activ', $output);
         self::assertStringContainsString(Ulid::fromString($id)->toBase32(), $output);
+    }
+
+    public function testSwitchOffBlocksDirectApiWritesButKeepsReadsExportAndWithdrawals(): void
+    {
+        $id = $this->subject();
+        $this->consent('ion');
+        $this->vote($id, 'VALIDITY', 1, 'ion');
+        $this->vote($id, 'IMPORTANCE', 3, 'ion');
+        $this->token('maria');
+
+        // Comutatorul oprit, ca în producție; același kernel pentru toate cererile următoare.
+        $this->client->disableReboot();
+        static::getContainer()->set(\App\Vote\VotingSwitch::class, new \App\Vote\VotingSwitch(false));
+
+        foreach ([['VALIDITY', 0], ['VALIDITY', 1], ['IMPORTANCE', 5]] as [$type, $value]) {
+            $r = $this->vote($id, $type, $value, 'ion');
+            self::assertSame([409, 'voting_disabled'], [$this->code(), $r['reason']], "$type=$value");
+        }
+        $r = $this->call('PUT', '/api/me/vote-consent', ['noticeVersion' => $this->notice], 'maria');
+        self::assertSame([409, 'voting_disabled'], [$this->code(), $r['reason']]);
+        $r = $this->vote($id, 'VALIDITY', 1, 'maria');
+        self::assertSame([409, 'voting_disabled'], [$this->code(), $r['reason']], 'comutatorul înaintea consimțământului');
+
+        $summary = $this->call('GET', "/api/civic_subjects/$id/votes", null, 'ion');
+        self::assertSame([200, false, false], [$this->code(), $summary['votingEnabled'], $summary['votingOpen']]);
+        self::assertSame(1, $summary['types'][1]['mine']['value'], 'votul existent rămâne vizibil');
+        self::assertFalse($this->call('GET', '/api/me/vote-consent', null, 'ion')['votingEnabled']);
+        self::assertCount(2, $this->call('GET', '/api/me/votes', null, 'ion')['votes']);
+
+        self::assertSame(['withdrawn' => true], $this->call('DELETE', "/api/civic_subjects/$id/votes/VALIDITY", null, 'ion'));
+        $r = $this->call('DELETE', '/api/me/vote-consent', null, 'ion');
+        self::assertSame([200, 1], [$this->code(), $r['withdrawnVotes']]);
+        self::assertSame(0, (int) $this->db->fetchOne('SELECT COUNT(*) FROM vote'));
+        self::assertSame(0, $this->verify()[0]);
     }
 }
