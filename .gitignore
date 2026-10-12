@@ -46,3 +46,6 @@ Thumbs.db
 /backend/public/uploads/
 /backend/var/media/
 /.codex/config.toml
+
+# Note operaționale confidențiale, exclusiv locale
+/.private/

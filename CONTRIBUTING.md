@@ -47,6 +47,10 @@ Un pull request cu commit-uri nesemnate nu poate fi acceptat până când toate 
 3. Commit-uri mici, mesaje clare, toate semnate cu `-s`.
 4. Deschide un pull request — descrie ce rezolvă și de ce.
 
+## Confidențialitatea infrastructurii
+
+Documentația versionată folosește repere generice pentru IP-urile serverelor, inventarele de producție și căile private de administrare. Nu include date confidențiale despre infrastructură, credențiale sau secrete în documentație, exemple, commit-uri ori pull request-uri. Notele operaționale reale se păstrează într-un spațiu privat; directorul local `.private/` este ignorat de Git. Un fișier deja urmărit de Git nu devine privat doar prin adăugarea lui în `.gitignore`.
+
 ## Cod de conduită
 
 Validez e un proiect civic — discuțiile, issue-urile și pull request-urile ar trebui să reflecte asta: respect, bună-credință, argumente pe fond. Comportament abuziv sau hărțuire nu sunt tolerate.
