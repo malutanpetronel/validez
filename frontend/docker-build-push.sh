@@ -10,7 +10,6 @@ DATE=$(date +%Y%m%d_%H%M)
 SUFFIX=${1:-$DATE}
 TAG="validez_fe_${SUFFIX}"
 FULL_TAG="${REGISTRY}:${TAG}"
-# Domeniul BE - de confirmat
 API_BASE="https://validez-be.webnou.ro"
 
 if [ -f src/version.json ]; then

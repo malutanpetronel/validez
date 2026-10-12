@@ -6,22 +6,22 @@ Marcaje: **[PE LAPTOP]** = `<checkout-validez>` sau checkout-ul Ansible de pe la
 
 ## 1. Decizii încă deschise
 
-- [ ] **Domeniul BE.** Provizoriu `validez-be.webnou.ro` (după modelul `artanft-be`). Apare în trei locuri, de schimbat împreună dacă se decide altfel: `backend/.env.prod.sample` (`VIRTUAL_HOST`, `DEFAULT_URI`), `backend/nginx/vhost.d.prod` (comentariul cu calea de copiere), `frontend/docker-build-push.sh` (`API_BASE`).
-- [ ] **FE** rămâne `validez.webnou.ro` (decis), cu `CORS_ALLOW_ORIGIN` pe el în `backend/.env.prod.sample`.
+- [x] **Domeniul BE.** `validez-be.webnou.ro` (decis 12.10.2026, după modelul `artanft-be`). Apare în trei locuri, de schimbat împreună dacă se schimbă vreodată: `backend/.env.prod.sample` (`VIRTUAL_HOST`, `DEFAULT_URI`), `backend/nginx/vhost.d.prod` (comentariul cu calea de copiere), `frontend/docker-build-push.sh` (`API_BASE`).
+- [x] **FE** rămâne `validez.webnou.ro` (decis), cu `CORS_ALLOW_ORIGIN` pe el în `backend/.env.prod.sample`.
 
 ## 2. DNS
 
-- [ ] **[PE LAPTOP]** Înregistrări A către `<PRODUCTION_SERVER_IP>` pentru `validez.webnou.ro` și pentru domeniul BE, în zona BIND, pe NS-urile proprii (ca la ArtaNFT), apoi `ansible-playbook <checkout-ansible>/main.yml -i <inventar-dns-primar> -f 10 --tags bind` și același lucru pentru `<inventar-dns-secundar>`.
-- [ ] Verificare propagare pe serverele DNS autoritative și pe 8.8.8.8 / 1.1.1.1 înainte de primul deploy (Let's Encrypt eșuează altfel).
+- [x] **[PE LAPTOP]** Înregistrări A către `<PRODUCTION_SERVER_IP>` pentru `validez.webnou.ro` și pentru domeniul BE, în zona BIND, pe NS-urile proprii (ca la ArtaNFT), apoi `ansible-playbook <checkout-ansible>/main.yml -i <inventar-dns-primar> -f 10 --tags bind` și același lucru pentru `<inventar-dns-secundar>`.
+- [x] Verificare propagare pe serverele DNS autoritative și pe 8.8.8.8 / 1.1.1.1 înainte de primul deploy (Let's Encrypt eșuează altfel) — verificat 12.10.2026.
 
 ## 3. Ansible (de scris înainte de primul deploy)
 
-- [ ] **[PE LAPTOP]** Playbook-uri `deploy_validez_be.yml` și `deploy_validez_fe.yml` în `<checkout-ansible>/`, plus inventare `environments/validez_be` și `environments/validez_fe` (model: `deploy_artanft_be.yml` / `deploy_artanft_fe.yml`).
-- [ ] Repository-ul e **monorepo**: compose-ul BE rulează din `<release>/backend`, cel FE din `<release>/frontend`. Căile din playbook trebuie să țină cont de subfolder (la ArtaNFT, compose-ul era în rădăcina release-ului).
-- [ ] Shared ansistrano pentru BE: `.env` → `/var/www/validez-be/shared/backend/.env`; directoare `/var/www/validez-be/shared/backend/public/uploads`, `/var/www/validez-be/shared/backend/var`, `/var/www/validez-be/shared/backend/vendor`, `/var/www/validez-be/shared/backend/config/jwt`; `chown -R 1000:1000` pe ele la deploy (devuser din imaginea PHP).
-- [ ] Shared pentru FE: `.env` → `/var/www/validez-fe/shared/frontend/.env`.
-- [ ] Playbook-ul BE copiază `backend/nginx/vhost.d.prod` în `/srv/nginx/vhost.d/validez-be.webnou.ro` **înainte** de pornirea containerelor (nginx-proxy îl include doar dacă există la generarea configurației) și face reload cu `nginx -t` când se schimbă — lecția ArtaNFT din 01.10.2026.
-- [ ] Ordinea în playbook-ul BE: `composer install --no-dev --optimize-autoloader` ca devuser → `doctrine:migrations:migrate -n` → `cache:clear --env=prod` → abia apoi trafic.
+- [x] **[PE LAPTOP]** Playbook-uri `deploy_validez_be.yml` și `deploy_validez_fe.yml` în `<checkout-ansible>/`, plus inventare `environments/validez_be` și `environments/validez_fe` (model: `deploy_artanft_be.yml` / `deploy_artanft_fe.yml`) — scrise 12.10.2026.
+- [x] Repository-ul e **monorepo**: compose-ul BE rulează din `<release>/backend`, cel FE din `<release>/frontend`. Căile din playbook trebuie să țină cont de subfolder (la ArtaNFT, compose-ul era în rădăcina release-ului).
+- [x] Shared ansistrano pentru BE: `.env` → `/var/www/validez-be/shared/backend/.env`; directoare `/var/www/validez-be/shared/backend/public/uploads`, `/var/www/validez-be/shared/backend/var`, `/var/www/validez-be/shared/backend/vendor`, `/var/www/validez-be/shared/backend/config/jwt`; `chown -R 1000:1000` pe ele la deploy (devuser din imaginea PHP).
+- [x] Shared pentru FE: `.env` → `/var/www/validez-fe/shared/frontend/.env`.
+- [x] Playbook-ul BE copiază `backend/nginx/vhost.d.prod` în `/srv/nginx/vhost.d/validez-be.webnou.ro` **înainte** de pornirea containerelor (nginx-proxy îl include doar dacă există la generarea configurației) și face reload cu `nginx -t` când se schimbă — lecția ArtaNFT din 01.10.2026.
+- [x] Ordinea în playbook-ul BE: `composer install --no-dev --optimize-autoloader` ca devuser → `doctrine:migrations:migrate -n` → `cache:clear --env=prod` → abia apoi trafic (nginx pornește ultimul).
 
 ## 4. Pe server, o singură dată (BE)
 

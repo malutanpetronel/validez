@@ -49,3 +49,5 @@ Thumbs.db
 
 # Note operaționale confidențiale, exclusiv locale
 /.private/
+# Deploy.md conține IP-ul, portul SSH și căile de pe server: local, nu pe GitHub (repo public)
+/Deploy.md
