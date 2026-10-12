@@ -8,9 +8,11 @@ Deciziile de arhitectură ale proiectului Validez, formalizate ca ADR-uri. Numă
 |---|---|---|
 | [0001](0001-hierarchy-adjacency-list-ltree.md) | Hierarchy: adjacency list + PostgreSQL ltree | Accepted |
 | [0002](0002-node-vs-civic-subject.md) | Node vs CivicSubject | Accepted |
-| [0003](0003-voting-model.md) | Voting model | Accepted |
+| [0003](0003-voting-model.md) | Voting model | Accepted, amended by ADR-0007 |
 | [0004](0004-trust-score-configuration.md) | Trust score configuration | Accepted |
 | [0005](0005-project-license.md) | Project license (AGPL-3.0-or-later) | Accepted |
+| [0006](0006-initial-contribution-moderation.md) | Initial contribution moderation and category proposals | Accepted |
+| [0007](0007-votes-revisions-and-privacy.md) | Votes: revisions, freezing, private data and integrity | Accepted |
 
 ## Template
 

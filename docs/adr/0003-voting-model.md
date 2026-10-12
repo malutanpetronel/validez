@@ -1,6 +1,7 @@
 # ADR-0003: Voting model
 
 **Status:** Accepted
+**Amended by:** [ADR-0007](0007-votes-revisions-and-privacy.md) — `VoteEvent` se împarte în `UserVoteHistory` (privat, ștergibil) și `IntegrityEventLog` (append-only, fără identificatori).
 **Date:** 2026-09-12
 
 ## Context
