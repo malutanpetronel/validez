@@ -8,6 +8,14 @@ start
 
 :Deschide o categorie;
 
+if (Creează o sesizare?) then (da)
+  :Autentificare și creare CivicSubject ISSUE;
+  :Adaugă descriere, fotografii,\nvideoclipuri și localizare GPS;
+  :Regulile de competență propun\ninstituții bifate din registrul unic;
+  :Utilizatorul poate debifa\nsau adăuga alte instituții;
+  :Salvează selecția și modul de trimitere;\nrespectă moderarea ADR-0006;
+endif
+
 :Vede până la 5 CivicSubject ca frunze\nasociate direct categoriei;
 
 if (Vrea lista completă?) then (da)
@@ -73,6 +81,21 @@ if (Selectează un CivicSubject?) then (da)
 
   :Afișează rezultatele actualizate\nper tip de vot;
   :Afișează statusul și istoricul\nrelevant al CivicSubject;
+
+  if (Sesizare publicată către autorități?) then (da)
+    :Verifică destinatarii și politica de praguri\npe voturile active, media și GPS;
+    if (Trimitere manuală eligibilă sau\npraguri automate îndeplinite?) then (da)
+      :Propune trimiterea / utilizatorul apasă\nTrimite sesizarea / mod automat activat explicit;
+      :La declanșare: reverifică eligibilitatea\nși evită depunerile duplicate;
+      :Generează document și pachet fixat\ncu media, GPS, voturi și validări;
+      :Trimite prin canalele integrate\nsau oferă document pentru depunere manuală;
+      :Număr intern unic și urmărire per instituție;\nTrimisă -> Înregistrată -> În analiză\n-> Rezolvată / Respinsă;
+      :Asociază și publică răspunsurile\ncu protejarea datelor personale;
+      :Comunitatea poate confirma sau contesta\nrezolvarea efectivă;
+    else (nu)
+      :Afișează condițiile încă neîndeplinite;
+    endif
+  endif
 
 else (nu)
 

@@ -30,7 +30,9 @@ Criteriu de încheiere: un administrator creează `Drumuri > Cluj > Calitate > D
 - **Step 2.1:** note personale și estimare de cost, doar pentru `PROPOSAL`, conform [specificației](subject-technical-details.md). Notele se stochează separat și au endpoint exclusiv autorului; estimarea publică include sumă exactă, monedă și explicație. La schimbarea tipului, datele se păstrează fără expunere. Implementat înainte de Step 3; istoricul estimării după primele voturi se tratează la Step 4.
 - **Step 2.2:** înregistrare publică, confirmare prin cod pe email și ALTCHA pentru login/înregistrare/retrimitere, adaptate din `sf4/semese`; [descrierea fluxului](registration-and-login.md).
 - **Step 3:** media, linkuri și localizare; verificare pe dispozitiv a funcționalităților Cordova necesare.
+- **Step 3.1:** registru unic `Authority`, reguli de competență între noduri și instituții, asociere automată cu bife editabile la crearea sesizării și pregătirea documentului cu media/GPS; [specificația sesizării autorităților](authority-notifications.md). De implementat.
 - **Step 4:** tipuri de vot configurabile, vot unic per utilizator/subiect/tip, agregări și evenimente de integritate conform modelului existent.
+- **Step 4.1:** sesizare către autoritățile selectate: buton „Trimite sesizarea”, propunere sau declanșare automată pe praguri configurabile, document cu istoricul voturilor/validărilor, email și conectori oficiali disponibili, număr intern unic, înregistrări și stare per instituție, răspunsuri și confirmarea rezolvării de comunitate. Depinde de Steps 3, 3.1 și 4; [specificație](authority-notifications.md). De implementat.
 - **Step 5:** comentarii, raportări și moderare.
 - **Step 6:** prioritate calculată, trust score și măsuri anti-abuz; stabilizare și distribuire mobilă.
 

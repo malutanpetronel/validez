@@ -1,5 +1,5 @@
 @startuml domain
-title Validez - Domain model (v3)
+title Validez - Domain model (v4; include funcționalități planificate)
 
 ' ===== Structură arbore =====
 class TreeNode {
@@ -58,10 +58,72 @@ class Location {
 
 class Authority {
   id
-  subject_id
   name
-  role
-  contact
+  jurisdiction
+  contacts
+  channels
+  active
+}
+
+class CompetenceRule {
+  id
+  node_id
+  authority_id
+  responsibility
+  geographic_scope
+  applies_to_subtree
+  valid_from
+  valid_until
+}
+
+class SubjectAuthority {
+  subject_id
+  authority_id
+  selected
+  source (AUTOMATIC/MANUAL)
+  competence_rule_id (nullable)
+}
+
+class AuthoritySubmission {
+  id
+  subject_id
+  internal_number (unique)
+  initiated_by (nullable)
+  mode (MANUAL/PROPOSED/AUTOMATIC)
+  document_snapshot
+  evidence_snapshot
+  threshold_evaluation
+  created_at
+}
+
+class AuthorityDelivery {
+  id
+  submission_id
+  authority_id
+  channel
+  destination_snapshot
+  transport_state
+  institution_state (SENT/REGISTERED/\nIN_REVIEW/RESOLVED/REJECTED)
+  external_registration_number
+  external_registration_date
+}
+
+class AuthorityResponse {
+  id
+  delivery_id
+  received_at
+  source
+  document
+  public_content
+}
+
+class AuthorityDeliveryEvent {
+  id
+  delivery_id
+  type
+  occurred_at
+  source
+  evidence
 }
 
 class Comment {
@@ -208,7 +270,30 @@ end note
 
 CivicSubject "1" -- "*" MediaAsset
 CivicSubject "1" -- "0..1" Location
-CivicSubject "1" -- "*" Authority
+TreeNode "1" -- "*" CompetenceRule
+Authority "1" -- "*" CompetenceRule
+CivicSubject "1" -- "*" SubjectAuthority
+Authority "1" -- "*" SubjectAuthority
+CompetenceRule "0..1" -- "*" SubjectAuthority : regulă sursă
+CivicSubject "1" -- "*" AuthoritySubmission
+User "0..1" -- "*" AuthoritySubmission : inițiator
+AuthoritySubmission "1" -- "1..*" AuthorityDelivery
+Authority "1" -- "*" AuthorityDelivery
+AuthorityDelivery "1" -- "*" AuthorityResponse
+AuthorityDelivery "1" -- "*" AuthorityDeliveryEvent
+
+note right of Authority
+  Registru unic, separat de arbore.
+  Competențe și sesizare cu bife: planificat,
+  Steps 3.1 / 4.1, authority-notifications.md.
+end note
+
+note right of AuthorityDelivery
+  Istoric și stare per instituție.
+  Numărul intern diferă de înregistrarea externă.
+  Confirmarea comunității privind rezolvarea
+  este separată de răspunsul instituției.
+end note
 CivicSubject "1" -- "*" Comment
 CivicSubject "1" -- "*" SubjectVoteType
 

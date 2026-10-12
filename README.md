@@ -55,6 +55,7 @@ Detalii tehnice complete în `docs/`:
 | `docs/domain.puml` | Entități și relații (User, TreeNode, CivicSubject, Vote, Comment, Flag...) |
 | `docs/workflow.puml` | Fluxul utilizatorului: navigare → autentificare → vot → rezultate |
 | `docs/security.puml` | Semnături, Merkle Tree, verificare integritate |
+| `docs/authority-notifications.md` | Instituții, reguli de competență, selecție cu bife, sesizare automată și urmărire (planificat) |
 | `docs/design_considered_aspects.md` | Deciziile de arhitectură, alternativele respinse și motivul |
 | `docs/adr/` | Architecture Decision Records — vezi indexul din `docs/adr/README.md` |
 

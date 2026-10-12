@@ -1,0 +1,8 @@
+# Instructions for Codex
+
+Before modifying the project:
+
+1. Respect existing architectural decisions.
+2. Do not modify unrelated components.
+3. Explain proposed changes before major refactoring.
+4. Suggest a commit message.
