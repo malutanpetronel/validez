@@ -12,7 +12,6 @@ import CategorySuggestionsPage from './pages/CategorySuggestionsPage';
 import ModerationPage from './pages/ModerationPage';
 import CheckApiPage from './pages/CheckApiPage';
 import MyVotesPage from './pages/MyVotesPage';
-import CategoryRoute from './pages/CategoryRoute';
 import LegacyCategoryRedirect from './pages/LegacyCategoryRedirect';
 
 // ADR-0008: pe web BrowserRouter (URL-uri reale, indexabile; nginx are fallback SPA), in Cordova HashRouter
@@ -32,8 +31,9 @@ export const routes = [
             {path: 'login', element: <LoginPage/>},
             {path: 'inregistrare', element: <RegisterPage/>},
             {path: 'subiecte', element: <SubjectsPage/>},
-            // URL-uri publice canonice: /categorie/{cale} si /categorie/{cale}/subiect/{slug}.
-            {path: 'categorie/*', element: <CategoryRoute/>},
+            // URL-uri publice canonice: /categorie/{cale} si /categorie/{cale}/subiect/{slug} - tot arborele,
+            // cu selectia data de adresa (acelasi element ca pe `/`, deci arborele nu se reconstruieste la click).
+            {path: 'categorie/*', element: <TreePage/>},
             // Vechi: raman valide si duc la URL-ul canonic dupa incarcare.
             {path: 'categorii/:nodeId/subiecte', element: <LegacyCategoryRedirect/>},
             {path: 'subiecte/:id', element: <SubjectPage/>},

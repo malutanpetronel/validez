@@ -40,6 +40,38 @@ export const appendChild = (nodes, parentKey, child) => {
 
 export const renameInTree = (nodes, key, title) => updateNode(nodes, key, (n) => ({...n, title}));
 
+/** Dupa redenumire/mutare: nodul primeste calea noua, iar descendentii incarcati prefixul nou (ADR-0008). */
+export const rebaseSlugPaths = (nodes, key, newPath) => updateNode(nodes, key, (n) => {
+    const old = n.slugPath;
+    const rebase = (x) => ({
+        ...x,
+        slugPath: old && x.slugPath?.startsWith(`${old}/`) ? newPath + x.slugPath.slice(old.length) : x.slugPath,
+        children: x.children ? x.children.map(rebase) : x.children,
+    });
+    return {...rebase(n), slugPath: newPath};
+});
+
+/** Nodul incarcat cu calea publica data, daca exista. */
+export const findBySlugPath = (nodes, slugPath) => {
+    for (const n of nodes) {
+        if (n.slugPath === slugPath) return n;
+        const found = n.children ? findBySlugPath(n.children, slugPath) : null;
+        if (found) return found;
+    }
+    return null;
+};
+
+/** Stramosii incarcati + nodul, de la radacina. */
+export const ancestorsOf = (nodes, key) => {
+    const chain = [];
+    let current = key ? findNode(nodes, key) : null;
+    while (current) {
+        chain.unshift(current);
+        current = current.parentId ? findNode(nodes, current.parentId) : null;
+    }
+    return chain;
+};
+
 /** Toate nodurile incarcate, dupa cheie. */
 export const indexByKey = (nodes, map = new Map()) => {
     for (const n of nodes) {

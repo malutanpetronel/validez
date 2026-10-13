@@ -47,8 +47,7 @@ test('vechiul /categorii/{id}/subiecte duce la /categorie/{cale}', async () => {
             breadcrumbs: [{name: 'Drumuri', slugPath: 'drumuri'}, {name: 'Cluj', slugPath: 'drumuri/cluj'}]})],
     ]);
     const router = renderAt('/categorii/01NODE/subiecte?name=Cluj');
-    expect(await screen.findByRole('heading', {name: 'Cluj', level: 1})).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/categorie/drumuri/cluj');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/categorie/drumuri/cluj'));
 });
 
 test('vechiul /subiecte/{id} duce la URL-ul canonic al subiectului', async () => {

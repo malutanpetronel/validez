@@ -14,11 +14,10 @@ import SubjectVotes from '../components/SubjectVotes';
 import CategoryBreadcrumbs from '../components/CategoryBreadcrumbs';
 import {fetchNodeByPath} from '../api/tree';
 import usePageMeta, {excerpt} from '../seo/usePageMeta';
+import {categoryPathOf} from '../seo/paths';
 
-/** `/categorie/a/b/subiect/x` → `a/b` */
-const categoryPathOf = (canonicalPath) => canonicalPath?.match(/^\/categorie\/(.+)\/subiect\/[^/]+$/)?.[1] ?? null;
-
-export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
+/** embedded: în panoul arborelui (fără buton înapoi, breadcrumbs, redirect canonic); meta: titlul/meta paginii vin de aici. */
+export default function SubjectPage({subjectId, embedded = false, meta = false, onUpdated}) {
     const params = useParams();
     const location = useLocation();
     const navigate = useNavigate();
@@ -54,7 +53,7 @@ export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
     }, [categoryPath]);
     usePageMeta(subject
         ? {title: subject.title, description: excerpt(subject.description), path: subject.canonicalPath ?? null, noindex: subject.visibility !== 'PUBLISHED'}
-        : {title: error ? 'Subiect negăsit' : null, noindex: Boolean(error)}, !embedded);
+        : {title: error ? 'Subiect negăsit' : null, noindex: Boolean(error)}, !embedded || meta);
 
     return (
         <Stack spacing={2}>

@@ -129,7 +129,7 @@ final class SlugTest extends WebTestCase
         self::assertSame($cluj['id'], $this->byPath('drumuri/cluj')['id']);
         self::assertSame('/api/tree_nodes/'.$cluj['id'], $this->byPath('drumuri/cluj')['@id'], '@id rămâne IRI-ul canonic al nodului');
         self::assertSame(
-            [['name' => 'Drumuri', 'slugPath' => 'drumuri'], ['name' => 'Cluj', 'slugPath' => 'drumuri/cluj']],
+            [['id' => $drumuri['id'], 'name' => 'Drumuri', 'slugPath' => 'drumuri'], ['id' => $cluj['id'], 'name' => 'Cluj', 'slugPath' => 'drumuri/cluj']],
             $this->byPath('drumuri/cluj')['breadcrumbs'],
         );
         self::assertArrayNotHasKey('breadcrumbs', $cluj, 'breadcrumbs doar pe by-path');

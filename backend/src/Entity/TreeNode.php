@@ -126,7 +126,7 @@ class TreeNode
 
     private int $subjectCount = 0;
 
-    /** @var list<array{name: string, slugPath: string}>|null stramosii + nodul, de la radacina; doar pe by-path (ADR-0008) */
+    /** @var list<array{id: string, name: string, slugPath: string}>|null stramosii + nodul, de la radacina; doar pe by-path (ADR-0008) */
     private ?array $breadcrumbs = null;
 
     public function __construct(string $name, User $createdBy, ?TreeNode $parent = null, int $position = 0)

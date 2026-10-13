@@ -1,8 +1,8 @@
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import Tree from 'rc-tree';
 import 'rc-tree/assets/index.css';
 import {
-    Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
+    Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
     IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Paper, Snackbar, Stack, TextField, Tooltip, Typography,
     useMediaQuery, useTheme,
 } from '@mui/material';
@@ -19,18 +19,21 @@ import SubjectPage from './SubjectPage';
 import TreeVoteSummary from '../components/TreeVoteSummary';
 import SubjectList from '../components/SubjectList';
 import SubjectForm from '../components/SubjectForm';
-import {fetchSubjects} from '../api/subjects';
+import {fetchSubjectBySlug, fetchSubjects} from '../api/subjects';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
 import {Link as RouterLink, useNavigate, useLocation} from 'react-router-dom';
-import {createNode, fetchChildren, moveNode, renameNode} from '../api/tree';
+import {createNode, fetchChildren, fetchNode, fetchNodeByPath, moveNode, renameNode} from '../api/tree';
 import {useAuth} from '../auth/AuthContext';
 import usePageMeta from '../seo/usePageMeta';
+import {categoryPathOf, categoryUrl, parseTarget} from '../seo/paths';
+import CategoryBreadcrumbs from '../components/CategoryBreadcrumbs';
 import {
-    appendChild, dropTarget, findNode, indexByKey, isNoopMove, renameInTree, replaceLevel, setChildren, toTreeNode,
+    ancestorsOf, appendChild, dropTarget, findBySlugPath, findNode, indexByKey, isNoopMove, rebaseSlugPaths, renameInTree,
+    replaceLevel, setChildren, toTreeNode,
 } from '../tree/treeData';
 
 const DIALOG_TITLES = {root: 'Tematică nouă', child: 'Nod copil nou', rename: 'Redenumește nodul'};
@@ -42,15 +45,20 @@ const DIALOG_TITLES = {root: 'Tematică nouă', child: 'Nod copil nou', rename: 
  * nu merge la atingere. Toate mutările trec prin performMove: după răspuns (succes sau eroare)
  * se reîncarcă de pe server nivelurile atinse, deci UI-ul arată structura confirmată de server.
  * Navigare publică; acțiunile de modificare doar pentru administratori (1.4) - serverul verifică oricum.
+ *
+ * ADR-0008: arborele e pagina pentru `/`, `/categorie/{cale}` și `/categorie/{cale}/subiect/{slug}`.
+ * Selecția schimbă adresa (intrare nouă în istoric); adresa (încărcare, Back/Forward, linkuri) schimbă
+ * selecția: ramurile lipsă se încarcă până la nod. Căile/slug-urile vechi devin canonice (replace).
  */
 export default function TreePage() {
-    usePageMeta({path: '/'});
     const {isAdmin, user} = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [returnContext] = useState(() => location.state?.treeReturn);
     const [subjectBranches, setSubjectBranches] = useState({});
     const [selectedSubject, setSelectedSubject] = useState(null);
+    const [subjectNodeKey, setSubjectNodeKey] = useState(null);
+    const [urlError, setUrlError] = useState(null);
     const [creatingSubject, setCreatingSubject] = useState(false);
     const [treeData, setTreeData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -113,6 +121,106 @@ export default function TreePage() {
     // rc-tree cere loadData doar pentru nodurile fără children și fără isLeaf.
     const onLoadData = (node) => loadBranch(node.key).catch((err) => { showError(err); throw err; });
 
+    // ---- adresa <-> selectie (ADR-0008) ----
+    const treeRef = useRef(treeData);
+    treeRef.current = treeData;
+    const branchesRef = useRef(subjectBranches);
+    branchesRef.current = subjectBranches;
+    /** Adresa care corespunde selectiei curente; o adresa egala nu se mai rezolva (vine dintr-un click). */
+    const lastSyncedUrl = useRef(null);
+
+    const goTo = (url, replace = false) => {
+        lastSyncedUrl.current = url ?? location.pathname;
+        if (url && location.pathname !== url) navigate(url, {replace});
+    };
+
+    /** Incarca, in ordine de la radacina, copiii si subiectele lipsa ale nodurilor date. */
+    const ensureLoaded = async (keys) => {
+        let tree = treeRef.current;
+        const branches = {};
+        for (const key of keys) {
+            const node = findNode(tree, key);
+            if (!node) break;
+            const needChildren = !node.children && !node.isLeaf;
+            const needSubjects = !branchesRef.current[key];
+            if (!needChildren && !needSubjects) continue;
+            const [children, subjects] = await Promise.all([
+                needChildren ? fetchChildren(key) : null, needSubjects ? fetchSubjects({node: key, scope: 'direct'}) : null,
+            ]);
+            if (children) tree = setChildren(tree, key, children.map(toTreeNode));
+            if (subjects) branches[key] = subjects;
+        }
+        treeRef.current = tree;
+        setTreeData(tree);
+        setSubjectBranches((b) => ({...b, ...branches}));
+    };
+
+    const clearSelection = () => {
+        setSelectedKey(null);
+        setSelectedSubject(null);
+        setSubjectNodeKey(null);
+    };
+
+    useEffect(() => {
+        if (loading) return undefined;
+        const path = location.pathname;
+        if (path === lastSyncedUrl.current) return undefined;
+        const target = parseTarget(path);
+        if (!target) {
+            // `/` dupa o selectie (Back): golim selectia. La prima incarcare pastram revenirea din alta pagina.
+            if (lastSyncedUrl.current !== null) clearSelection();
+            lastSyncedUrl.current = path;
+            setUrlError(null);
+            return undefined;
+        }
+        if (target.invalid) {
+            navigate(categoryUrl(target.categoryPath) ?? '/', {replace: true});
+            return undefined;
+        }
+        lastSyncedUrl.current = path;
+        let active = true;
+        (async () => {
+            const subject = target.subjectSlug ? await fetchSubjectBySlug(target.subjectSlug) : null;
+            const categoryPath = categoryPathOf(subject?.canonicalPath) ?? target.categoryPath;
+            const local = findBySlugPath(treeRef.current, categoryPath);
+            let keys;
+            let slugPath;
+            if (local) {
+                keys = ancestorsOf(treeRef.current, local.key).map((n) => n.key);
+                slugPath = local.slugPath;
+            } else {
+                const node = await fetchNodeByPath(categoryPath);
+                keys = (node.breadcrumbs ?? [{id: node.id}]).map((c) => c.id);
+                slugPath = node.slugPath;
+            }
+            if (!active) return;
+            await ensureLoaded(keys);
+            if (!active) return;
+            const nodeKey = keys[keys.length - 1];
+            setExpandedKeys((expanded) => [...new Set([...expanded, ...keys])]);
+            setUrlError(null);
+            if (subject) {
+                setSelectedKey(null);
+                setSelectedSubject(subject.id);
+                setSubjectNodeKey(nodeKey);
+            } else {
+                setSelectedSubject(null);
+                setSubjectNodeKey(null);
+                setSelectedKey(nodeKey);
+            }
+            goTo(subject?.canonicalPath ?? categoryUrl(slugPath), true);
+        })().catch((err) => {
+            if (!active) return;
+            clearSelection();
+            setUrlError(err.status === 404
+                ? (target.subjectSlug ? 'Subiectul nu există sau nu e vizibil.' : 'Categoria nu există.')
+                : err.message || 'Eroare necunoscută');
+        });
+        return () => { active = false; };
+        // goTo/ensureLoaded/navigate citesc starea curenta prin ref-uri; efectul urmareste doar adresa.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.pathname, loading]);
+
     /**
      * Reîncarcă de pe server nivelurile date (null = rădăcinile) - structura confirmată de server,
      * după o mutare reușită sau eșuată. `previous` păstrează ramurile încărcate ale nodului mutat.
@@ -140,6 +248,9 @@ export default function TreePage() {
         try {
             await moveNode(key, target.parentId, target.position);
             if (target.parentId) setExpandedKeys((keys) => (keys.includes(target.parentId) ? keys : [...keys, target.parentId]));
+            // Calea publica a nodului mutat (si a descendentilor incarcati) se schimba.
+            const fresh = await fetchNode(key).catch(() => null);
+            if (fresh?.slugPath) setTreeData((t) => rebaseSlugPaths(t, key, fresh.slugPath));
             setMessage({severity: 'success', text: 'Nod mutat.'});
         } catch (err) {
             showError(err);
@@ -170,9 +281,39 @@ export default function TreePage() {
         return {treeReturn: {expandedKeys: [...expanded], selectedKey: categoryKey,
             selectedSubject: categoryKey ? null : selectedSubject}};
     };
-    // ADR-0008: URL-ul public al categoriei; dupa o redenumire din arbore calea poate fi veche - pagina
-    // categoriei o rezolva din istoric si o inlocuieste cu cea canonica.
-    const subjectsUrl = (node) => (node.slugPath ? `/categorie/${node.slugPath}` : `/categorii/${node.key}/subiecte`);
+    // Adresa urmeaza calea selectiei si dupa redenumirea/mutarea ei (sau a unui stramos).
+    const selectedUrl = selectedSubject ? null : categoryUrl(selected?.slugPath);
+    useEffect(() => {
+        if (selectedUrl && lastSyncedUrl.current?.startsWith('/categorie/') && lastSyncedUrl.current !== selectedUrl) goTo(selectedUrl, true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedUrl]);
+
+    const subjectNode = subjectNodeKey ? findNode(treeData, subjectNodeKey) : null;
+    const crumbs = ancestorsOf(treeData, (selected ?? subjectNode)?.key)
+        .filter((n) => n.slugPath).map((n) => ({name: n.title, slugPath: n.slugPath}));
+    usePageMeta(urlError ? {title: 'Pagină negăsită', noindex: true}
+        : selected ? {
+            title: crumbs.slice(-2).reverse().map((c) => c.name).join(' · ') || selected.title,
+            description: `Subiecte din categoria ${crumbs.map((c) => c.name).join(' › ') || selected.title} pe VALIDEZ.`,
+            path: selectedUrl,
+        } : {path: '/'}, !selectedSubject);
+
+    const selectCategory = (key) => {
+        setSelectedSubject(null);
+        setSubjectNodeKey(null);
+        setSelectedKey(key);
+        setUrlError(null);
+        setExpandedKeys((expanded) => [...new Set([...expanded, key])]);
+        if (!subjectBranches[key]) loadBranch(key).catch(showError);
+        goTo(categoryUrl(findNode(treeData, key)?.slugPath));
+    };
+    const selectSubject = (subject) => {
+        setSelectedKey(null);
+        setSelectedSubject(subject.id);
+        setSubjectNodeKey(subject.nodeId ?? null);
+        setUrlError(null);
+        goTo(subject.canonicalPath ?? null);
+    };
     const decorate = (nodes) => nodes.map((node) => {
         const branch = subjectBranches[node.key];
         const children = node.children ? decorate(node.children) : [];
@@ -190,17 +331,14 @@ export default function TreePage() {
     const displayTree = decorate(treeData);
     const selectTreeItem = (keys, info) => {
         const item = info?.node;
-        if (item?.kind === 'all') { navigate(subjectsUrl(item.category), {state: navigationState(item.category.key)}); return; }
-        if (item?.kind === 'add') {
-            setSelectedKey(item.category.key); setSelectedSubject(null); setCreatingSubject(true); return;
-        }
-        if (item?.kind === 'subject') { setSelectedSubject(item.subject.id); setSelectedKey(null); return; }
-        setSelectedSubject(null);
-        setSelectedKey(keys[0] ?? null);
-        if (keys[0]) {
-            setExpandedKeys((expanded) => [...new Set([...expanded, keys[0]])]);
-            if (!subjectBranches[keys[0]]) loadBranch(keys[0]).catch(showError);
-        }
+        // „Vezi tot”: panoul categoriei are deja lista completa, paginata.
+        if (item?.kind === 'all') { selectCategory(item.category.key); return; }
+        if (item?.kind === 'add') { selectCategory(item.category.key); setCreatingSubject(true); return; }
+        if (item?.kind === 'subject') { selectSubject(item.subject); return; }
+        if (keys[0]) { selectCategory(keys[0]); return; }
+        clearSelection();
+        setUrlError(null);
+        goTo('/');
     };
 
     // Ordonare intre frati fara drag (Sus/Jos, Alt+↑/↓). Pozitia API exclude nodul mutat:
@@ -231,7 +369,10 @@ export default function TreePage() {
         try {
             if (dialog.mode === 'rename') {
                 const updated = await renameNode(selectedKey, name);
-                setTreeData((t) => renameInTree(t, selectedKey, updated.name));
+                setTreeData((t) => {
+                    const renamed = renameInTree(t, selectedKey, updated.name);
+                    return updated.slugPath ? rebaseSlugPaths(renamed, selectedKey, updated.slugPath) : renamed;
+                });
             } else {
                 const parentKey = dialog.mode === 'child' ? selectedKey : null;
                 const created = toTreeNode(await createNode(name, parentKey));
@@ -243,7 +384,7 @@ export default function TreePage() {
                 }
                 await reloadLevels([parentKey], indexByKey(treeData));
                 if (parentKey) setExpandedKeys((keys) => (keys.includes(parentKey) ? keys : [...keys, parentKey]));
-                setSelectedKey(created.key);
+                selectCategory(created.key);
             }
             setDialog(null);
             setMessage({severity: 'success', text: dialog.mode === 'rename' ? 'Nod redenumit.' : 'Nod creat.'});
@@ -359,9 +500,26 @@ export default function TreePage() {
                         </Box>
                     )}
                 </Paper>
-                {selectedSubject ? <SubjectPage key={selectedSubject} subjectId={selectedSubject} embedded onUpdated={(subject) => loadBranch(subject.nodeId, true).catch(showError)}/> :
-                    selected ? <SubjectList key={selected.key} node={{id: selected.key, name: selected.title}}
-                        scope="direct" navigationState={navigationState()}/> :
+                {urlError ? <Alert severity="warning">{urlError}</Alert> :
+                    selectedSubject ? <Stack spacing={1.5} sx={{minWidth: 0}}>
+                        <CategoryBreadcrumbs items={crumbs}/>
+                        <SubjectPage key={selectedSubject} subjectId={selectedSubject} embedded meta onUpdated={(subject) => {
+                            loadBranch(subject.nodeId, true).catch(showError);
+                            if (subject.canonicalPath) goTo(subject.canonicalPath, true);
+                        }}/>
+                    </Stack> :
+                    selected ? <Stack spacing={1.5} sx={{minWidth: 0}}>
+                        <CategoryBreadcrumbs items={crumbs} currentIsLast/>
+                        {(selected.children ?? []).some((c) => c.slugPath) && (
+                            <Stack component="nav" aria-label="Subcategorii" direction="row" spacing={1} useFlexGap sx={{flexWrap: 'wrap'}}>
+                                {selected.children.filter((c) => c.slugPath).map((c) => (
+                                    <Chip key={c.key} component={RouterLink} to={categoryUrl(c.slugPath)} clickable variant="outlined" label={c.title}/>
+                                ))}
+                            </Stack>
+                        )}
+                        <SubjectList key={selected.key} node={{id: selected.key, name: selected.title}}
+                            scope="direct" navigationState={navigationState()}/>
+                    </Stack> :
                     <Paper sx={{p: 3}}><Stack spacing={2}>
                         <Typography variant="h6">Explorează subiectele</Typography>
                         <Typography color="text.secondary">Selectează o categorie pentru a vedea toate subiectele ei.</Typography>
@@ -373,9 +531,9 @@ export default function TreePage() {
                 onClose={() => setCreatingSubject(false)} onSaved={(subject) => {
                     setCreatingSubject(false);
                     if (subject.visibility === 'PENDING') setMessage({severity: 'info', text: 'Subiectul a fost salvat și este în așteptarea aprobării.'});
-                    setSelectedSubject(subject.id);
                     setExpandedKeys((keys) => [...new Set([...keys, selected.key])]);
                     loadBranch(selected.key, true).catch(showError);
+                    selectSubject(subject);
                 }}/>}
 
             {moveOpen && selected && (

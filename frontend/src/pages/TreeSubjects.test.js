@@ -87,11 +87,11 @@ test('întoarcerea din listă și detaliu păstrează categoria imbricată și r
     await waitFor(() => expect(mockTree.selectedKeys).toEqual([child.id]));
     expect(mockTree.expandedKeys).toEqual([category.id, child.id]);
     expect(mockTree.treeData[0].children[0].children[0].kind).toBe('subject');
-    // A doua revenire, direct din lista categoriei.
+    // ADR-0008: „Vezi tot” rămâne în arbore — selectează categoria, iar lista completă e deja în panou.
     act(() => mockTree.onSelect([all.key], {node: all}));
-    fireEvent.click(await screen.findByRole('link', {name: 'Înapoi la arbore'}));
     await waitFor(() => expect(mockTree.selectedKeys).toEqual([child.id]));
     expect(mockTree.expandedKeys).toEqual([category.id, child.id]);
+    expect(screen.queryByRole('link', {name: 'Înapoi la arbore'})).not.toBeInTheDocument();
 });
 
 

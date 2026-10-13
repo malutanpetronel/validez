@@ -9,6 +9,7 @@ use App\Entity\User;
 use Symfony\Bundle\SecurityBundle\Security;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * @extends ServiceEntityRepository<TreeNode>
@@ -64,10 +65,15 @@ class TreeNodeRepository extends ServiceEntityRepository
     public function withBreadcrumbs(TreeNode $node): TreeNode
     {
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            'SELECT name, slug_path AS "slugPath" FROM tree_node WHERE path @> CAST(:path AS ltree) ORDER BY nlevel(path)',
+            'SELECT id::text AS id, name, slug_path AS "slugPath" FROM tree_node WHERE path @> CAST(:path AS ltree) ORDER BY nlevel(path)',
             ['path' => $node->getPath()],
         );
-        $node->setBreadcrumbs(array_map(static fn (array $r): array => ['name' => (string) $r['name'], 'slugPath' => (string) $r['slugPath']], $rows));
+        // id in base32, ca peste tot in API (FE expandeaza arborele pe stramosi dupa id).
+        $node->setBreadcrumbs(array_map(static fn (array $r): array => [
+            'id' => Ulid::fromString((string) $r['id'])->toBase32(),
+            'name' => (string) $r['name'],
+            'slugPath' => (string) $r['slugPath'],
+        ], $rows));
 
         return $node;
     }
