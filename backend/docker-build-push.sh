@@ -23,5 +23,5 @@ docker push "${FULL_TAG}"
 "$(dirname "$0")/../docker/cleanup-old-tags.sh" validez_be_ "${TAG}" || true
 
 echo ""
-echo "Gata. Pune pe server in /var/www/validez-be/shared/backend/.env:"
+echo "Gata. Pune pe server in /etc/validez-be/compose.env (nu in .env-ul runtime):"
 echo "   DOCKER_IMAGE=${FULL_TAG}"
