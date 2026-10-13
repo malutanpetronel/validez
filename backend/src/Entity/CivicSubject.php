@@ -33,6 +33,9 @@ use Symfony\Component\Uid\Ulid;
     operations: [
         // ?node={ulid} = subarborele; &scope=direct = doar nodul; filtre ?type=, ?stage=; 20/pagină.
         new GetCollection(provider: CivicSubjectProvider::class, paginationItemsPerPage: 20),
+        // ADR-0008: subiectul dupa slug, curent sau din istoric; raspunsul are canonicalPath. Aceleasi reguli
+        // de vizibilitate ca detaliul. Prioritate fata de /{id}/... (un slug poate fi si „votes”).
+        new Get(uriTemplate: '/civic_subjects/by-slug/{slug}', uriVariables: ['slug'], priority: 10, provider: CivicSubjectProvider::class, name: 'civic_subject_by_slug', normalizationContext: ['groups' => ['subject:read'], 'item_uri_template' => '/civic_subjects/{id}{._format}']),
         new Get(provider: CivicSubjectProvider::class),
         new Post(security: "is_granted('ROLE_USER')", input: CivicSubjectCreateInput::class, processor: CivicSubjectCreateProcessor::class),
         new Patch(security: "is_granted('SUBJECT_EDIT', object)", provider: CivicSubjectProvider::class, input: CivicSubjectUpdateInput::class, processor: CivicSubjectUpdateProcessor::class),
@@ -42,6 +45,7 @@ use Symfony\Component\Uid\Ulid;
 #[ORM\Entity(repositoryClass: CivicSubjectRepository::class)]
 #[ORM\Table(name: 'civic_subject')]
 #[ORM\Index(name: 'idx_civic_subject_node_created', columns: ['node_id', 'created_at'])]
+#[ORM\UniqueConstraint(name: 'uniq_civic_subject_slug', columns: ['slug'])]
 #[ORM\HasLifecycleCallbacks]
 class CivicSubject
 {
@@ -65,6 +69,11 @@ class CivicSubject
     #[ORM\Column(length: 200)]
     #[Groups(['subject:read'])]
     private string $title;
+
+    /** ADR-0008: unic global; atribuit de App\Seo\SlugRegistry (la persist și la schimbarea titlului). */
+    #[ORM\Column(length: 100)]
+    #[Groups(['subject:read'])]
+    private ?string $slug = null;
 
     #[ORM\Column(type: Types::TEXT)]
     #[Groups(['subject:read'])]
@@ -131,6 +140,18 @@ class CivicSubject
     public function getAuthor(): User { return $this->author; }
     public function getType(): SubjectType { return $this->type; }
     public function getTitle(): string { return $this->title; }
+    public function getSlug(): ?string { return $this->slug; }
+    public function hasSlug(): bool { return $this->slug !== null; }
+    /** Doar prin App\Seo\SlugRegistry. */
+    public function assignSlug(string $slug): void { $this->slug = $slug; }
+
+    /** URL-ul public canonic (ADR-0008): calea categoriei curente + slug-ul subiectului. */
+    #[Groups(['subject:read'])]
+    public function getCanonicalPath(): string
+    {
+        return '/categorie/'.$this->node->getSlugPath().'/subiect/'.$this->slug;
+    }
+
     public function getDescription(): string { return $this->description; }
     public function getVisibility(): SubjectVisibility { return $this->visibility; }
     public function getStage(): SubjectStage { return $this->stage; }

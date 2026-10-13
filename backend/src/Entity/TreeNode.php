@@ -45,7 +45,12 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         // Un nivel: radacini (fara ?parent) sau copiii lui ?parent={ulid}. Fara paginare: incarcare pe ramuri.
         new GetCollection(paginationEnabled: false, provider: TreeNodeProvider::class),
-        new Get(provider: TreeNodeProvider::class),
+        // ADR-0008: nodul dupa calea publica (?path=drumuri/cluj), curenta sau din istoric; FE compara
+        // slugPath-ul primit cu calea din URL si o inlocuieste cu cea canonica.
+        new Get(uriTemplate: '/tree_nodes/by-path', uriVariables: [], provider: TreeNodeProvider::class, name: 'tree_node_by_path', normalizationContext: ['groups' => ['tree:read'], 'item_uri_template' => '/tree_nodes/{id}{._format}']),
+        // {id} restrans la forma unui ULID (base32) sau UUID, altfel ar prinde si /tree_nodes/by-path
+        // (prioritatea rutelor API Platform nu e respectata intre operatii ale aceleiasi resurse).
+        new Get(requirements: ['id' => '[0-9A-Za-z]{26}|[0-9a-fA-F-]{36}'], provider: TreeNodeProvider::class),
         new Post(security: "is_granted('TREE_EDIT')", input: TreeNodeCreateInput::class, processor: TreeNodeCreateProcessor::class),
         new Patch(security: "is_granted('TREE_EDIT')", input: TreeNodeRenameInput::class, processor: TreeNodeRenameProcessor::class),
         // Mutare si ordonare (Step 1.3): operatie explicita, tranzactionala, sub TreeLock - vezi App\Tree\TreeMover.
@@ -66,6 +71,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Table(name: 'tree_node')]
 #[ORM\Index(name: 'idx_tree_node_path_gist', columns: ['path'])]
 #[ORM\UniqueConstraint(name: 'uniq_tree_node_parent_position', columns: ['parent_id', 'position'])]
+#[ORM\UniqueConstraint(name: 'uniq_tree_node_slug_path', columns: ['slug_path'])]
 #[ORM\HasLifecycleCallbacks]
 class TreeNode
 {
@@ -90,6 +96,19 @@ class TreeNode
     #[Assert\NotBlank]
     #[Assert\Length(max: 255)]
     private string $name;
+
+    /**
+     * ADR-0008: slug-ul nodului, unic între frații aceluiași părinte (garantat de unicitatea slug_path),
+     * și calea publică materializată `drumuri/cluj/calitate`. Atribuite de App\Seo\SlugRegistry
+     * (la persist, redenumire, mutare); null doar între construcție și persist.
+     */
+    #[ORM\Column(length: 100)]
+    #[Groups(['tree:read'])]
+    private ?string $slug = null;
+
+    #[ORM\Column(length: 1024)]
+    #[Groups(['tree:read'])]
+    private ?string $slugPath = null;
 
     #[ORM\Column(type: Types::INTEGER)]
     #[Groups(['tree:read'])]
@@ -137,6 +156,28 @@ class TreeNode
     public function rename(string $name): void
     {
         $this->name = trim($name);
+    }
+
+    public function hasSlug(): bool
+    {
+        return $this->slug !== null;
+    }
+
+    /** Doar prin App\Seo\SlugRegistry. */
+    public function assignSlug(string $slug, string $slugPath): void
+    {
+        $this->slug = $slug;
+        $this->slugPath = $slugPath;
+    }
+
+    public function getSlug(): ?string
+    {
+        return $this->slug;
+    }
+
+    public function getSlugPath(): ?string
+    {
+        return $this->slugPath;
     }
 
     #[ORM\PreUpdate]

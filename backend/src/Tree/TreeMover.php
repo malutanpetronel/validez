@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tree;
 
+use App\Seo\SlugRegistry;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Uid\Ulid;
 
@@ -16,6 +17,8 @@ use Symfony\Component\Uid\Ulid;
  * 3. parent_id + path-ul intregului subarbore se rescriu (ltree);
  * 4. fratii de la sursa si de la destinatie se renumeroteaza dens 0..n
  *    (unicitatea (parent_id, position) e DEFERRED, deci duplicatele intermediare sunt permise).
+ * 5. la schimbarea parintelui: slug liber printre fratii de la destinatie si calea publica rescrisa
+ *    pe tot subarborele, cu istoric (ADR-0008, App\Seo\SlugRegistry::afterMove).
  *
  * position = indexul printre fratii de la destinatie, fara nodul mutat; null = la capat;
  * o valoare peste numarul fratilor inseamna tot "la capat".
@@ -25,6 +28,7 @@ final class TreeMover
     public function __construct(
         private readonly Connection $connection,
         private readonly TreeLock $lock,
+        private readonly SlugRegistry $slugs,
     ) {
     }
 
@@ -69,6 +73,7 @@ final class TreeMover
                     'UPDATE tree_node SET parent_id = :parent, path = CAST(:path AS ltree), updated_at = now() WHERE id = :id',
                     ['parent' => $newParentDbId, 'path' => $newPath, 'id' => $node['id']],
                 );
+                $this->slugs->afterMove($node['id']);
 
                 $this->renumber($this->childIds($oldParentDbId));
             } else {

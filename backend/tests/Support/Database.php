@@ -15,7 +15,7 @@ final class Database
 {
     public static function reset(Connection $db, string ...$extraTables): void
     {
-        $tables = array_merge(['civic_subject', 'tree_node', 'refresh_token', 'app_user'], $extraTables);
+        $tables = array_merge(['civic_subject', 'tree_node', 'refresh_token', 'app_user', 'slug_redirect'], $extraTables);
         $db->executeStatement('TRUNCATE '.implode(', ', $tables).' CASCADE');
     }
 }

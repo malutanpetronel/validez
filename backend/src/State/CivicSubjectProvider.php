@@ -12,6 +12,7 @@ use App\Entity\CivicSubject;
 use App\Entity\User;
 use App\Repository\CivicSubjectRepository;
 use App\Repository\TreeNodeRepository;
+use App\Seo\SlugRegistry;
 use App\Subject\SubjectStage;
 use App\Subject\SubjectType;
 use App\Subject\SubjectVisibility;
@@ -34,6 +35,7 @@ final class CivicSubjectProvider implements ProviderInterface
         private readonly CivicSubjectRepository $subjects,
         private readonly TreeNodeRepository $nodes,
         private readonly Security $security,
+        private readonly SlugRegistry $slugs,
     ) {
     }
 
@@ -44,7 +46,12 @@ final class CivicSubjectProvider implements ProviderInterface
         $isAdmin = $viewer?->isAdmin() ?? false;
 
         if (!$operation instanceof CollectionOperationInterface) {
-            $id = $uriVariables['id'] ?? null;
+            if ($operation->getName() === 'civic_subject_by_slug') {
+                $slug = (string) ($uriVariables['slug'] ?? '');
+                $id = preg_match('/^[a-z0-9-]{1,100}$/', $slug) === 1 ? $this->slugs->subjectIdForSlug($slug) : null;
+            } else {
+                $id = $uriVariables['id'] ?? null;
+            }
             $subject = $id === null ? null : $this->subjects->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
             if ($subject === null) {
                 return null;

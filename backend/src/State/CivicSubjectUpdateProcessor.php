@@ -16,6 +16,7 @@ use App\Subject\CostEstimate;
 use App\Subject\SubjectVisibility;
 use App\Subject\PublishingPolicy;
 use App\Subject\SubjectRevisions;
+use App\Seo\SlugRegistry;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -37,6 +38,7 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
         private readonly Security $security,
         private readonly PublishingPolicy $policy,
         private readonly SubjectRevisions $revisions,
+        private readonly SlugRegistry $slugs,
     ) {
     }
 
@@ -69,6 +71,7 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
             $this->em->refresh($subject, LockMode::PESSIMISTIC_WRITE);
             // După lock: starea citită aici e cea față de care se decide revizia și blocarea tipului.
             $before = SubjectRevisions::snapshot($subject);
+            $wasPublished = $subject->getVisibility() === SubjectVisibility::PUBLISHED;
             SubjectRevisions::assertTypeChangeAllowed($subject, $type);
             if ($isAdmin && $data->visibility === SubjectVisibility::PUBLISHED->value && $subject->getVisibility() !== SubjectVisibility::PUBLISHED) {
                 $subject->markApprovedContribution();
@@ -81,6 +84,10 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
             }
             CostEstimate::apply($subject, get_object_vars($data), $type ?? $subject->getType());
             $subject->edit($data->title, $data->description, $type);
+            if ($data->title !== null) {
+                // ADR-0008: slug nou după titlu; cel vechi rămâne valid (301) dacă subiectul era public.
+                $this->slugs->afterTitleChange($subject, $wasPublished);
+            }
             $subject->moderate(
                 $data->stage === null ? null : SubjectStage::from($data->stage),
                 $data->visibility === null ? null : SubjectVisibility::from($data->visibility),

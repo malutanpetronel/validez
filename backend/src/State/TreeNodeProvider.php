@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\Entity\TreeNode;
 use App\Repository\TreeNodeRepository;
+use App\Seo\SlugRegistry;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Ulid;
@@ -22,8 +23,10 @@ use Symfony\Component\Uid\Ulid;
  */
 final class TreeNodeProvider implements ProviderInterface
 {
-    public function __construct(private readonly TreeNodeRepository $repository)
-    {
+    public function __construct(
+        private readonly TreeNodeRepository $repository,
+        private readonly SlugRegistry $slugs,
+    ) {
     }
 
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): object|array|null
@@ -40,6 +43,18 @@ final class TreeNodeProvider implements ProviderInterface
             }
 
             return $this->repository->withChildrenFlags($this->repository->findChildren($parent));
+        }
+
+        if ($operation->getName() === 'tree_node_by_path') {
+            $path = trim((string) $context['request']?->query->get('path', ''), '/');
+            $id = preg_match('#^[a-z0-9-]+(/[a-z0-9-]+)*$#', $path) === 1 && \strlen($path) <= 1024
+                ? $this->slugs->nodeIdForPath($path) : null;
+            $node = $id === null ? null : $this->repository->find(Ulid::fromString($id));
+            if ($node !== null) {
+                $this->repository->withChildrenFlags([$node]);
+            }
+
+            return $node;
         }
 
         $id = $uriVariables['id'] ?? null;
