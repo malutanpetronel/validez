@@ -57,7 +57,8 @@ test('selectarea categoriei afișează automat lista paginată și păstrează c
     expect(await screen.findByText('Subiect 19')).toBeInTheDocument();
     expect(screen.getByLabelText('Tip')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: /page 2/i})).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('link', {name: /^Subiect 0/}));
+    // getByText: getByRole calculeaza numele accesibil al tuturor linkurilor din lista (~1,6 s)
+    fireEvent.click(screen.getByText('Subiect 0').closest('a'));
     expect(await screen.findByText('Descriere completă')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('link', {name: 'Înapoi la arbore'}));
     expect(await screen.findByText('Subiect 19')).toBeInTheDocument();

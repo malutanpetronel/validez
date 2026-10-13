@@ -8,3 +8,6 @@ Object.assign(global, {TextEncoder, TextDecoder});
 // our event bridge with a plain custom element; backend tests solve real challenges.
 jest.mock('altcha', () => ({}));
 jest.mock('altcha/i18n/ro', () => ({}), {virtual: true});
+
+// Testele arborelui (MUI + rc-tree, ~2 s) depășesc 5 s doar sub încărcare mare a mașinii (rulare paralelă).
+jest.setTimeout(15000);
