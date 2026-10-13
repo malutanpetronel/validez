@@ -32,7 +32,7 @@ import {
     appendChild, dropTarget, findNode, indexByKey, isNoopMove, renameInTree, replaceLevel, setChildren, toTreeNode,
 } from '../tree/treeData';
 
-const DIALOG_TITLES = {root: 'Rădăcină nouă', child: 'Nod copil nou', rename: 'Redenumește nodul'};
+const DIALOG_TITLES = {root: 'Tematică nouă', child: 'Nod copil nou', rename: 'Redenumește nodul'};
 
 /**
  * Plan Step 1.5: creare rădăcină/copil, redenumire, expandare cu încărcare pe ramuri,
@@ -252,12 +252,11 @@ export default function TreePage() {
 
     return (
         <Stack spacing={2}>
-            <Typography variant="h5" component="h1" color="primary">Arbore</Typography>
+            <Typography variant="h5" component="h1" color="primary">Tematici</Typography>
 
             {!isAdmin && (
                 <Alert severity="info">
-                    Arborele se poate naviga liber. Modificarea lui e rezervată administratorilor —{' '}
-                    <RouterLink to="/login" state={{from: '/'}}>intră în cont</RouterLink>.
+                    Poți explora liber tematicile. Organizarea lor este gestionată de administratori.
                 </Alert>
             )}
 
@@ -265,7 +264,7 @@ export default function TreePage() {
                 <Paper sx={{p: 2, overflowX: 'auto'}}>
                     {isAdmin && <Box sx={{mb: 2, pb: 1.5, borderBottom: 1, borderColor: 'divider'}}>
                         <Stack direction="row" spacing={0.5} useFlexGap sx={{alignItems: 'center', flexWrap: 'wrap'}}>
-                            <Button size="small" startIcon={<AddIcon/>} aria-label="Rădăcină nouă" onClick={() => openDialog('root')}>Rădăcină</Button>
+                            <Button size="small" startIcon={<AddIcon/>} aria-label="Tematică nouă" onClick={() => openDialog('root')}>Tematică</Button>
                             {selected && <>
                                 <Button size="small" startIcon={<SubdirectoryArrowRightIcon/>} aria-label="Adaugă copil" onClick={() => openDialog('child')}>Copil</Button>
                                 {!mobile && <Tooltip title="Redenumește nodul">
@@ -303,7 +302,7 @@ export default function TreePage() {
                     </Box>}
                     {loading && <Typography color="text.secondary">Se încarcă…</Typography>}
                     {!loading && treeData.length === 0 && (
-                        <Typography color="text.secondary">Arborele e gol. Creează prima rădăcină.</Typography>
+                        <Typography color="text.secondary">{isAdmin ? 'Nu există tematici. Creează prima tematică.' : 'Nu există tematici încă.'}</Typography>
                     )}
                     {treeData.length > 0 && (
                         <Box onKeyDown={isAdmin ? onTreeKeyDown : undefined}
@@ -419,7 +418,7 @@ export default function TreePage() {
                 <DialogTitle>Lucrul cu arborele</DialogTitle>
                 <DialogContent><Stack spacing={2}>
                     <Typography>Selectează o categorie pentru a vedea subiectele ei. Selectează un subiect pentru detalii.</Typography>
-                    <Typography>„Rădăcină” adaugă o categorie la nivelul principal, iar „Copil” adaugă o categorie sub nodul selectat.</Typography>
+                    <Typography>„Tematică” adaugă o categorie la nivelul principal, iar „Copil” adaugă o categorie sub nodul selectat.</Typography>
                     <Typography>Pe calculator, folosește creionul sau dublu-click pentru redenumire. Poți trage un nod peste altul pentru a-l muta în el, sau între rânduri pentru a-l ordona.</Typography>
                     <Typography>Din meniul „⋯” poți muta nodul în altă categorie sau îl poți ordona cu „Mai sus” și „Mai jos”. Pe telefon, aici găsești și „Redenumește”.</Typography>
                     <Typography>De la tastatură, Alt+↑ și Alt+↓ mută nodul selectat printre frați când arborele are focus.</Typography>

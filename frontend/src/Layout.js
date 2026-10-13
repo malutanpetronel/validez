@@ -65,7 +65,6 @@ export default function Layout() {
                         </>
                     ) : (
                         <Box sx={{display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end'}}>
-                            <Button variant="contained" size="small" component={RouterLink} to="/inregistrare">Înregistrează-te</Button>
                             <Button color="inherit" variant="outlined" size="small" component={RouterLink} to="/login">Intră</Button>
                         </Box>
                     )}

@@ -27,8 +27,9 @@ test('vizitatorul vede arborele, fara actiuni de modificare', async () => {
     renderPage();
     expect(await screen.findByText('Drumuri')).toBeInTheDocument();
     expect(screen.getByText('Sănătate')).toBeInTheDocument();
-    expect(screen.queryByRole('button', {name: /Rădăcină nouă/})).not.toBeInTheDocument();
-    expect(screen.getByRole('link', {name: /intră în cont/})).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: /Tematică nouă/})).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Tematici'})).toBeInTheDocument();
+    expect(screen.getByText('Poți explora liber tematicile. Organizarea lor este gestionată de administratori.')).toBeInTheDocument();
     expect(global.fetch.mock.calls[0][1].headers.Authorization).toBeUndefined();
 });
 
@@ -36,14 +37,14 @@ test('utilizatorul fara ROLE_ADMIN e tratat ca vizitator', async () => {
     setSession({token: userJwt()});
     renderPage();
     await screen.findByText('Drumuri');
-    expect(screen.queryByRole('button', {name: /Rădăcină nouă/})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: /Tematică nouă/})).not.toBeInTheDocument();
 });
 
 test('administratorul vede actiunile; cele pe nod sunt dezactivate pana la selectie', async () => {
     setSession({token: adminJwt()});
     renderPage();
     await screen.findByText('Drumuri');
-    expect(screen.getByRole('button', {name: /Rădăcină nouă/})).toBeEnabled();
+    expect(screen.getByRole('button', {name: /Tematică nouă/})).toBeEnabled();
     expect(screen.queryByRole('button', {name: /Adaugă copil/})).not.toBeInTheDocument();
     expect(global.fetch.mock.calls[0][1].headers.Authorization).toMatch(/^Bearer /);
 });
