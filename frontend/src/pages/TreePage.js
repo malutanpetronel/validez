@@ -59,6 +59,8 @@ export default function TreePage() {
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [subjectNodeKey, setSubjectNodeKey] = useState(null);
     const [urlError, setUrlError] = useState(null);
+    // Doar un 404 real scoate pagina din index; o eroare de retea / API indisponibil nu (ADR-0008).
+    const [urlNotFound, setUrlNotFound] = useState(false);
     const [creatingSubject, setCreatingSubject] = useState(false);
     const [treeData, setTreeData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -212,6 +214,7 @@ export default function TreePage() {
         })().catch((err) => {
             if (!active) return;
             clearSelection();
+            setUrlNotFound(err.status === 404);
             setUrlError(err.status === 404
                 ? (target.subjectSlug ? 'Subiectul nu există sau nu e vizibil.' : 'Categoria nu există.')
                 : err.message || 'Eroare necunoscută');
@@ -291,7 +294,7 @@ export default function TreePage() {
     const subjectNode = subjectNodeKey ? findNode(treeData, subjectNodeKey) : null;
     const crumbs = ancestorsOf(treeData, (selected ?? subjectNode)?.key)
         .filter((n) => n.slugPath).map((n) => ({name: n.title, slugPath: n.slugPath}));
-    usePageMeta(urlError ? {title: 'Pagină negăsită', noindex: true}
+    usePageMeta(urlError ? {title: urlNotFound ? 'Pagină negăsită' : null, noindex: urlNotFound}
         : selected ? {
             title: crumbs.slice(-2).reverse().map((c) => c.name).join(' · ') || selected.title,
             description: `Subiecte din categoria ${crumbs.map((c) => c.name).join(' › ') || selected.title} pe VALIDEZ.`,

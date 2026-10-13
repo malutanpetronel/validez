@@ -25,6 +25,7 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
     const {user, isAdmin} = useAuth();
     const [subject, setSubject] = useState(null);
     const [error, setError] = useState(null);
+    const [notFound, setNotFound] = useState(false);
     const [editing, setEditing] = useState(false);
     const [noteVersion, setNoteVersion] = useState(0);
     const [crumbs, setCrumbs] = useState([]);
@@ -32,8 +33,13 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
     useEffect(() => {
         setSubject(null);
         setError(null);
+        setNotFound(false);
         let active = true;
-        fetchSubject(id).then((s) => { if (active) setSubject(s); }).catch((e) => { if (active) setError(e.message); });
+        fetchSubject(id).then((s) => { if (active) setSubject(s); }).catch((e) => {
+            if (!active) return;
+            setNotFound(e.status === 404);
+            setError(e.message);
+        });
         return () => { active = false; };
     }, [id, user?.id]);
 
@@ -53,7 +59,7 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
     }, [categoryPath]);
     usePageMeta(subject
         ? {title: subject.title, description: excerpt(subject.description), path: subject.canonicalPath ?? null, noindex: subject.visibility !== 'PUBLISHED'}
-        : {title: error ? 'Subiect negăsit' : null, noindex: Boolean(error)}, !embedded || meta);
+        : {title: notFound ? 'Subiect negăsit' : null, noindex: notFound}, !embedded || meta);
 
     return (
         <Stack spacing={2}>

@@ -109,9 +109,10 @@ final class SitemapTest extends WebTestCase
         self::assertSame([], $this->locs('/sitemap/subiecte-1.xml'));
     }
 
-    public function testRobotsPeApiBlocheazaTot(): void
+    public function testRobotsPeApiPermiteDoarApi(): void
     {
         $robots = (string) file_get_contents(static::getContainer()->getParameter('kernel.project_dir').'/public/robots.txt');
-        self::assertMatchesRegularExpression('/^User-agent: \*\s*\nDisallow: \/\s*$/m', $robots);
+        // /api/ permis: Google randeaza paginile FE cu datele de aici (blocat -> noindex la randare).
+        self::assertMatchesRegularExpression('/^User-agent: \*\nAllow: \/api\/\nDisallow: \/\s*$/m', $robots);
     }
 }

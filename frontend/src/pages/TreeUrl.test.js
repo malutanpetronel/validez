@@ -114,6 +114,18 @@ test('categorie sau subiect inexistent: mesaj si noindex', async () => {
     expect(document.head.querySelector('link[rel="canonical"]')).toBeNull();
 });
 
+test('API indisponibil (nu 404): mesaj, dar fara noindex - pagina nu iese din index la o pana', async () => {
+    global.fetch = routedFetch([
+        [(u) => u.endsWith('/tree_nodes'), () => res({member: [DRU]})],
+        [(u) => u.includes('/tree_nodes/by-path'), () => res({detail: 'Service Unavailable'}, 503)],
+        [(u) => u.includes('/by-slug/'), () => res({detail: 'Service Unavailable'}, 503)],
+    ]);
+    renderAt('/categorie/drumuri/cluj/calitate');
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    await waitFor(() => expect(document.title).toBe('VALIDEZ — Vezi. Verifică. Validează.'));
+    expect(document.head.querySelector('meta[name="robots"]')).toBeNull();
+});
+
 test('subiect inexistent: mesaj', async () => {
     renderAt('/categorie/drumuri/subiect/nu-exista');
     expect(await screen.findByText('Subiectul nu există sau nu e vizibil.')).toBeInTheDocument();

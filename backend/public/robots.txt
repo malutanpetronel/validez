@@ -1,4 +1,7 @@
 # validez-be.webnou.ro este API-ul (ADR-0008); site-ul public e validez.webnou.ro.
+# /api/ trebuie permis: Google randeaza paginile validez.webnou.ro si cere datele de aici; blocat,
+# aplicatia ajungea pe ramura de eroare (noindex). Neindexarea API-ului o da X-Robots-Tag din nginx.
 # La media publice (Step 3) se revede regula pentru /uploads/.
 User-agent: *
+Allow: /api/
 Disallow: /
