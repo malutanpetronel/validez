@@ -1,0 +1,13 @@
+{# ADR-0008, S.3: meta paginii publice, inserate in <head>-ul index.html-ului FE. #}
+<title>{{ title }}</title>
+<meta name="description" content="{{ description }}"/>
+{% if canonical %}<link rel="canonical" href="{{ canonical }}"/>
+<meta property="og:url" content="{{ canonical }}"/>
+{% endif %}
+{% if noindex %}<meta name="robots" content="noindex"/>
+{% endif %}
+<meta property="og:title" content="{{ title }}"/>
+<meta property="og:description" content="{{ description }}"/>
+<meta property="og:type" content="{{ ogType }}"/>
+{% for ld in jsonLd %}<script type="application/ld+json">{{ ld|raw }}</script>
+{% endfor %}

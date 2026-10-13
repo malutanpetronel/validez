@@ -25,6 +25,9 @@ services:
     container_name: validez-php
     volumes:
       - ./:/var/www/validez-be
+      # ADR-0008, S.3: sablonul shell-ului SEO, la aceeasi cale ca pe productie (acolo il copiaza ansible).
+      # Pe dev exista dupa un `npx react-scripts build` in frontend/.
+      - ../frontend/build:/var/www/validez-fe/shared/seo:ro
     working_dir: /var/www/validez-be
     depends_on:
       - db

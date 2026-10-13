@@ -1,0 +1,9 @@
+{# Rezumatul subiectului in #root (React il inlocuieste la pornire). #}
+<main>
+{% include 'seo/_crumbs.html.twig' with {crumbs: crumbs} %}
+<article>
+<h1>{{ subject.title }}</h1>
+<p>{{ types[subject.type.value] }} · {{ stages[subject.stage.value] }} · publicat <time datetime="{{ subject.createdAt|date('Y-m-d') }}">{{ subject.createdAt|date('d.m.Y') }}</time></p>
+<div>{{ subject.description|nl2br }}</div>
+</article>
+</main>

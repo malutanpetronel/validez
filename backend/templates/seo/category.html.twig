@@ -1,0 +1,12 @@
+{# Rezumatul categoriei in #root (React il inlocuieste la pornire); linkuri reale pentru roboti. #}
+<main>
+{% include 'seo/_crumbs.html.twig' with {crumbs: crumbs|slice(0, -1)} %}
+<h1>{{ node.name }}</h1>
+{% if children %}<h2>Subcategorii</h2>
+<ul>{% for c in children %}<li><a href="/categorie/{{ c.slugPath }}">{{ c.name }}</a></li>{% endfor %}</ul>
+{% endif %}
+<h2>Subiecte</h2>
+{% if subjects %}<ul>{% for s in subjects %}<li><a href="{{ s.canonicalPath }}">{{ s.title }}</a> — {{ types[s.type.value] }}, {{ stages[s.stage.value] }}</li>{% endfor %}</ul>
+{% else %}<p>Nu există încă subiecte publicate în această categorie.</p>
+{% endif %}
+</main>

@@ -1,0 +1,1 @@
+{% if crumbs %}<nav aria-label="Categorii"><ol>{% for c in crumbs %}<li><a href="/categorie/{{ c.slugPath }}">{{ c.name }}</a></li>{% endfor %}</ol></nav>{% endif %}

@@ -9,6 +9,10 @@
 parameters:
     altcha_cost_default: 1500
     registration_sender_default: 'noreply@validez.webnou.ro'
+    # ADR-0008, S.3: adresa publica a site-ului (canonical, 301) si sablonul shell-ului SEO (index.html al FE,
+    # copiat de ansible la deploy-ul FE si montat read-only in containerul PHP).
+    site_url_default: 'https://validez.webnou.ro'
+    seo_shell_template_default: '/var/www/validez-fe/shared/seo/index.html'
 
 services:
     # default configuration for services in *this* file
