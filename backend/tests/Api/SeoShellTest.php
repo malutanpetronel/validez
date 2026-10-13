@@ -94,6 +94,8 @@ final class SeoShellTest extends WebTestCase
         self::assertStringContainsString('<meta property="og:url" content="https://validez.test/categorie/drumuri/cluj/calitate"/>', $html);
         self::assertSame(1, substr_count($html, 'og:url'), 'og:url din șablon (pagina principală) e înlocuit');
         self::assertStringContainsString('<meta property="og:site_name" content="VALIDEZ"/>', $html, 'restul șablonului rămâne');
+        self::assertStringContainsString('<meta property="og:image" content="https://validez.webnou.ro/og-image.jpg"/>', $html, 'imaginea de previzualizare rămâne pe paginile publice');
+        self::assertStringContainsString('<meta name="twitter:card" content="summary_large_image"/>', $html);
         self::assertStringContainsString('src="/static/js/main.test.js"', $html, 'aplicația se încarcă în continuare');
         self::assertStringNotContainsString('noindex', $html);
 
