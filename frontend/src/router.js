@@ -13,6 +13,8 @@ import ModerationPage from './pages/ModerationPage';
 import CheckApiPage from './pages/CheckApiPage';
 import MyVotesPage from './pages/MyVotesPage';
 import LegacyCategoryRedirect from './pages/LegacyCategoryRedirect';
+import NotFoundPage from './pages/NotFoundPage';
+import ErrorPage from './pages/ErrorPage';
 
 // ADR-0008: pe web BrowserRouter (URL-uri reale, indexabile; nginx are fallback SPA), in Cordova HashRouter
 // (WebView din file://, unde caile nu ajung la un server). Rutele sunt aceleasi.
@@ -20,6 +22,7 @@ export const routes = [
     {
         path: '/',
         element: <Layout/>,
+        errorElement: <ErrorPage/>,
         children: [
             {index: true, element: <TreePage/>},
             {path: 'help', element: <HelpPage/>},
@@ -38,6 +41,8 @@ export const routes = [
             {path: 'categorii/:nodeId/subiecte', element: <LegacyCategoryRedirect/>},
             {path: 'subiecte/:id', element: <SubjectPage/>},
             {path: 'voturile-mele', element: <MyVotesPage/>},
+            // Orice alta adresa: pagina „nu exista” (noindex), cu antetul aplicatiei.
+            {path: '*', element: <NotFoundPage/>},
         ],
     },
 ];

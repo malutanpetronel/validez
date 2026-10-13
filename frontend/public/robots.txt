@@ -1,2 +1,11 @@
 User-agent: *
-Disallow:
+# ADR-0008: paginile private au si noindex; aici nici nu se mai cer.
+Disallow: /login
+Disallow: /inregistrare
+Disallow: /am-uitat-parola
+Disallow: /voturile-mele
+Disallow: /moderare
+Disallow: /check-api
+Disallow: /categorii-propuse
+
+Sitemap: https://validez.webnou.ro/sitemap.xml

@@ -31,6 +31,25 @@ const renderAt = (path) => {
     return router;
 };
 
+test('adresa necunoscuta: pagina „nu exista” cu noindex, in aplicatie', async () => {
+    renderAt('/abc/def');
+    expect(await screen.findByRole('heading', {name: 'Pagina nu există'})).toBeInTheDocument();
+    expect(screen.getByRole('link', {name: 'Înapoi la tematici'})).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', {name: 'VALIDEZ — pagina principală'})).toBeInTheDocument();
+    await waitFor(() => expect(document.head.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex'));
+    expect(document.title).toBe('Pagină negăsită — VALIDEZ');
+});
+
+test('eroare neprevazuta intr-o pagina: mesaj normal, nu ecranul tehnic', async () => {
+    const Boom = () => { throw new Error('boom'); };
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const router = createMemoryRouter([{...routes[0], children: [{index: true, element: <Boom/>}]}], {initialEntries: ['/']});
+    render(<AuthProvider><RouterProvider router={router}/></AuthProvider>);
+    expect(await screen.findByRole('heading', {name: 'A apărut o eroare'})).toBeInTheDocument();
+    expect(screen.queryByText(/Unexpected Application Error/)).not.toBeInTheDocument();
+    spy.mockRestore();
+});
+
 test('linkurile vechi cu hash devin cai reale, cu query', () => {
     const history = {state: {x: 1}, replaceState: jest.fn()};
     migrateLegacyHash({hash: '#/subiecte/01SUBJ?a=1'}, history);

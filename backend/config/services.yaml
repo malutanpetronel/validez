@@ -13,6 +13,8 @@ parameters:
     # copiat de ansible la deploy-ul FE si montat read-only in containerul PHP).
     site_url_default: 'https://validez.webnou.ro'
     seo_shell_template_default: '/var/www/validez-fe/shared/seo/index.html'
+    # S.4: subiecte pe fisier de sitemap (limita Google: 50.000)
+    sitemap_page_size_default: 10000
 
 services:
     # default configuration for services in *this* file

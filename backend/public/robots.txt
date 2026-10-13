@@ -1,0 +1,4 @@
+# validez-be.webnou.ro este API-ul (ADR-0008); site-ul public e validez.webnou.ro.
+# La media publice (Step 3) se revede regula pentru /uploads/.
+User-agent: *
+Disallow: /
