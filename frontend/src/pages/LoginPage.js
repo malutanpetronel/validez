@@ -16,7 +16,7 @@ export default function LoginPage() {
     const [captchaVersion, setCaptchaVersion] = useState(0);
     const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
-    const after = location.state?.from || '/arbore';
+    const after = location.state?.from || '/';
 
     const submit = async (e) => {
         e.preventDefault();

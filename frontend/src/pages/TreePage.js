@@ -16,6 +16,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import MoveDialog from '../components/MoveDialog';
 import SubjectPage from './SubjectPage';
+import TreeVoteSummary from '../components/TreeVoteSummary';
 import SubjectList from '../components/SubjectList';
 import SubjectForm from '../components/SubjectForm';
 import {fetchSubjects} from '../api/subjects';
@@ -167,7 +168,7 @@ export default function TreePage() {
         return {treeReturn: {expandedKeys: [...expanded], selectedKey: categoryKey,
             selectedSubject: categoryKey ? null : selectedSubject}};
     };
-    const subjectsUrl = (node) => `/arbore/${node.key}/subiecte?name=${encodeURIComponent(node.title)}`;
+    const subjectsUrl = (node) => `/categorii/${node.key}/subiecte?name=${encodeURIComponent(node.title)}`;
     const decorate = (nodes) => nodes.map((node) => {
         const branch = subjectBranches[node.key];
         const children = node.children ? decorate(node.children) : [];
@@ -256,7 +257,7 @@ export default function TreePage() {
             {!isAdmin && (
                 <Alert severity="info">
                     Arborele se poate naviga liber. Modificarea lui e rezervată administratorilor —{' '}
-                    <RouterLink to="/login" state={{from: '/arbore'}}>intră în cont</RouterLink>.
+                    <RouterLink to="/login" state={{from: '/'}}>intră în cont</RouterLink>.
                 </Alert>
             )}
 
@@ -325,7 +326,7 @@ export default function TreePage() {
                                      bgcolor: 'primary.main', color: 'primary.contrastText', opacity: 1,
                                      boxShadow: 'none', borderLeftColor: 'primary.contrastText',
                                      '& .MuiTypography-root': {color: 'inherit', fontWeight: 700},
-                                     '& .MuiSvgIcon-root': {color: 'inherit'},
+                                     '& .MuiSvgIcon-root:not(.MuiRating-icon .MuiSvgIcon-root)': {color: 'inherit'},
                                      '& .MuiSvgIcon-root[data-hidden="true"]': {color: 'error.main'},
                                      '&:hover': {bgcolor: 'primary.dark'},
                                  },
@@ -340,7 +341,10 @@ export default function TreePage() {
                                 allowDrop={({dropNode, dragNode}) => !dropNode.kind && !dragNode.kind}
                                 titleRender={(node) => <Stack component="span" direction="row" spacing={1} sx={{alignItems: 'center', minWidth: 0, '& .MuiSvgIcon-root': {flexShrink: 0}}}>
                                     {node.kind === 'subject' ? <DescriptionOutlinedIcon fontSize="small" color={node.subject.visibility === 'HIDDEN' ? 'error' : 'primary'} data-hidden={node.subject.visibility === 'HIDDEN' ? 'true' : undefined}/> : !node.kind ? <FolderOutlinedIcon fontSize="small" color="action"/> : node.kind === 'add' ? <AddIcon fontSize="small" color="primary"/> : <ListAltOutlinedIcon fontSize="small" color="primary"/>}
+                                    <Box component="span" sx={{display: 'flex', flexDirection: 'column', gap: 0.25, minWidth: 0}}>
                                     <Typography component="span" variant="body2" sx={{color: node.kind === 'all' || node.kind === 'add' ? 'primary.main' : 'inherit', whiteSpace: 'normal'}}>{node.title}{!node.kind && node.subjectCount > 0 && <Tooltip title="Total subiecte în această ramură, inclusiv subnivelurile"><span> ({node.subjectCount})</span></Tooltip>}</Typography>
+                                    {node.kind === 'subject' && <TreeVoteSummary subjectId={node.subject.id}/>}
+                                    </Box>
                                 </Stack>}
                                 loadData={onLoadData}
                                 expandedKeys={expandedKeys}

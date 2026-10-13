@@ -12,7 +12,7 @@ const renderLogin = () => render(
         <MemoryRouter initialEntries={['/login']}>
             <Routes>
                 <Route path="/login" element={<LoginPage/>}/>
-                <Route path="/arbore" element={<p>pagina arbore</p>}/>
+                <Route path="/" element={<p>pagina arbore</p>}/>
             </Routes>
         </MemoryRouter>
     </AuthProvider>,

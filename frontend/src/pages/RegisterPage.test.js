@@ -11,7 +11,7 @@ jest.mock('../components/AltchaVerification', () => ({onVerified}) => <button ty
 const renderPage = (state) => render(<AuthProvider><MemoryRouter initialEntries={[{pathname: '/inregistrare', state}]}><Routes>
     <Route path="/inregistrare" element={<RegisterPage/>}/>
     <Route path="/login" element={<LoginPage/>}/>
-    <Route path="/arbore" element={<p>Arbore după confirmare</p>}/>
+    <Route path="/" element={<p>Arbore după confirmare</p>}/>
 </Routes></MemoryRouter></AuthProvider>);
 const fill = () => {
     fireEvent.change(screen.getByLabelText(/Nume afișat/), {target: {value: 'Petru'}});

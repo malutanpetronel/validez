@@ -26,7 +26,7 @@ export const VOTE_TYPE_HINTS = {
     YES_NO: 'Susții această inițiativă?',
     IMPORTANCE: '1 = puțin important, 5 = foarte important',
 };
-const BINARY_OPTIONS = {VALIDITY: [[1, 'Validez'], [0, 'Invalidez']], YES_NO: [[1, 'Da'], [0, 'Nu']]};
+const BINARY_OPTIONS = {VALIDITY: [[1, 'Validez'], [0, 'Invalidez']], YES_NO: [[1, 'Susțin'], [0, 'Nu susțin']]};
 
 /** Opțiunile unui tip de vot, ca [valoare, etichetă]; pentru tipuri noi, intervalul primit de la server. */
 export const voteOptions = (type) => BINARY_OPTIONS[type.code]

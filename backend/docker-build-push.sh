@@ -20,6 +20,8 @@ docker build -t "${FULL_TAG}" - < Dockerfile
 echo "=> Pushing: ${FULL_TAG}"
 docker push "${FULL_TAG}"
 
+"$(dirname "$0")/../docker/cleanup-old-tags.sh" validez_be_ "${TAG}" || true
+
 echo ""
 echo "Gata. Pune pe server in /var/www/validez-be/shared/backend/.env:"
 echo "   DOCKER_IMAGE=${FULL_TAG}"

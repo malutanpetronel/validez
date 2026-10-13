@@ -9,7 +9,7 @@ export default function RegisterPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const {user} = useAuth();
-    const after = location.state?.from || '/arbore';
+    const after = location.state?.from || '/';
     const [step, setStep] = useState(location.state?.confirmEmail ? 'code' : 'form');
     const [email, setEmail] = useState(location.state?.confirmEmail || '');
     const [displayName, setDisplayName] = useState('');

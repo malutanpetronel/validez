@@ -1,6 +1,9 @@
 import {useCallback, useEffect, useState} from 'react';
 import {Link as RouterLink, useLocation} from 'react-router-dom';
-import {Alert, Box, Button, Chip, Divider, Stack, ToggleButton, ToggleButtonGroup, Typography} from '@mui/material';
+import {Alert, Box, Button, Chip, Divider, Rating, Stack, ToggleButton, ToggleButtonGroup, Typography} from '@mui/material';
+import StarRoundedIcon from '@mui/icons-material/StarRounded';
+import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
+import ThumbDownOutlinedIcon from '@mui/icons-material/ThumbDownOutlined';
 import {useAuth} from '../auth/AuthContext';
 import {castVote, fetchVotes, grantVoteConsent, withdrawVote} from '../api/votes';
 import {VOTE_TYPE_HINTS, VOTE_TYPE_LABELS, voteOptions, voteValueLabel} from '../subjects/labels';
@@ -23,10 +26,12 @@ function Results({type}) {
                         {` · ${total} ${total === 1 ? 'vot' : 'voturi'}`}
                     </Typography>
                 ) : (
-                    <Typography variant="body2">
-                        Media {(sum / total).toLocaleString('ro-RO', {maximumFractionDigits: 1})} din {type.maxValue} · {total} {total === 1 ? 'vot' : 'voturi'}
-                        {' ('}{options.map(([value]) => `${value}: ${counts[value] ?? 0}`).join(', ')}{')'}
-                    </Typography>
+                    <Box>
+                        <Rating readOnly value={sum / total} max={type.maxValue} precision={0.1} icon={<StarRoundedIcon fontSize="inherit"/>} emptyIcon={<StarRoundedIcon fontSize="inherit"/>} sx={{color: '#c58b12', '& .MuiRating-iconEmpty': {color: 'text.disabled'}}}/>
+                        <Typography variant="body2">
+                            Media {(sum / total).toLocaleString('ro-RO', {maximumFractionDigits: 1})} din {type.maxValue} · {total} {total === 1 ? 'vot' : 'voturi'}
+                        </Typography>
+                    </Box>
                 )}
             {staleTotal > 0 && <Typography variant="caption" color="text.secondary">
                 + {staleTotal} {staleTotal === 1 ? 'vot dat' : 'voturi date'} pe versiuni anterioare, nereconfirmate</Typography>}
@@ -45,7 +50,12 @@ export default function SubjectVotes({subjectId}) {
     const [message, setMessage] = useState(null);
     const [busy, setBusy] = useState(false);
     const [consentIntent, setConsentIntent] = useState(null);
+    const [hoveredStar, setHoveredStar] = useState(null);
     const [diff, setDiff] = useState(null);
+
+    useEffect(() => {
+        if (summary) window.dispatchEvent(new CustomEvent('subject-votes-updated', {detail: {subjectId, summary}}));
+    }, [subjectId, summary]);
 
     const reload = useCallback(() => fetchVotes(subjectId).then((s) => { setSummary(s); return s; }), [subjectId]);
 
@@ -147,7 +157,7 @@ export default function SubjectVotes({subjectId}) {
             )}
             {message && <Alert severity={message.severity} onClose={() => setMessage(null)}>{message.text}</Alert>}
             {summary.types.map((type) => (
-                <Box key={type.code}>
+                <Box key={type.code} sx={{p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'background.paper'}}>
                     <Stack direction="row" spacing={1} useFlexGap sx={{alignItems: 'center', flexWrap: 'wrap'}}>
                         <Typography variant="subtitle2" component="h3">{VOTE_TYPE_LABELS[type.code] ?? type.code}</Typography>
                         {!type.active && <Chip size="small" label="Tip de vot dezactivat" variant="outlined"/>}
@@ -156,12 +166,15 @@ export default function SubjectVotes({subjectId}) {
                     {VOTE_TYPE_HINTS[type.code] && <Typography variant="caption" color="text.secondary">{VOTE_TYPE_HINTS[type.code]}</Typography>}
                     {user && summary.votingEnabled && (
                         <Box sx={{my: 0.75}}>
-                            <ToggleButtonGroup exclusive size="small" aria-label={VOTE_TYPE_LABELS[type.code] ?? type.code}
+                            <ToggleButtonGroup onMouseLeave={() => setHoveredStar(null)} exclusive size="small" sx={{gap: 1, flexWrap: 'wrap', '& .MuiToggleButtonGroup-grouped': {m: 0, border: '1px solid', borderColor: 'divider', borderRadius: '10px !important'}, '& .MuiToggleButton-root': {minHeight: 44, px: type.code === 'IMPORTANCE' ? 0.5 : 1.75, textTransform: 'none', fontWeight: 600, gap: 1}, '& .MuiToggleButton-root.Mui-selected': {bgcolor: 'action.selected', color: 'primary.main', borderColor: 'primary.main'}}} aria-label={VOTE_TYPE_LABELS[type.code] ?? type.code}
                                                value={type.mine?.current ? type.mine.value : null}
                                                disabled={busy || !canExpress(type)}>
                                 {voteOptions(type).map(([value, label]) => (
-                                    <ToggleButton key={value} value={value} onClick={() => vote(type.code, value)}
-                                                  aria-label={label}>{label}</ToggleButton>
+                                    <ToggleButton onMouseEnter={() => { if (type.code === 'IMPORTANCE' && !busy && canExpress(type)) setHoveredStar(value); }} key={value} value={value} onClick={() => vote(type.code, value)}
+                                                  aria-label={label} sx={type.code === 'IMPORTANCE' ? {minWidth: 40, border: '0 !important', '&:hover': {bgcolor: 'action.hover'}, '&.Mui-selected': {bgcolor: 'transparent'}} : {}}>
+                                        {type.code === 'IMPORTANCE' ? <StarRoundedIcon sx={{fontSize: 36, color: value <= (hoveredStar ?? (type.mine?.current ? type.mine.value : 0)) ? '#c58b12' : 'text.disabled'}}/>
+                                            : <>{value === 1 ? <ThumbUpOutlinedIcon fontSize="small"/> : <ThumbDownOutlinedIcon fontSize="small"/>}{label}</>}
+                                    </ToggleButton>
                                 ))}
                             </ToggleButtonGroup>
                             {type.mine && !type.mine.current && canExpress(type) && (
@@ -177,7 +190,7 @@ export default function SubjectVotes({subjectId}) {
                             Votul tău: <strong>{voteValueLabel(type.code, type.mine.value)}</strong>
                             {!type.mine.current && ` (pe revizia ${type.mine.revisionNumber})`}
                             {' · '}
-                            <Button size="small" disabled={busy} onClick={() => withdraw(type.code)}>Retrage votul</Button>
+                            <Button sx={{textTransform: 'none'}} size="small" disabled={busy} onClick={() => withdraw(type.code)}>Retrage votul</Button>
                         </Typography>
                     )}
                 </Box>

@@ -21,9 +21,9 @@ beforeEach(() => {
         return ok({member: url.includes('?parent=') ? [] : [category]});
     });
 });
-const renderPage = () => render(<AuthProvider><MemoryRouter initialEntries={['/arbore']}><Routes>
-    <Route path="/arbore" element={<TreePage/>}/>
-    <Route path="/arbore/:nodeId/subiecte" element={<SubjectsPage/>}/>
+const renderPage = () => render(<AuthProvider><MemoryRouter initialEntries={['/']}><Routes>
+    <Route path="/" element={<TreePage/>}/>
+    <Route path="/categorii/:nodeId/subiecte" element={<SubjectsPage/>}/>
     <Route path="/subiecte/:id" element={<SubjectPage/>}/>
 </Routes></MemoryRouter></AuthProvider>);
 const openBranch = async () => {

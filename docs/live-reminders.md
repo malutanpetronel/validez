@@ -25,20 +25,20 @@ Marcaje: **[PE LAPTOP]** = `<checkout-validez>` sau checkout-ul Ansible de pe la
 
 ## 4. Pe server, o singură dată (BE)
 
-- [ ] **[PE SERVER]** `/var/www/validez-be/shared/backend/.env` pornind de la `backend/.env.prod.sample`, cu toate cheile (fișierul înlocuiește complet `.env`-ul Symfony):
-  - [ ] `COMPOSE_PROJECT_NAME=validez_be` — **obligatoriu**: altfel proiectul compose se numește `backend` și se amestecă cu orice alt proiect dintr-un folder `backend` (problema din 03.10.2026 cu EvoPresence).
-  - [ ] `DOCKER_IMAGE=` tag-ul afișat de `backend/docker-build-push.sh`.
-  - [ ] `DB_PASSWORD`, `APP_SECRET`, `JWT_PASSPHRASE` noi, nu cele de pe dev.
+- [x] **[PE SERVER]** `/var/www/validez-be/shared/backend/.env` pornind de la `backend/.env.prod.sample`, cu toate cheile (fișierul înlocuiește complet `.env`-ul Symfony):
+  - [x] `COMPOSE_PROJECT_NAME=validez_be` — **obligatoriu**: altfel proiectul compose se numește `backend` și se amestecă cu orice alt proiect dintr-un folder `backend` (problema din 03.10.2026 cu EvoPresence).
+  - [x] `DOCKER_IMAGE=` tag-ul afișat de `backend/docker-build-push.sh`.
+  - [x] `DB_PASSWORD`, `APP_SECRET`, `JWT_PASSPHRASE` noi, nu cele de pe dev.
   - [x] `SYMFONY_TRUSTED_PROXIES` cu IP-urile/CIDR-urile exacte ale nginx-ului intern și ale Nginx_Proxy (nu `0.0.0.0/0`) — subrețelele rețelelor `proxy` și `validez_be_internal`, 12.10.2026. **Important pentru login:** `login_throttling` (5 încercări greșite/minut) numără per IP; fără proxy-uri de încredere, toți utilizatorii apar cu IP-ul proxy-ului și se blochează unii pe alții.
   - [x] `MAILER_DSN` real și `MAILER_FROM_ADDRESS` valid: înregistrarea publică trimite coduri de confirmare pe email (Step 2.2). Implicit, local se folosește Mailcatcher.
-  - [ ] Verificare ALTCHA pe browser și Android; `ALTCHA_COST` implicit 1500. Cheile sunt derivate din `APP_SECRET`, fără secrete suplimentare.
-- [ ] **[PE SERVER]** Chei JWT generate pe server, nu copiate de pe dev, în `/var/www/validez-be/shared/backend/config/jwt/` (`private.pem`, `public.pem`, cu passphrase-ul din `.env`), proprietar 1000:1000.
-- [ ] **[PE SERVER]** Directorul de date PostgreSQL: `/srv/www/validez-be.webnou.ro/db_data` (din `backend/docker-compose.prod.yml`).
-- [ ] `ltree`: migrarea rulează `CREATE EXTENSION IF NOT EXISTS ltree`; utilizatorul din imaginea oficială `postgres:16-alpine` e superuser, deci merge. Dacă vreodată baza vine din altă parte, extensia trebuie creată de un superuser.
+  - [x] Verificare ALTCHA pe browser și Android; `ALTCHA_COST` implicit 1500. Cheile sunt derivate din `APP_SECRET`, fără secrete suplimentare.
+- [x] **[PE SERVER]** Chei JWT generate pe server, nu copiate de pe dev, în `/var/www/validez-be/shared/backend/config/jwt/` (`private.pem`, `public.pem`, cu passphrase-ul din `.env`), proprietar 1000:1000.
+- [x] **[PE SERVER]** Directorul de date PostgreSQL: `/srv/www/validez-be.webnou.ro/db_data` (din `backend/docker-compose.prod.yml`).
+- [x] `ltree`: migrarea rulează `CREATE EXTENSION IF NOT EXISTS ltree`; utilizatorul din imaginea oficială `postgres:16-alpine` e superuser, deci merge. Dacă vreodată baza vine din altă parte, extensia trebuie creată de un superuser.
 
 ## 5. Pe server, o singură dată (FE)
 
-- [ ] **[PE SERVER]** `/var/www/validez-fe/shared/frontend/.env` pornind de la `frontend/.env.prod.sample`: `COMPOSE_PROJECT_NAME=validez_fe` (același motiv ca la BE), `VIRTUAL_HOST=validez.webnou.ro`, `WEB_CONTAINER=validez_fe_web`, `DOCKER_IMAGE=` tag-ul afișat de `frontend/docker-build-push.sh`.
+- [x] **[PE SERVER]** `/var/www/validez-fe/shared/frontend/.env` pornind de la `frontend/.env.prod.sample`: `COMPOSE_PROJECT_NAME=validez_fe` (același motiv ca la BE), `VIRTUAL_HOST=validez.webnou.ro`, `WEB_CONTAINER=validez_fe_web`, `DOCKER_IMAGE=` tag-ul afișat de `frontend/docker-build-push.sh`.
 
 ## 6. Build și deploy
 

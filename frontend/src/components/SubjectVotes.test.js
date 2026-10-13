@@ -189,7 +189,7 @@ function ReturnProbe() {
 }
 const renderAt = (entry) => render(<AuthProvider><MemoryRouter initialEntries={[entry]}><Routes>
     <Route path="/subiecte/:id" element={<SubjectVotes subjectId="01SUBJ"/>}/>
-    <Route path="/arbore" element={<SubjectVotes subjectId="01SUBJ"/>}/>
+    <Route path="/" element={<SubjectVotes subjectId="01SUBJ"/>}/>
     <Route path="/inregistrare" element={<ReturnProbe/>}/>
     <Route path="/login" element={<ReturnProbe/>}/>
 </Routes></MemoryRouter></AuthProvider>);
@@ -204,9 +204,9 @@ test('call to action pentru vizitator: înregistrare cu revenire la subiect', as
 
 test('call to action din panoul arborelui: login cu revenire la aceeași vedere', async () => {
     global.fetch = routedFetch([[isVotes, () => res(summary())]]);
-    renderAt('/arbore?node=01NODE&subject=01SUBJ');
+    renderAt('/?node=01NODE&subject=01SUBJ');
     fireEvent.click(await screen.findByRole('link', {name: 'Intră'}));
-    expect(screen.getByText('/login ← /arbore?node=01NODE&subject=01SUBJ')).toBeInTheDocument();
+    expect(screen.getByText('/login ← /?node=01NODE&subject=01SUBJ')).toBeInTheDocument();
 });
 
 test('fără call to action când votarea nu e deschisă sau utilizatorul e autentificat', async () => {

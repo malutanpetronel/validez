@@ -32,7 +32,7 @@ export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
 
     return (
         <Stack spacing={2}>
-            {!embedded && <div><Button component={RouterLink} to="/arbore" state={location.state} startIcon={<ArrowBackIcon/>}>Înapoi la arbore</Button></div>}
+            {!embedded && <div><Button component={RouterLink} to="/" state={location.state} startIcon={<ArrowBackIcon/>}>Înapoi la arbore</Button></div>}
             {error && <Alert severity="warning">{error}</Alert>}
             {!error && !subject && <Typography color="text.secondary">Se încarcă…</Typography>}
             {subject && (

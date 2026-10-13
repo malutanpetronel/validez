@@ -9,7 +9,7 @@ export default function SubjectsPage() {
     const [params] = useSearchParams();
     const node = nodeId ? {id: nodeId, name: params.get('name') || 'Categoria selectată'} : null;
     return <Stack spacing={2}>
-        <div><Button component={RouterLink} to="/arbore" state={location.state} startIcon={<ArrowBackIcon/>}>Înapoi la arbore</Button></div>
+        <div><Button component={RouterLink} to="/" state={location.state} startIcon={<ArrowBackIcon/>}>Înapoi la arbore</Button></div>
         <Typography variant="h5" component="h1">{node ? `Subiecte în „${node.name}”` : 'Subiecte recente'}</Typography>
         <SubjectList node={node} scope={node ? 'direct' : ''}/>
     </Stack>;

@@ -60,7 +60,7 @@ export default function SubjectList({node, scope = '', navigationState}) {
             </Stack>
             {node && scope !== 'direct' && <Typography variant="body2" color="text.secondary" sx={{mb: 1.5}}>Include subiectele din toate subnodurile.</Typography>}
             {!user && <Typography variant="body2" color="text.secondary" sx={{mb: 1.5}}>
-                <RouterLink to="/login" state={{from: '/arbore'}}>Intră în cont</RouterLink> ca să adaugi un subiect.
+                <RouterLink to="/login" state={{from: '/'}}>Intră în cont</RouterLink> ca să adaugi un subiect.
             </Typography>}
             {user && !node && <Typography variant="body2" color="text.secondary" sx={{mb: 1.5}}>Selectează un nod din arbore ca să adaugi un subiect.</Typography>}
 

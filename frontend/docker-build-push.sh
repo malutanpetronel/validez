@@ -53,6 +53,8 @@ docker build \
 echo "=> Pushing: ${FULL_TAG}"
 docker push ${FULL_TAG}
 
+../docker/cleanup-old-tags.sh validez_fe_ "${TAG}" || true
+
 echo ""
 echo "Gata. Pune pe server in /var/www/validez-fe/shared/frontend/.env:"
 echo "   DOCKER_IMAGE=${FULL_TAG}"

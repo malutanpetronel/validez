@@ -21,7 +21,6 @@ export const routes = [
         element: <Layout/>,
         children: [
             {index: true, element: <TreePage/>},
-            {path: 'arbore', element: <TreePage/>},
             {path: 'help', element: <HelpPage/>},
             {path: 'privacy', element: <PrivacyPage/>},
             {path: 'categorii-propuse', element: <CategorySuggestionsPage/>},
@@ -31,7 +30,7 @@ export const routes = [
             {path: 'login', element: <LoginPage/>},
             {path: 'inregistrare', element: <RegisterPage/>},
             {path: 'subiecte', element: <SubjectsPage/>},
-            {path: 'arbore/:nodeId/subiecte', element: <SubjectsPage/>},
+            {path: 'categorii/:nodeId/subiecte', element: <SubjectsPage/>},
             {path: 'subiecte/:id', element: <SubjectPage/>},
             {path: 'voturile-mele', element: <MyVotesPage/>},
         ],
