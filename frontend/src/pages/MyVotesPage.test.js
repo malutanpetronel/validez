@@ -32,6 +32,11 @@ test('acord, voturi, retragerea acordului cu confirmare', async () => {
     expect(await screen.findByText(/Ți-ai dat acordul/)).toBeInTheDocument();
     expect(screen.getByText('Validare: Invalidez — nereconfirmat (revizia 1)')).toBeInTheDocument();
     expect(screen.getByText('Importanță: 4')).toBeInTheDocument();
+    // Acordul și retragerea lui vin după situația voturilor și după descărcare.
+    const headings = screen.getAllByRole('heading').map((h) => h.textContent);
+    expect(headings.indexOf('Acordul pentru voturi')).toBeGreaterThan(headings.indexOf('Voturile tale (2)'));
+    const buttons = screen.getAllByRole('button').map((b) => b.textContent);
+    expect(buttons.indexOf('Retrage acordul')).toBeGreaterThan(buttons.indexOf('Descarcă datele mele de vot (JSON)'));
 
     fireEvent.click(screen.getByRole('button', {name: 'Retrage acordul'}));
     const dialog = screen.getByRole('dialog');

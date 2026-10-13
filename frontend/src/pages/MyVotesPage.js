@@ -68,22 +68,7 @@ export default function MyVotesPage() {
                 {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
                 {notice && <Alert severity="success" onClose={() => setNotice(null)}>{notice}</Alert>}
                 {!consent && !error && <Typography color="text.secondary">Se încarcă…</Typography>}
-                {consent && (
-                    <Stack spacing={1}>
-                        <Typography component="h2" variant="h6">Acordul pentru voturi</Typography>
-                        {!consent.votingEnabled && <Alert severity="info">Votarea nu este încă activă.</Alert>}
-                        {consent.active ? (
-                            <Typography>
-                                Ți-ai dat acordul (informarea din {consent.noticeVersion}).
-                                {!consent.current && ' Informarea s-a actualizat între timp; la următorul vot ți se va cere din nou acordul. Voturile existente rămân.'}
-                            </Typography>
-                        ) : <Typography>Nu ai un acord activ. Acordul se cere la primul vot.</Typography>}
-                        <Typography variant="body2">
-                            <Link component={RouterLink} to="/privacy?section=voturi">Cum prelucrăm voturile</Link>
-                        </Typography>
-                        {consent.active && <div><Button color="error" variant="outlined" onClick={() => setConfirming(true)}>Retrage acordul</Button></div>}
-                    </Stack>
-                )}
+                {consent && !consent.votingEnabled && <Alert severity="info">Votarea nu este încă activă.</Alert>}
                 {data && (
                     <Stack spacing={1}>
                         <Typography component="h2" variant="h6">Voturile tale ({data.votes.length})</Typography>
@@ -102,6 +87,22 @@ export default function MyVotesPage() {
                             Exportul conține voturile, istoricul tău privat și, pentru fiecare înregistrare, datele necesare verificării ei în jurnalul de integritate.
                         </Typography>
                         <div><Button variant="outlined" onClick={download}>Descarcă datele mele de vot (JSON)</Button></div>
+                    </Stack>
+                )}
+                {/* Acordul și retragerea lui: după situația voturilor și export, cu litere mai mici. */}
+                {consent && (
+                    <Stack spacing={0.75} sx={{pt: 1}}>
+                        <Typography component="h2" variant="subtitle1">Acordul pentru voturi</Typography>
+                        {consent.active ? (
+                            <Typography variant="body2">
+                                Ți-ai dat acordul (informarea din {consent.noticeVersion}).
+                                {!consent.current && ' Informarea s-a actualizat între timp; la următorul vot ți se va cere din nou acordul. Voturile existente rămân.'}
+                            </Typography>
+                        ) : <Typography variant="body2">Nu ai un acord activ. Acordul se cere la primul vot.</Typography>}
+                        <Typography variant="body2">
+                            <Link component={RouterLink} to="/privacy?section=voturi">Cum prelucrăm voturile</Link>
+                        </Typography>
+                        {consent.active && <div><Button size="small" color="error" variant="outlined" onClick={() => setConfirming(true)}>Retrage acordul</Button></div>}
                     </Stack>
                 )}
             </Stack>
