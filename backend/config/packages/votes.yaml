@@ -3,7 +3,8 @@ parameters:
     # Versiunea informării pentru voturi. Se incrementează doar la schimbări relevante ale prelucrării,
     # nu la corecturi editoriale. O versiune nouă cere reconfirmarea înainte de următorul vot,
     # dar nu retrage voturile existente.
-    vote_consent_notice_version_default: '2026-10-12'
+    # Trebuie să corespundă cu „Versiunea din …” din frontend/src/pages/PrivacyPage.js.
+    vote_consent_notice_version_default: '2026-10-13'
     # Operații de scriere pe voturi (vot, retragere, acordarea consimțământului) per utilizator, pe minut.
     # Retragerea consimțământului nu e limitată.
     vote_write_limit: 30
