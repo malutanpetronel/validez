@@ -3,8 +3,10 @@ import {Alert, Paper, Stack, Typography} from '@mui/material';
 import {API_ENDPOINT} from '../config';
 import {Navigate} from 'react-router-dom';
 import {useAuth} from '../auth/AuthContext';
+import usePageMeta from '../seo/usePageMeta';
 
 export default function CheckApiPage() {
+    usePageMeta({title: 'Check API', noindex: true});
     const {isAdmin} = useAuth();
     const [api, setApi] = useState({state: 'loading'});
 

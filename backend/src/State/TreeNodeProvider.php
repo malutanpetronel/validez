@@ -52,6 +52,7 @@ final class TreeNodeProvider implements ProviderInterface
             $node = $id === null ? null : $this->repository->find(Ulid::fromString($id));
             if ($node !== null) {
                 $this->repository->withChildrenFlags([$node]);
+                $this->repository->withBreadcrumbs($node);
             }
 
             return $node;

@@ -3,6 +3,7 @@ import {Navigate} from 'react-router-dom';
 import {Alert, Box, Button, Chip, List, MenuItem, Pagination, Paper, Skeleton, Stack, TextField, Typography} from '@mui/material';
 import {formatDate} from '../subjects/labels';
 import {useAuth} from '../auth/AuthContext';
+import usePageMeta from '../seo/usePageMeta';
 import {fetchChildren} from '../api/tree';
 import {fetchCategorySuggestions, reviewCategory, suggestCategory} from '../api/contributions';
 
@@ -10,6 +11,7 @@ const STATUS_COLOR = {PENDING: 'warning', APPROVED: 'success', REJECTED: 'error'
 const STATUS = {PENDING: 'În așteptarea aprobării', APPROVED: 'Aprobată', REJECTED: 'Respinsă'};
 
 export default function CategorySuggestionsPage() {
+    usePageMeta({title: 'Propuneri de categorii', noindex: true});
     const {user, isAdmin} = useAuth();
     const [data, setData] = useState({items: [], total: 0});
     const [loading, setLoading] = useState(true);

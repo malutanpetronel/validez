@@ -37,6 +37,8 @@ export async function fetchSubjects({node = null, type = '', stage = '', page = 
 }
 
 export const fetchSubject = (id) => request(`${URL}/${encodeURIComponent(id)}`);
+/** ADR-0008: subiectul după slug (curent sau din istoric); răspunsul are canonicalPath. */
+export const fetchSubjectBySlug = (slug) => request(`${URL}/by-slug/${encodeURIComponent(slug)}`);
 
 export const createSubject = ({node, type, title, description, ...estimate}) => request(URL, {
     method: 'POST',

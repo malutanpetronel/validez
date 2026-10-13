@@ -1,4 +1,5 @@
 import {useEffect} from 'react';
+import usePageMeta from '../seo/usePageMeta';
 import {Link as RouterLink, useSearchParams} from 'react-router-dom';
 import {Alert, Button, Link, Paper, Stack, Typography} from '@mui/material';
 
@@ -29,6 +30,7 @@ const VOTES = [
 ];
 
 export default function PrivacyPage() {
+    usePageMeta({title: 'Confidențialitate', path: '/privacy'});
     const [params] = useSearchParams();
     const section = params.get('section');
     useEffect(() => {

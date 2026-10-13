@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react';
+import usePageMeta from '../seo/usePageMeta';
 import {Link as RouterLink, useLocation} from 'react-router-dom';
 import {Alert, Box, Button, Paper, Stack, TextField, Typography} from '@mui/material';
 import AltchaVerification from '../components/AltchaVerification';
@@ -6,6 +7,7 @@ import {requestPasswordReset, confirmPasswordReset} from '../api/passwordReset';
 import {clearSession} from '../auth/session';
 
 export default function ForgotPasswordPage() {
+    usePageMeta({title: 'Am uitat parola', noindex: true});
     const location = useLocation();
     const [step, setStep] = useState('email');
     const [email, setEmail] = useState(location.state?.email || '');

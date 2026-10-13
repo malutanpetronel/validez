@@ -4,8 +4,10 @@ import {Alert, Box, Button, Paper, Stack, TextField, Typography} from '@mui/mate
 import AltchaVerification from '../components/AltchaVerification';
 import {confirmRegistration, register, resendRegistrationCode} from '../api/registration';
 import {useAuth} from '../auth/AuthContext';
+import usePageMeta from '../seo/usePageMeta';
 
 export default function RegisterPage() {
+    usePageMeta({title: 'Creează un cont', noindex: true});
     const location = useLocation();
     const navigate = useNavigate();
     const {user} = useAuth();

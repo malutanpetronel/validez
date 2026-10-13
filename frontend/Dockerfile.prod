@@ -11,6 +11,9 @@ COPY . .
 # nu environment in compose (ala e prea tarziu).
 ARG REACT_APP_API_BASE
 ENV REACT_APP_API_BASE=$REACT_APP_API_BASE
+# ADR-0008: pe web rutele sunt reale (/categorie/a/b), deci asset-urile trebuie cerute cu cale absoluta
+# (/static/...). package.json are homepage "./" pentru Cordova (file://); PUBLIC_URL o suprascrie doar aici.
+ENV PUBLIC_URL=/
 RUN npx react-scripts build
 
 FROM nginx:stable-alpine

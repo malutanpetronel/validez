@@ -28,6 +28,7 @@ import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
 import {Link as RouterLink, useNavigate, useLocation} from 'react-router-dom';
 import {createNode, fetchChildren, moveNode, renameNode} from '../api/tree';
 import {useAuth} from '../auth/AuthContext';
+import usePageMeta from '../seo/usePageMeta';
 import {
     appendChild, dropTarget, findNode, indexByKey, isNoopMove, renameInTree, replaceLevel, setChildren, toTreeNode,
 } from '../tree/treeData';
@@ -43,6 +44,7 @@ const DIALOG_TITLES = {root: 'Tematică nouă', child: 'Nod copil nou', rename: 
  * Navigare publică; acțiunile de modificare doar pentru administratori (1.4) - serverul verifică oricum.
  */
 export default function TreePage() {
+    usePageMeta({path: '/'});
     const {isAdmin, user} = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -168,7 +170,9 @@ export default function TreePage() {
         return {treeReturn: {expandedKeys: [...expanded], selectedKey: categoryKey,
             selectedSubject: categoryKey ? null : selectedSubject}};
     };
-    const subjectsUrl = (node) => `/categorii/${node.key}/subiecte?name=${encodeURIComponent(node.title)}`;
+    // ADR-0008: URL-ul public al categoriei; dupa o redenumire din arbore calea poate fi veche - pagina
+    // categoriei o rezolva din istoric si o inlocuieste cu cea canonica.
+    const subjectsUrl = (node) => (node.slugPath ? `/categorie/${node.slugPath}` : `/categorii/${node.key}/subiecte`);
     const decorate = (nodes) => nodes.map((node) => {
         const branch = subjectBranches[node.key];
         const children = node.children ? decorate(node.children) : [];

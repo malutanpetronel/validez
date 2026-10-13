@@ -1,8 +1,10 @@
 import {Alert, Button, Stack, Typography} from '@mui/material';
 import {Link as RouterLink, Navigate} from 'react-router-dom';
 import {useAuth} from '../auth/AuthContext';
+import usePageMeta from '../seo/usePageMeta';
 
 export default function HelpPage() {
+    usePageMeta({title: 'Ajutor', path: '/help'});
     const {user} = useAuth();
     if (!user) return <Navigate to="/login" replace/>;
     return <Stack spacing={2}>

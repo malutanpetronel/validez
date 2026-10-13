@@ -7,6 +7,7 @@ export const toTreeNode = (n) => ({
     subjectCount: n.subjectCount ?? 0,
     isLeaf: !n.hasChildren,
     parentId: n.parentId ?? null,
+    slugPath: n.slugPath ?? null,
 });
 
 export const updateNode = (nodes, key, fn) => nodes.map((n) => {

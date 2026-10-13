@@ -2,9 +2,11 @@ import {useEffect, useState} from 'react';
 import {Link as RouterLink, Navigate} from 'react-router-dom';
 import {Alert, Button, Pagination, Paper, Stack, Typography} from '@mui/material';
 import {useAuth} from '../auth/AuthContext';
+import usePageMeta from '../seo/usePageMeta';
 import {fetchSubjects, updateSubject} from '../api/subjects';
 
 export default function ModerationPage() {
+    usePageMeta({title: 'Moderare subiecte', noindex: true});
     const {isAdmin} = useAuth();
     const [data, setData] = useState({items: [], total: 0});
     const [page, setPage] = useState(1);
@@ -38,7 +40,7 @@ export default function ModerationPage() {
             <Typography variant="body2">{subject.authorName} · {subject.nodeName}</Typography>
             <Typography sx={{whiteSpace: 'pre-wrap', overflowWrap: 'anywhere'}}>{subject.description}</Typography>
             <Stack direction="row" spacing={1} useFlexGap sx={{flexWrap: 'wrap'}}>
-                <Button component={RouterLink} to={`/subiecte/${subject.id}`}>Detalii și drepturi autor</Button>
+                <Button component={RouterLink} to={subject.canonicalPath ?? `/subiecte/${subject.id}`}>Detalii și drepturi autor</Button>
                 <Button disabled={busy || loading} variant="contained" onClick={() => review(subject.id, 'PUBLISHED')}>Aprobă și publică</Button>
                 <Button disabled={busy || loading} color="error" onClick={() => review(subject.id, 'HIDDEN')}>Respinge</Button>
             </Stack>

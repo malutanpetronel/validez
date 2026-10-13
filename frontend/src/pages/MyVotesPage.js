@@ -5,6 +5,7 @@ import {
     ListItemText, Paper, Stack, Typography,
 } from '@mui/material';
 import {useAuth} from '../auth/AuthContext';
+import usePageMeta from '../seo/usePageMeta';
 import {exportMyVotes, fetchVoteConsent, withdrawVoteConsent} from '../api/votes';
 import {VOTE_TYPE_LABELS, voteValueLabel} from '../subjects/labels';
 
@@ -13,6 +14,7 @@ import {VOTE_TYPE_LABELS, voteValueLabel} from '../subjects/labels';
  * (cu tot ce trebuie pentru verificarea propriilor înregistrări). Răspunsurile serverului sunt private, no-store.
  */
 export default function MyVotesPage() {
+    usePageMeta({title: 'Voturile mele', noindex: true});
     const {user} = useAuth();
     const [consent, setConsent] = useState(null);
     const [data, setData] = useState(null);

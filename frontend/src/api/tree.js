@@ -30,6 +30,12 @@ export async function fetchChildren(parentId = null) {
     return body?.member ?? body?.['hydra:member'] ?? [];
 }
 
+/** Nodul dupa id (ULID) - folosit la redirectul vechilor URL-uri /categorii/{id}/subiecte. */
+export const fetchNode = (id) => request(`${URL}/${encodeURIComponent(id)}`);
+
+/** ADR-0008: nodul dupa calea publica (curenta sau din istoric), cu breadcrumbs. */
+export const fetchNodeByPath = (path) => request(`${URL}/by-path?path=${encodeURIComponent(path)}`);
+
 export const createNode = (name, parentId = null) => request(URL, {
     method: 'POST',
     headers: {'Content-Type': LD},

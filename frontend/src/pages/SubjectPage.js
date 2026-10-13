@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {Link as RouterLink, useLocation, useParams} from 'react-router-dom';
+import {Link as RouterLink, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {Alert, Box, Button, Chip, Paper, Stack, Typography} from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
@@ -11,16 +11,24 @@ import SubjectEstimate from '../components/SubjectEstimate';
 import AuthorPublishing from '../components/AuthorPublishing';
 import SubjectPrivateNote from '../components/SubjectPrivateNote';
 import SubjectVotes from '../components/SubjectVotes';
+import CategoryBreadcrumbs from '../components/CategoryBreadcrumbs';
+import {fetchNodeByPath} from '../api/tree';
+import usePageMeta, {excerpt} from '../seo/usePageMeta';
+
+/** `/categorie/a/b/subiect/x` → `a/b` */
+const categoryPathOf = (canonicalPath) => canonicalPath?.match(/^\/categorie\/(.+)\/subiect\/[^/]+$/)?.[1] ?? null;
 
 export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
     const params = useParams();
     const location = useLocation();
+    const navigate = useNavigate();
     const id = subjectId ?? params.id;
     const {user, isAdmin} = useAuth();
     const [subject, setSubject] = useState(null);
     const [error, setError] = useState(null);
     const [editing, setEditing] = useState(false);
     const [noteVersion, setNoteVersion] = useState(0);
+    const [crumbs, setCrumbs] = useState([]);
 
     useEffect(() => {
         setSubject(null);
@@ -30,9 +38,28 @@ export default function SubjectPage({subjectId, embedded = false, onUpdated}) {
         return () => { active = false; };
     }, [id, user?.id]);
 
+    // ADR-0008 (doar ca pagină de sine stătătoare): URL-ul canonic — și după un titlu nou salvat aici —,
+    // breadcrumbs ale categoriei, titlu/meta; subiectele nepublicate nu se indexează.
+    const canonicalPath = embedded ? null : subject?.canonicalPath ?? null;
+    useEffect(() => {
+        if (canonicalPath && location.pathname !== canonicalPath) navigate(canonicalPath, {replace: true, state: location.state});
+    }, [canonicalPath, location.pathname, location.state, navigate]);
+    const categoryPath = categoryPathOf(canonicalPath);
+    useEffect(() => {
+        setCrumbs([]);
+        if (!categoryPath) return undefined;
+        let active = true;
+        fetchNodeByPath(categoryPath).then((n) => { if (active) setCrumbs(n.breadcrumbs ?? []); }).catch(() => {});
+        return () => { active = false; };
+    }, [categoryPath]);
+    usePageMeta(subject
+        ? {title: subject.title, description: excerpt(subject.description), path: subject.canonicalPath ?? null, noindex: subject.visibility !== 'PUBLISHED'}
+        : {title: error ? 'Subiect negăsit' : null, noindex: Boolean(error)}, !embedded);
+
     return (
         <Stack spacing={2}>
             {!embedded && <div><Button component={RouterLink} to="/" state={location.state} startIcon={<ArrowBackIcon/>}>Înapoi la arbore</Button></div>}
+            {!embedded && <CategoryBreadcrumbs items={crumbs}/>}
             {error && <Alert severity="warning">{error}</Alert>}
             {!error && !subject && <Typography color="text.secondary">Se încarcă…</Typography>}
             {subject && (

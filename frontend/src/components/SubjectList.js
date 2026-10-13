@@ -92,7 +92,7 @@ export default function SubjectList({node, scope = '', navigationState}) {
                 sx={{display: 'grid', gap: 1.25, opacity: loading ? 0.6 : 1}}>
                 {data.items.map((s) => (
                     <Box component="li" key={s.id} sx={{listStyle: 'none', minWidth: 0}}>
-                        <ListItemButton component={RouterLink} to={`/subiecte/${s.id}`} state={navigationState ?? location.state}
+                        <ListItemButton component={RouterLink} to={s.canonicalPath ?? `/subiecte/${s.id}`} state={navigationState ?? location.state}
                             sx={{p: {xs: 1.5, sm: 2}, alignItems: 'flex-start', gap: 1, border: 1, borderColor: 'divider', borderRadius: 2,
                                 '&:hover': {borderColor: 'primary.main', bgcolor: 'action.hover'},
                                 '&.Mui-focusVisible': {outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2}}}>

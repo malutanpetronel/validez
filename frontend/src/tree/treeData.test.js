@@ -3,7 +3,8 @@ import {appendChild, findNode, renameInTree, setChildren, toTreeNode} from './tr
 const api = (id, name, hasChildren = false, parentId = null) => ({id, name, hasChildren, parentId});
 
 test('toTreeNode pastreaza ULID-ul ca string si deriva isLeaf', () => {
-    expect(toTreeNode(api('01ABC', 'Drumuri', true))).toEqual({key: '01ABC', title: 'Drumuri', subjectCount: 0, isLeaf: false, parentId: null});
+    expect(toTreeNode(api('01ABC', 'Drumuri', true))).toEqual({key: '01ABC', title: 'Drumuri', subjectCount: 0, isLeaf: false, parentId: null, slugPath: null});
+    expect(toTreeNode({...api('01ABC', 'Drumuri', true), slugPath: 'drumuri'}).slugPath).toBe('drumuri');
     expect(toTreeNode(api('01DEF', 'DN1')).isLeaf).toBe(true);
 });
 

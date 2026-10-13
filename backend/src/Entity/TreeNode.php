@@ -47,7 +47,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         new GetCollection(paginationEnabled: false, provider: TreeNodeProvider::class),
         // ADR-0008: nodul dupa calea publica (?path=drumuri/cluj), curenta sau din istoric; FE compara
         // slugPath-ul primit cu calea din URL si o inlocuieste cu cea canonica.
-        new Get(uriTemplate: '/tree_nodes/by-path', uriVariables: [], provider: TreeNodeProvider::class, name: 'tree_node_by_path', normalizationContext: ['groups' => ['tree:read'], 'item_uri_template' => '/tree_nodes/{id}{._format}']),
+        new Get(uriTemplate: '/tree_nodes/by-path', uriVariables: [], provider: TreeNodeProvider::class, name: 'tree_node_by_path', normalizationContext: ['groups' => ['tree:read', 'tree:breadcrumbs'], 'item_uri_template' => '/tree_nodes/{id}{._format}']),
         // {id} restrans la forma unui ULID (base32) sau UUID, altfel ar prinde si /tree_nodes/by-path
         // (prioritatea rutelor API Platform nu e respectata intre operatii ale aceleiasi resurse).
         new Get(requirements: ['id' => '[0-9A-Za-z]{26}|[0-9a-fA-F-]{36}'], provider: TreeNodeProvider::class),
@@ -125,6 +125,9 @@ class TreeNode
     private ?bool $hasChildren = null;
 
     private int $subjectCount = 0;
+
+    /** @var list<array{name: string, slugPath: string}>|null stramosii + nodul, de la radacina; doar pe by-path (ADR-0008) */
+    private ?array $breadcrumbs = null;
 
     public function __construct(string $name, User $createdBy, ?TreeNode $parent = null, int $position = 0)
     {
@@ -223,6 +226,19 @@ class TreeNode
     public function setSubjectCount(int $count): void
     {
         $this->subjectCount = $count;
+    }
+
+    /** @return list<array{name: string, slugPath: string}>|null */
+    #[Groups(['tree:breadcrumbs'])]
+    public function getBreadcrumbs(): ?array
+    {
+        return $this->breadcrumbs;
+    }
+
+    /** @param list<array{name: string, slugPath: string}> $breadcrumbs */
+    public function setBreadcrumbs(array $breadcrumbs): void
+    {
+        $this->breadcrumbs = $breadcrumbs;
     }
 
     public function getCreatedBy(): User

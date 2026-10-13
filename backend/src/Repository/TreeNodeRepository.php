@@ -60,6 +60,18 @@ class TreeNodeRepository extends ServiceEntityRepository
         return $max === null ? 0 : ((int) $max) + 1;
     }
 
+    /** Stramosii + nodul, de la radacina, dintr-o singura interogare pe ltree (breadcrumbs, ADR-0008). */
+    public function withBreadcrumbs(TreeNode $node): TreeNode
+    {
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            'SELECT name, slug_path AS "slugPath" FROM tree_node WHERE path @> CAST(:path AS ltree) ORDER BY nlevel(path)',
+            ['path' => $node->getPath()],
+        );
+        $node->setBreadcrumbs(array_map(static fn (array $r): array => ['name' => (string) $r['name'], 'slugPath' => (string) $r['slugPath']], $rows));
+
+        return $node;
+    }
+
     /**
      * Seteaza hasChildren si totalul subiectelor vizibile pe noduri cu o singura interogare (fara N+1).
      *

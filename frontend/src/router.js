@@ -1,4 +1,4 @@
-import {createHashRouter} from 'react-router-dom';
+import {createBrowserRouter, createHashRouter} from 'react-router-dom';
 import Layout from './Layout';
 import PrivacyPage from './pages/PrivacyPage';
 import TreePage from './pages/TreePage';
@@ -12,9 +12,11 @@ import CategorySuggestionsPage from './pages/CategorySuggestionsPage';
 import ModerationPage from './pages/ModerationPage';
 import CheckApiPage from './pages/CheckApiPage';
 import MyVotesPage from './pages/MyVotesPage';
+import CategoryRoute from './pages/CategoryRoute';
+import LegacyCategoryRedirect from './pages/LegacyCategoryRedirect';
 
-// Hash router: functioneaza identic in browser, pe nginx si in WebView-ul Cordova (file:// / http://localhost),
-// fara configurare de rescriere pe server (acelasi tipar ca ArtaNFT).
+// ADR-0008: pe web BrowserRouter (URL-uri reale, indexabile; nginx are fallback SPA), in Cordova HashRouter
+// (WebView din file://, unde caile nu ajung la un server). Rutele sunt aceleasi.
 export const routes = [
     {
         path: '/',
@@ -30,11 +32,24 @@ export const routes = [
             {path: 'login', element: <LoginPage/>},
             {path: 'inregistrare', element: <RegisterPage/>},
             {path: 'subiecte', element: <SubjectsPage/>},
-            {path: 'categorii/:nodeId/subiecte', element: <SubjectsPage/>},
+            // URL-uri publice canonice: /categorie/{cale} si /categorie/{cale}/subiect/{slug}.
+            {path: 'categorie/*', element: <CategoryRoute/>},
+            // Vechi: raman valide si duc la URL-ul canonic dupa incarcare.
+            {path: 'categorii/:nodeId/subiecte', element: <LegacyCategoryRedirect/>},
             {path: 'subiecte/:id', element: <SubjectPage/>},
             {path: 'voturile-mele', element: <MyVotesPage/>},
         ],
     },
 ];
 
-export const createAppRouter = () => createHashRouter(routes);
+/** Pe web, linkurile vechi `/#/subiecte/…` devin `/subiecte/…` înainte de pornirea routerului. */
+export function migrateLegacyHash(loc = window.location, history = window.history) {
+    if (loc.hash.startsWith('#/')) history.replaceState(history.state, '', loc.hash.slice(1));
+}
+
+/** De apelat dupa deviceready (App, la prima randare): abia atunci window.cordova exista in Android. */
+export const createAppRouter = (isCordova = Boolean(window.cordova)) => {
+    if (isCordova) return createHashRouter(routes);
+    migrateLegacyHash();
+    return createBrowserRouter(routes);
+};

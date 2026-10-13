@@ -2,9 +2,11 @@ import {useState} from 'react';
 import {Link as RouterLink, useLocation, useNavigate} from 'react-router-dom';
 import {Alert, Box, Button, Paper, Stack, TextField, Typography} from '@mui/material';
 import {useAuth} from '../auth/AuthContext';
+import usePageMeta from '../seo/usePageMeta';
 import AltchaVerification from '../components/AltchaVerification';
 
 export default function LoginPage() {
+    usePageMeta({title: 'Intră în cont', noindex: true});
     const {user, login, logout} = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
