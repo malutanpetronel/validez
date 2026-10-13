@@ -45,6 +45,9 @@ services:
             - ${VAR_DIR:-/var/www/validez-be/shared/backend/var}:/var/www/validez-be/var:rw
             - ${VENDOR_DIR:-/var/www/validez-be/shared/backend/vendor}:/var/www/validez-be/vendor:rw
             - ${JWT_DIR:-/var/www/validez-be/shared/backend/config/jwt}:/var/www/validez-be/config/jwt:ro
+            # ADR-0008: index.html-ul FE curent (copiat de ansible la deploy-ul FE), sablonul shell-ului SEO.
+            # Director, nu fisier: ansible il inlocuieste prin mv, iar un mount de fisier ar ramane pe versiunea veche.
+            - ${SEO_DIR:-/var/www/validez-fe/shared/seo}:/var/www/validez-fe/shared/seo:ro
         environment:
             APP_ENV: prod
             # DATABASE_URL vine din .env-ul runtime (validez_app), nu din credentialele de bootstrap.
