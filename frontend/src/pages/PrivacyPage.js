@@ -39,11 +39,12 @@ export default function PrivacyPage() {
 
     return <Paper sx={{p: {xs: 2, sm: 3}, maxWidth: 860, mx: 'auto'}}><Stack spacing={2.5}>
         <Typography component="h1" variant="h4">Politica de confidențialitate</Typography>
-        <Typography variant="body2" color="text.secondary">Validez · Actualizată la 12 octombrie 2026</Typography>
+        <Typography variant="body2" color="text.secondary">Validez · Actualizată la 14 octombrie 2026</Typography>
         <Typography>Validez este o platformă de participare civică pentru sesizări, propuneri și alte subiecte ale comunității. Poți consulta subiectele publice fără cont; pentru contribuții este necesar un cont.</Typography>
         <Stack spacing={1}>
-            <Typography component="h2" variant="h6">Contact pentru confidențialitate</Typography>
-            <Typography>Contact: <Link href="mailto:contact@webnou.ro">contact@webnou.ro</Link>.</Typography>
+            <Typography component="h2" variant="h6">Operatorul datelor și contact</Typography>
+            <Typography>Operatorul datelor este AQUIS GRANA IMPEX SRL, CUI 53064471, cu sediul în 16 Febr. 2 / 21, 405200, Cluj, România.</Typography>
+            <Typography>Contact pentru confidențialitate: <Link href="mailto:contact@webnou.ro">contact@webnou.ro</Link>.</Typography>
         </Stack>
         {sections.map(([title, text]) => <Stack key={title} spacing={1}>
             <Typography component="h2" variant="h6">{title}</Typography>
