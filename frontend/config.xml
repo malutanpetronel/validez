@@ -23,6 +23,8 @@
     <preference name="SplashScreenDelay" value="3000" />
     <preference name="FadeSplashScreenDuration" value="300" />
     <platform name="android">
+        <!-- Opreste build-ul Android daca www/ e build-ul de dev (API localhost) - foloseste npm run android -->
+        <hook type="before_prepare" src="hooks/check-api-base.js" />
         <icon src="res/icon/android/mdpi.png" density="mdpi" />
         <icon src="res/icon/android/hdpi.png" density="hdpi" />
         <icon src="res/icon/android/xhdpi.png" density="xhdpi" />
