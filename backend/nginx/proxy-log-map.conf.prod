@@ -4,7 +4,7 @@
 # vhost.d/validez-be.webnou.ro_location (care foloseste variabila): fara map, nginx -t pica pentru tot proxy-ul.
 # Variabila are nume unic, pentru ca fisierul e incarcat in contextul http comun.
 # Aceeasi lista in nginx/default.conf (nginx-ul BE) - se modifica impreuna.
-map "$request_method $uri" $validez_be_access_log {
+map "$request_method $request_uri" $validez_be_access_log {
     "~^(PUT|DELETE) /api/civic_subjects/[^/]+/votes/" 0;
     "~^[A-Z]+ /api/me/vote-consent" 0;
     "~^GET /api/me/votes" 0;

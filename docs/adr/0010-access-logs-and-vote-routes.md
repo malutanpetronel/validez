@@ -28,7 +28,7 @@ Copiile de siguranță (`pg_dump`) nu includ logurile.
 
    Restul cererilor se loghează normal, pentru securitate și limitarea abuzurilor. `GET /api/civic_subjects/{id}/votes` (rezultatele și votul propriu) rămâne logat: îl face oricine deschide subiectul, deci nu arată că persoana a votat.
 
-   Implementare: un `map "$request_method $uri"` și `access_log … if=`; în nginx-ul BE în `backend/nginx/default.conf`, în proxy prin `backend/nginx/proxy-log-map.conf.prod` (contextul `http`, variabila `$validez_be_access_log`) și `backend/nginx/vhost.d_location.prod` (inclus de șablonul docker-gen în `location /` al `validez-be.webnou.ro`, unde înlocuiește logul moștenit de la server). Cele două liste se modifică împreună.
+   Implementare: un `map "$request_method $request_uri"` (URL-ul original: în nginx-ul BE `$uri` devine `/index.php` după `try_files`) și `access_log … if=`; în nginx-ul BE în `backend/nginx/default.conf`, în proxy prin `backend/nginx/proxy-log-map.conf.prod` (contextul `http`, variabila `$validez_be_access_log`) și `backend/nginx/vhost.d_location.prod` (inclus de șablonul docker-gen în `location /` al `validez-be.webnou.ro`, unde înlocuiește logul moștenit de la server). Cele două liste se modifică împreună.
 
 2. **Logul de acces al php-fpm este oprit** (`backend/docker/php-fpm/zz-no-access-log.conf`): nu conține ruta, dar momentul unui `PUT` se poate corela cu jurnalul, iar nginx are deja logul de acces.
 
