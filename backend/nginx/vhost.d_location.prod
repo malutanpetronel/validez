@@ -1,0 +1,9 @@
+# Configurare nginx-proxy pentru location / al validez-be.webnou.ro - ADR-0010.
+#
+# DEPLOY: se copiaza pe server la /srv/nginx/vhost.d/validez-be.webnou.ro_location, DUPA
+# /srv/nginx/conf.d/validez-be-log.conf (defineste $validez_be_access_log) si INAINTE de pornirea containerelor:
+# nginx-proxy il include doar daca exista la generarea configuratiei.
+#
+# Inlocuieste, in acest location, logul mostenit de la server: scrierile de vot, acordul si exportul propriu
+# nu se logheaza; restul cererilor da, in acelasi format ca celelalte site-uri.
+access_log /var/log/nginx/access.log vhost if=$validez_be_access_log;

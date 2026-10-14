@@ -10,6 +10,9 @@ services:
         container_name: ${WEB_CONTAINER}
         image: ${DOCKER_IMAGE}
         restart: always
+        logging:
+            driver: json-file
+            options: { max-size: "4m", max-file: "3" }
         expose:
             - 80
         environment:

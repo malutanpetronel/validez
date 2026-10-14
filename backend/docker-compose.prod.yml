@@ -17,6 +17,9 @@ services:
         container_name: ${DB_CONTAINER}
         image: postgres:16-alpine
         restart: always
+        logging:
+            driver: json-file
+            options: { max-size: "4m", max-file: "3" }
         volumes:
             - ${DB_DATA_DIR:-/srv/www/validez-be.webnou.ro/db_data}:/var/lib/postgresql/data
             - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
@@ -33,6 +36,9 @@ services:
         # Tag-ul sta in .env-ul de pe server (afisat de ./docker-build-push.sh), nu in repository.
         image: ${DOCKER_IMAGE}
         restart: always
+        logging:
+            driver: json-file
+            options: { max-size: "4m", max-file: "3" }
         depends_on:
             - db
         volumes:
@@ -48,6 +54,8 @@ services:
             # ADR-0008: index.html-ul FE curent (copiat de ansible la deploy-ul FE), sablonul shell-ului SEO.
             # Director, nu fisier: ansible il inlocuieste prin mv, iar un mount de fisier ar ramane pe versiunea veche.
             - ${SEO_DIR:-/var/www/validez-fe/shared/seo}:/var/www/validez-fe/shared/seo:ro
+            # ADR-0010: fara logul de acces al php-fpm.
+            - ./docker/php-fpm/zz-no-access-log.conf:/usr/local/etc/php-fpm.d/zz-no-access-log.conf:ro
         environment:
             APP_ENV: prod
             # DATABASE_URL vine din .env-ul runtime (validez_app), nu din credentialele de bootstrap.
@@ -84,6 +92,9 @@ services:
         container_name: ${NGINX_CONTAINER}
         image: nginx:stable-alpine
         restart: always
+        logging:
+            driver: json-file
+            options: { max-size: "4m", max-file: "3" }
         depends_on:
             - php
         expose:
