@@ -10,6 +10,15 @@ parameters:
     vote_write_limit: 30
     # Votarea e oprită implicit (producție). Dev și test o pornesc din .env.dev / .env.test.
     voting_enabled_default: false
+    # Registrul ștergerilor pentru restaurare (ADR-0009): în afara bazei de date, deci în afara pg_dump.
+    # Pe server, var/ e persistent (/var/www/validez-be/shared/backend/var). Se poate muta cu ERASURE_REGISTRY_DIR.
+    erasure_registry_dir_default: '%kernel.project_dir%/var/erasure-registry'
+    # Copiile bazei trăiesc cel mult 30 de zile (privacy, Deploy.md E); registrul păstrează 45, cu marjă.
+    erasure_registry_retention_days: 45
+
+when@test:
+    parameters:
+        erasure_registry_dir_default: '%kernel.cache_dir%/erasure-registry'
 
 framework:
     rate_limiter:

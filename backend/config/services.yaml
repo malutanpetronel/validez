@@ -53,6 +53,11 @@ services:
         arguments:
             $enabled: '%env(bool:default:voting_enabled_default:VOTING_ENABLED)%'
 
+    App\Vote\ErasureRegistry:
+        arguments:
+            $directory: '%env(default:erasure_registry_dir_default:ERASURE_REGISTRY_DIR)%'
+            $retentionDays: '%erasure_registry_retention_days%'
+
 when@test:
     services:
         App\Auth\AltchaService:

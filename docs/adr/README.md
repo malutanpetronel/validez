@@ -14,6 +14,7 @@ Deciziile de arhitectură ale proiectului Validez, formalizate ca ADR-uri. Numă
 | [0006](0006-initial-contribution-moderation.md) | Initial contribution moderation and category proposals | Accepted |
 | [0007](0007-votes-revisions-and-privacy.md) | Votes: revisions, freezing, private data and integrity | Accepted |
 | [0008](0008-public-urls-slugs-and-indexing.md) | Public URLs with slugs and web indexing (SEO shell) | Accepted |
+| [0009](0009-erasure-registry-for-restores.md) | Erasure registry reapplied after database restores | Accepted |
 
 ## Template
 

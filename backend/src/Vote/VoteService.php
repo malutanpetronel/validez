@@ -16,6 +16,7 @@ use App\Subject\SubjectStage;
 use App\Subject\SubjectVisibility;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Votul (ADR-0007): exprimare, schimbare, reconfirmare, retragere; consimțământul.
@@ -38,6 +39,8 @@ final class VoteService
         private readonly VoteResultCalculator $results,
         private readonly string $currentNoticeVersion,
         private readonly VotingSwitch $switch,
+        private readonly ErasureRegistry $erasures,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -203,22 +206,72 @@ final class VoteService
      * referință la persoană, apoi șterge voturile și întregul istoric privat, inclusiv nonce-urile.
      * Lock pe utilizator, apoi pe subiectele afectate în ordinea id-ului; funcționează pe orice stare a subiectului.
      *
+     * După commit, retragerea se notează în registrul de ștergeri (ADR-0009), cu momentul retragerii acordului.
+     * Notarea are loc numai după commit: o intrare pentru o tranzacție anulată ar retrage, la o restaurare, un acord
+     * încă valabil. Dacă notarea eșuează, retragerea rămâne valabilă și eroarea se loghează ca `critical`.
+     *
      * @return int numărul voturilor retrase
      */
     public function withdrawConsent(User $user): int
     {
-        return $this->transactional(function () use ($user): int {
+        $withdrawnAt = null;
+        $count = $this->transactional(function () use ($user, &$withdrawnAt): int {
             $this->em->refresh($user, LockMode::PESSIMISTIC_WRITE);
             foreach ($this->em->getRepository(VoteConsent::class)->findBy(['user' => $user, 'withdrawnAt' => null]) as $consent) {
                 $consent->withdraw();
+                $withdrawnAt = $consent->getWithdrawnAt();
             }
+            $this->em->flush();
+
+            return $this->eraseVotes($user);
+        });
+
+        try {
+            $this->erasures->record($user->getId(), ErasureRegistry::CONSENT_WITHDRAWN, $withdrawnAt ?? new \DateTimeImmutable());
+        } catch (\Throwable $e) {
+            $this->logger->critical('Retragerea consimțământului nu a putut fi notată în registrul de ștergeri (ADR-0009).', ['exception' => $e]);
+        }
+
+        return $count;
+    }
+
+    /**
+     * Reaplicarea unei retrageri din registrul de ștergeri după o restaurare (ADR-0009), fără o intrare nouă.
+     *
+     * Retrage acordul activ numai dacă a fost dat înainte de momentul retragerii; un acord dat din nou după aceea
+     * (prezent deja în copia restaurată) rămâne neatins. Fără acord activ, elimină eventualele voturi și istoric
+     * rămase. Idempotentă: a doua rulare nu mai găsește nimic de făcut.
+     *
+     * @return int|null voturile retrase (sau, cu `$dryRun`, care ar fi retrase); null dacă nu e nimic de făcut
+     */
+    public function reapplyConsentWithdrawal(User $user, \DateTimeImmutable $withdrawnAt, bool $dryRun = false): ?int
+    {
+        return $this->transactional(function () use ($user, $withdrawnAt, $dryRun): ?int {
+            $this->em->refresh($user, LockMode::PESSIMISTIC_WRITE);
+            /** @var VoteConsent|null $active */
+            $active = $this->em->getRepository(VoteConsent::class)->findOneBy(['user' => $user, 'withdrawnAt' => null]);
+            if ($active !== null && $active->getGrantedAt() >= $withdrawnAt) {
+                return null;
+            }
+            $votes = $this->em->getRepository(Vote::class)->count(['user' => $user]);
+            $history = (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM user_vote_history WHERE user_id = ?', [$user->getId()->toRfc4122()]);
+            if ($active === null && $votes === 0 && $history === 0) {
+                return null;
+            }
+            if ($dryRun) {
+                return $votes;
+            }
+            $active?->withdraw();
             $this->em->flush();
 
             return $this->eraseVotes($user);
         });
     }
 
-    /** Partea de vot a ștergerii contului; apelantul ține lockul utilizatorului într-o tranzacție. */
+    /**
+     * Partea de vot a ștergerii contului; apelantul ține lockul utilizatorului într-o tranzacție.
+     * Ștergerea contului, când va exista, notează și ea operația în registrul de ștergeri (ADR-0009), după commit.
+     */
     public function eraseVotes(User $user): int
     {
         /** @var list<Vote> $votes */

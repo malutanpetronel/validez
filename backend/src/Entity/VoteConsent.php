@@ -45,6 +45,8 @@ class VoteConsent
     }
 
     public function getNoticeVersion(): string { return $this->noticeVersion; }
+    public function getGrantedAt(): \DateTimeImmutable { return $this->grantedAt; }
+    public function getWithdrawnAt(): ?\DateTimeImmutable { return $this->withdrawnAt; }
     public function isActive(): bool { return $this->withdrawnAt === null; }
 
     public function withdraw(): void
