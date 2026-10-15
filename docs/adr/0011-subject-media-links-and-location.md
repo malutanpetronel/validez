@@ -41,6 +41,15 @@ Riscuri specifice:
 - Spațiu pe disc: după re-encodare, o fotografie ocupă de regulă sub 1 MB; limita de 10 MB se aplică doar la upload.
 - Build-ul Android se verifică cu camera, galeria și locația (permisiuni, refuzul lor).
 
+## Completări de implementare (15.10.2026, M.2–M.4)
+
+- **Confirmarea locului prin vot:** detaliată la punctul 9 (tipul de vot `LOCATION`, pragul `LOCATION_CONFIRM_MIN`, fără votul autorului).
+- **Registrul de ștergeri:** scoaterea unei fotografii sau a unui link se notează în registrul din [ADR-0009](0009-erasure-registry-for-restores.md), iar `app:votes:reapply-erasures` o reaplică după o restaurare (rând + fișiere), ca o copie mai veche să nu readucă media scoase (punctul 10).
+- **Copiile de media:** snapshot-uri zilnice cu `rsync --link-dest`, de la aceeași oră cu dump-ul bazei, cu rotație de 30 de zile (`Deploy.md`, secțiunea E).
+- **Video:** doar link cu iconiță, fără player încorporat - un player ar încărca un terț (de exemplu Google) la simpla deschidere a subiectului.
+- **Micșorare în browser:** JPEG/PNG/WebP peste 2560 px pe latura mare pleacă la 2560 px JPEG (mai puține date mobile, sub limita de 10 MB); HEIC pleacă neschimbat. Pe Android, `cordova-plugin-camera` livrează direct JPEG de cel mult 2560 px. Serverul re-encodează oricum (punctul 5).
+- **Media în așteptare** sunt vizibile celui care le-a încărcat și administratorilor; FE le încarcă cu token. Locația nginx `internal` retrimite headerul CORS decis de Symfony, pe care `X-Accel-Redirect` altfel îl pierde.
+
 ## Alternative respinse
 
 - **Minimum 3 fotografii per subiect:** ar forța poze fără valoare pe propuneri clare.
