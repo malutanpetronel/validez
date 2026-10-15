@@ -63,7 +63,8 @@ Marcaje: **[PE LAPTOP]** = `<checkout-validez>` sau checkout-ul Ansible de pe la
 ## 8. Mentenanță periodică
 
 - [x] **[PE SERVER]** Curățarea refresh token-urilor expirate (tabela `refresh_token` crește la fiecare login/refresh, cu rotație): cron zilnic, linia din `Deploy.md` pasul 13 (`crontab -e`): `30 4 * * * docker exec -u devuser validez_be_php php /var/www/validez-be/bin/console gesdinet:jwt:clear --env=prod >/dev/null 2>&1` — pus și verificat 15.10.2026.
-- [ ] Backup pentru `/srv/www/validez-be.webnou.ro/db_data` (sau `pg_dump` programat).
+- [x] Backup zilnic `pg_dump` la 03:00 UTC (`/usr/local/bin/validez-backup.sh`, `/etc/cron.d/validez-backup`), rotație 30 zile la 03:30 — `Deploy.md` secțiunea E; pus 15.10.2026.
+- [x] Repetiția restaurării (E2) pe o copie — făcută 15.10.2026, procedura în `Deploy.md` secțiunea E3; de repetat după schimbări în schema de vot sau în registrul de ștergeri.
 
 ## 9. De știut (fără acțiune imediată)
 
