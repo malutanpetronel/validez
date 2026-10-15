@@ -9,3 +9,7 @@
 location ~ ^/api(/v[0-9]+)?/docs {
     return 404;
 }
+
+# ADR-0011 p.5: fotografii de pana la 10 MB (PHP accepta 12M); implicit Nginx_Proxy are 1 MB si ar raspunde 413
+# inainte ca cererea sa ajunga la aplicatie.
+client_max_body_size 12m;

@@ -16,8 +16,10 @@ use App\Security\CivicSubjectVoter;
 use App\Subject\MediaStatus;
 use App\Subject\PublishingPolicy;
 use App\Subject\SubjectVisibility;
+use App\Vote\ErasureRegistry;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -41,12 +43,13 @@ final class SubjectMediaController extends AbstractController
 {
     public const MAX_PER_SUBJECT = 10;
     public const MAX_LINKS_PER_SUBJECT = 10;
-    private const VARIANTS = ['display', 'thumb'];
 
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly SubjectMediaRepository $media,
         private readonly MediaStorage $storage,
+        private readonly ErasureRegistry $erasures,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -187,7 +190,7 @@ final class SubjectMediaController extends AbstractController
         if (!$item->isPhoto()) {
             throw $this->createNotFoundException('Fotografia nu există.');
         }
-        \assert(\in_array($variant, self::VARIANTS, true));
+        \assert(\in_array($variant, SubjectMedia::VARIANTS, true));
 
         // Corpul îl trimite nginx din locația internal; aici doar decidem dacă are voie.
         return new Response('', 200, [
@@ -208,9 +211,16 @@ final class SubjectMediaController extends AbstractController
 
         $item->markRemoved($user);
         $this->em->flush();
+        // ADR-0011 p.10: o restaurare dintr-o copie mai veche nu trebuie să readucă media scoasă
+        // (app:votes:reapply-erasures o scoate din nou). Ca la retragerea consimțământului, eșecul se loghează.
+        try {
+            $this->erasures->record($item->getId(), ErasureRegistry::MEDIA_REMOVED, $item->getRemovedAt());
+        } catch (\Throwable $e) {
+            $this->logger->critical('Scoaterea unei media nu a putut fi notată în registrul de ștergeri (ADR-0011).', ['exception' => $e]);
+        }
         // Fișierul dispare de pe disc acum; din copiile de siguranță, după rotația de 30 de zile (ADR-0011 p.10).
         if ($item->isPhoto()) {
-            foreach (self::VARIANTS as $variant) {
+            foreach (SubjectMedia::VARIANTS as $variant) {
                 $this->storage->delete($item->storageKey($variant));
             }
         }

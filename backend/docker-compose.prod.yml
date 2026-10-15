@@ -46,8 +46,9 @@ services:
             # .env din shared e symlink (ansistrano): montat explicit ca fisier, altfel symlink-ul nu se rezolva in container.
             # Contine DOAR configurarea runtime (fara parola administrativa sau a migratorului).
             - ${RUNTIME_ENV_FILE:-./.env}:/var/www/validez-be/.env:ro
-            # Uploadurile: persistente intre release-uri (shared), nu in codul release-ului.
-            - ${UPLOADS_DIR:-/var/www/validez-be/shared/backend/public/uploads}:/var/www/validez-be/public/uploads:rw
+            # ADR-0011 p.3: media subiectelor, in afara public/ si a release-urilor; intra in backupul zilnic.
+            # Aceeasi cale in container ca pe dev (MEDIA_DIR implicit al aplicatiei) si in nginx (locatia internal).
+            - ${MEDIA_HOST_DIR:-/srv/www/validez-be.webnou.ro/uploads}:/var/www/validez-media:rw
             - ${VAR_DIR:-/var/www/validez-be/shared/backend/var}:/var/www/validez-be/var:rw
             - ${VENDOR_DIR:-/var/www/validez-be/shared/backend/vendor}:/var/www/validez-be/vendor:rw
             - ${JWT_DIR:-/var/www/validez-be/shared/backend/config/jwt}:/var/www/validez-be/config/jwt:ro
@@ -102,7 +103,8 @@ services:
         volumes:
             # Nginx doar serveste static: read-only.
             - ./public:/var/www/validez-be/public:ro
-            - ${UPLOADS_DIR:-/var/www/validez-be/shared/backend/public/uploads}:/var/www/validez-be/public/uploads:ro
+            # ADR-0011 p.4: servite doar prin X-Accel-Redirect (location internal /_protected_media/).
+            - ${MEDIA_HOST_DIR:-/srv/www/validez-be.webnou.ro/uploads}:/var/www/validez-media:ro
             - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
         environment:
             VIRTUAL_HOST: ${VIRTUAL_HOST}

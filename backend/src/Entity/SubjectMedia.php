@@ -24,6 +24,8 @@ class SubjectMedia
 {
     public const KIND_PHOTO = 'PHOTO';
     public const KIND_LINK = 'LINK';
+    /** Variantele unei fotografii pe disc (MediaStorage). */
+    public const VARIANTS = ['display', 'thumb'];
 
     #[ORM\Id]
     #[ORM\Column(type: UlidType::NAME)]
@@ -136,9 +138,10 @@ class SubjectMedia
         $this->approvedAt = new \DateTimeImmutable();
     }
 
-    public function markRemoved(User $by): void
+    /** @param ?User $by null la reaplicarea din registrul de ștergeri (ADR-0011 p.10) */
+    public function markRemoved(?User $by, ?\DateTimeImmutable $at = null): void
     {
-        $this->removedAt = new \DateTimeImmutable();
+        $this->removedAt = $at ?? new \DateTimeImmutable();
         $this->removedBy = $by;
     }
 

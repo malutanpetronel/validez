@@ -228,6 +228,43 @@ final class SubjectMediaTest extends WebTestCase
         self::assertSame(404, $this->code());
     }
 
+    /** ADR-0011 p.10: o restaurare nu readuce o fotografie scoasă - registrul de ștergeri o scoate din nou. */
+    public function testScoatereaSeReaplicaDupaRestaurare(): void
+    {
+        $registry = static::getContainer()->get(\App\Vote\ErasureRegistry::class);
+        @unlink($registry->path());
+        $m = $this->upload('vlad', 'vlad');
+        $display = (string) file_get_contents($this->stored($m, 'display'));
+        $this->call('DELETE', '/api/media/'.$m['id'], 'vlad');
+        self::assertSame([$m['id']], array_column($registry->entries(), 'media'));
+
+        // „Restaurare”: baza și fișierele de dinaintea scoaterii.
+        $this->db->executeStatement('UPDATE subject_media SET removed_at = NULL, removed_by_id = NULL');
+        file_put_contents($this->stored($m, 'display'), $display);
+        file_put_contents($this->stored($m, 'thumb'), $display);
+        self::assertCount(1, $this->call('GET', '/api/civic_subjects/'.$m['subjectId'].'/media')['items']);
+
+        $run = function (array $options): string {
+            $tester = new \Symfony\Component\Console\Tester\CommandTester((new \Symfony\Bundle\FrameworkBundle\Console\Application(static::$kernel))->find('app:votes:reapply-erasures'));
+            self::assertSame(0, $tester->execute($options));
+
+            return $tester->getDisplay();
+        };
+        $out = $run(['--dry-run' => true]);
+        self::assertMatchesRegularExpression('/Media de scos\s+1/', $out);
+        self::assertMatchesRegularExpression('/Fișiere media de șters\s+2/', $out);
+        self::assertFileExists($this->stored($m, 'display'), 'simularea nu șterge');
+
+        $out = $run([]);
+        self::assertMatchesRegularExpression('/Media scoase\s+1/', $out);
+        self::assertFileDoesNotExist($this->stored($m, 'display'));
+        self::assertFileDoesNotExist($this->stored($m, 'thumb'));
+        self::assertSame([], $this->call('GET', '/api/civic_subjects/'.$m['subjectId'].'/media')['items']);
+        self::assertCount(1, $registry->entries(), 'reaplicarea nu adaugă intrări');
+        self::assertMatchesRegularExpression('/Media scoase\s+0/', $run([]), 'idempotentă');
+        @unlink($registry->path());
+    }
+
     public function testJpegReencodatFaraMetadateSiFaraRevizieNoua(): void
     {
         $revision = $this->s['vlad']->getRevisionNumber();

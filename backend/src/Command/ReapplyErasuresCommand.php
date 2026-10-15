@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\User;
+use App\Entity\SubjectMedia;
+use App\Media\MediaStorage;
 use App\Vote\ErasureRegistry;
 use App\Vote\VoteService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -17,17 +19,19 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Uid\Ulid;
 
 /**
- * După restaurarea unei copii a bazei (ADR-0009): reaplică retragerile de consimțământ notate în registrul de
- * ștergeri, înainte de redeschiderea traficului. Idempotentă. Afișează doar totaluri, fără identificatori.
+ * După restaurarea unei copii a bazei (ADR-0009): reaplică retragerile de consimțământ și scoaterile de media
+ * (ADR-0011 p.10) notate în registrul de ștergeri, înainte de redeschiderea traficului. La media scoase șterge și
+ * fișierele readuse de copia de media. Idempotentă. Afișează doar totaluri, fără identificatori.
  * Ordinea pe server: restaurare → această comandă → app:votes:verify → pornirea nginx (Deploy.md, secțiunea E2).
  */
-#[AsCommand(name: 'app:votes:reapply-erasures', description: 'Reaplică retragerile de consimțământ din registrul de ștergeri, după o restaurare.')]
+#[AsCommand(name: 'app:votes:reapply-erasures', description: 'Reaplică retragerile de consimțământ și scoaterile de media din registrul de ștergeri, după o restaurare.')]
 final class ReapplyErasuresCommand extends Command
 {
     public function __construct(
         private readonly ErasureRegistry $registry,
         private readonly VoteService $votes,
         private readonly EntityManagerInterface $em,
+        private readonly MediaStorage $storage,
     ) {
         parent::__construct();
     }
@@ -43,8 +47,36 @@ final class ReapplyErasuresCommand extends Command
         $dryRun = (bool) $input->getOption('dry-run');
         $entries = $this->registry->entries();
         $applied = $votes = $regranted = $missing = 0;
+        $mediaRemoved = $mediaMissing = $filesDeleted = 0;
 
         foreach ($entries as $entry) {
+            if ($entry['action'] === ErasureRegistry::MEDIA_REMOVED) {
+                $item = $this->em->find(SubjectMedia::class, Ulid::fromString($entry['media']));
+                if ($item === null) {
+                    ++$mediaMissing;
+                    continue;
+                }
+                if (!$item->isRemoved()) {
+                    ++$mediaRemoved;
+                    if (!$dryRun) {
+                        $item->markRemoved(null, $entry['at']);
+                        $this->em->flush();
+                    }
+                }
+                // Și dacă rândul era deja scos: o copie de media mai nouă decât dump-ul poate avea fișierele.
+                if ($item->isPhoto()) {
+                    foreach (SubjectMedia::VARIANTS as $variant) {
+                        if ($this->storage->exists($item->storageKey($variant))) {
+                            ++$filesDeleted;
+                            if (!$dryRun) {
+                                $this->storage->delete($item->storageKey($variant));
+                            }
+                        }
+                    }
+                }
+                $this->em->clear();
+                continue;
+            }
             $user = $this->em->find(User::class, Ulid::fromString($entry['user']));
             if ($user === null) {
                 ++$missing;
@@ -66,6 +98,9 @@ final class ReapplyErasuresCommand extends Command
             [($dryRun ? 'Voturi de retras' : 'Voturi retrase') => (string) $votes],
             ['Fără nimic de făcut (deja aplicate sau acord dat din nou)' => (string) $regranted],
             ['Utilizatori inexistenți în copia restaurată' => (string) $missing],
+            [($dryRun ? 'Media de scos' : 'Media scoase') => (string) $mediaRemoved],
+            [($dryRun ? 'Fișiere media de șters' : 'Fișiere media șterse') => (string) $filesDeleted],
+            ['Media inexistente în copia restaurată' => (string) $mediaMissing],
         );
         $io->success($dryRun ? 'Simulare: baza nu a fost modificată.' : 'Retragerile din registru sunt aplicate.');
 
