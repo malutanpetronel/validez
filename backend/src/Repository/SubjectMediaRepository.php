@@ -19,12 +19,35 @@ final class SubjectMediaRepository extends ServiceEntityRepository
         parent::__construct($registry, SubjectMedia::class);
     }
 
-    /** Fotografiile încă atașate (publicate și în așteptare) - limita de 10 se aplică pe ele. */
-    public function countActive(CivicSubject $subject): int
+    /** Media încă atașate (publicate și în așteptare), pe tip - limita de 10 se aplică separat pe poze și linkuri. */
+    public function countActive(CivicSubject $subject, string $kind): int
     {
         return (int) $this->createQueryBuilder('m')->select('COUNT(m.id)')
-            ->where('IDENTITY(m.subject) = :s')->andWhere('m.removedAt IS NULL')
-            ->setParameter('s', $subject->getId(), UlidType::NAME)->getQuery()->getSingleScalarResult();
+            ->where('IDENTITY(m.subject) = :s')->andWhere('m.removedAt IS NULL')->andWhere('m.kind = :kind')
+            ->setParameter('s', $subject->getId(), UlidType::NAME)->setParameter('kind', $kind)
+            ->getQuery()->getSingleScalarResult();
+    }
+
+    public function hasActiveLink(CivicSubject $subject, string $url): bool
+    {
+        return (int) $this->createQueryBuilder('m')->select('COUNT(m.id)')
+            ->where('IDENTITY(m.subject) = :s')->andWhere('m.removedAt IS NULL')->andWhere('m.url = :url')
+            ->setParameter('s', $subject->getId(), UlidType::NAME)->setParameter('url', $url)
+            ->getQuery()->getSingleScalarResult() > 0;
+    }
+
+    /**
+     * Media care au fost publice vreodată (încărcate direct sau aprobate), inclusiv cele scoase - pentru istoricul
+     * public (ADR-0011 p.2). Cele scoase înainte de aprobare rămân PENDING și nu apar.
+     *
+     * @return list<SubjectMedia>
+     */
+    public function findPublishedEver(CivicSubject $subject): array
+    {
+        return $this->createQueryBuilder('m')
+            ->where('IDENTITY(m.subject) = :s')->andWhere('m.status = :published')
+            ->setParameter('s', $subject->getId(), UlidType::NAME)->setParameter('published', MediaStatus::PUBLISHED->value)
+            ->getQuery()->getResult();
     }
 
     public function nextPosition(CivicSubject $subject): int

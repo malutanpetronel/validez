@@ -33,6 +33,12 @@ final class CivicSubjectUpdateInput
     public ?string $costCurrency;
     public ?string $costEstimateScope;
 
+    /** ADR-0011 p.9/p.11: lipsă = neschimbat, null = scos, {lat, lng, source?} = pus/mutat (revizie nouă). */
+    public ?array $location;
+
+    /** Doar adminul; nu creează revizie. */
+    public ?bool $locationConfirmed = null;
+
     /** @return list<string> */
     public static function stages(): array
     {

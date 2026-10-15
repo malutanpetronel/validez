@@ -15,6 +15,7 @@ use App\Repository\CivicSubjectRepository;
 use App\State\CivicSubjectCreateProcessor;
 use App\State\CivicSubjectProvider;
 use App\State\CivicSubjectUpdateProcessor;
+use App\Subject\LocationSource;
 use App\Subject\SubjectStage;
 use App\Subject\SubjectType;
 use App\Subject\SubjectVisibility;
@@ -112,6 +113,30 @@ class CivicSubject
     /** Numărul reviziei curente (ADR-0007 §3); revizia 1 se creează împreună cu subiectul (Step 4.b2). */
     #[ORM\Column(options: ['default' => 1])]
     private int $revisionNumber = 1;
+
+    /**
+     * Localizarea (ADR-0011 p.9, p.11): punctul face parte din revizie; sursa și confirmarea nu.
+     * Coordonatele se țin ca text zecimal normalizat (6 zecimale), ca instantaneul reviziei să compare exact.
+     */
+    #[ORM\Column(type: Types::DECIMAL, precision: 9, scale: 6, nullable: true)]
+    private ?string $locationLat = null;
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 9, scale: 6, nullable: true)]
+    private ?string $locationLng = null;
+
+    #[ORM\Column(length: 16, nullable: true, enumType: LocationSource::class)]
+    private ?LocationSource $locationSource = null;
+
+    /** Confirmarea unui administrator; se anulează la mutarea pinului. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $locationAdminConfirmed = false;
+
+    /** Calculate de VoteResultCalculator din votul LOCATION pe revizia curentă, fără votul autorului. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $locationUsersConfirmed = false;
+
+    #[ORM\Column(options: ['default' => 0])]
+    private int $locationConfirmations = 0;
 
     /** Primul vot înregistrat vreodată; blochează tipul, chiar dacă votul a fost retras (ADR-0007 §3). */
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
@@ -229,5 +254,57 @@ class CivicSubject
     {
         if ($stage !== null) $this->stage = $stage;
         if ($visibility !== null) $this->visibility = $visibility;
+    }
+
+    public function hasLocation(): bool { return $this->locationLat !== null; }
+
+    /** @return array{locationLat: ?string, locationLng: ?string} partea de instantaneu a reviziei */
+    public function storedLocation(): array
+    {
+        return ['locationLat' => $this->locationLat, 'locationLng' => $this->locationLng];
+    }
+
+    public function getLocationSource(): ?LocationSource { return $this->locationSource; }
+
+    /** @param ?string $lat coordonate deja normalizate (SubjectLocation) */
+    public function setLocation(?string $lat, ?string $lng, ?LocationSource $source): void
+    {
+        if ($lat !== $this->locationLat || $lng !== $this->locationLng) {
+            // Alt punct: confirmarea veche nu mai spune nimic despre el.
+            $this->locationAdminConfirmed = false;
+        }
+        $this->locationLat = $lat;
+        $this->locationLng = $lng;
+        $this->locationSource = $lat === null ? null : $source;
+    }
+
+    public function confirmLocationByAdmin(bool $confirmed): void
+    {
+        $this->locationAdminConfirmed = $confirmed && $this->hasLocation();
+    }
+
+    public function applyLocationVotes(int $confirmations, bool $usersConfirmed): void
+    {
+        $this->locationConfirmations = $confirmations;
+        $this->locationUsersConfirmed = $usersConfirmed && $this->hasLocation();
+    }
+
+    /** @return array{lat: float, lng: float, source: string, confirmed: bool, confirmedBy: ?string, confirmations: int}|null */
+    #[Groups(['subject:read'])]
+    public function getLocation(): ?array
+    {
+        if (!$this->hasLocation()) {
+            return null;
+        }
+        $confirmedBy = $this->locationAdminConfirmed ? 'ADMIN' : ($this->locationUsersConfirmed ? 'USERS' : null);
+
+        return [
+            'lat' => (float) $this->locationLat,
+            'lng' => (float) $this->locationLng,
+            'source' => ($this->locationSource ?? LocationSource::MANUAL)->value,
+            'confirmed' => $confirmedBy !== null,
+            'confirmedBy' => $confirmedBy,
+            'confirmations' => $this->locationConfirmations,
+        ];
     }
 }

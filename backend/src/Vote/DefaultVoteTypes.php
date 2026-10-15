@@ -12,6 +12,8 @@ final class DefaultVoteTypes
     public const VALIDITY = 'VALIDITY';
     public const YES_NO = 'YES_NO';
     public const IMPORTANCE = 'IMPORTANCE';
+    /** ADR-0011 p.9: „Locul e corect?” - atașat de SubjectLocation doar subiectelor cu pin. */
+    public const LOCATION = 'LOCATION';
 
     /** @return list<string> */
     public static function forSubjectType(SubjectType $type): array

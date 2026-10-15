@@ -17,6 +17,8 @@ parameters:
     sitemap_page_size_default: 10000
     # ADR-0011: media subiectelor, in afara public/; montat la aceeasi cale in php si nginx (dev si prod).
     media_dir_default: '/var/www/validez-media'
+    # ADR-0011 p.9: voturi „Da” (fara autor) pe revizia curenta care confirma locul subiectului.
+    location_confirm_min_default: 3
 
 services:
     # default configuration for services in *this* file
@@ -64,6 +66,10 @@ services:
         arguments:
             $directory: '%env(default:media_dir_default:MEDIA_DIR)%'
             $projectDir: '%kernel.project_dir%'
+
+    App\Vote\VoteResultCalculator:
+        arguments:
+            $locationConfirmMin: '%env(int:default:location_confirm_min_default:LOCATION_CONFIRM_MIN)%'
 
 when@test:
     services:

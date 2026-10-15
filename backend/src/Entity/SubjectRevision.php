@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Subject\LocationSource;
 use App\Subject\SubjectType;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -50,6 +51,16 @@ class SubjectRevision
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $costEstimateScope;
 
+    /** ADR-0011 p.11: punctul de pe hartă face parte din revizie; la reconfirmare se văd vechiul și noul punct. */
+    #[ORM\Column(type: Types::DECIMAL, precision: 9, scale: 6, nullable: true)]
+    private ?string $locationLat = null;
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 9, scale: 6, nullable: true)]
+    private ?string $locationLng = null;
+
+    #[ORM\Column(length: 16, nullable: true, enumType: LocationSource::class)]
+    private ?LocationSource $locationSource = null;
+
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: 'created_by', referencedColumnName: 'id', nullable: false, onDelete: 'RESTRICT')]
     private User $createdBy;
@@ -69,6 +80,8 @@ class SubjectRevision
         $this->title = $subject->getTitle();
         $this->description = $subject->getDescription();
         ['costEstimate' => $this->costEstimate, 'costCurrency' => $this->costCurrency, 'costEstimateScope' => $this->costEstimateScope] = $subject->storedEstimate();
+        ['locationLat' => $this->locationLat, 'locationLng' => $this->locationLng] = $subject->storedLocation();
+        $this->locationSource = $subject->getLocationSource();
         $this->createdBy = $createdBy;
         $this->createdAt = new \DateTimeImmutable();
     }
@@ -85,6 +98,13 @@ class SubjectRevision
     public function belongsTo(CivicSubject $subject): bool
     {
         return $this->subject->getId()->equals($subject->getId());
+    }
+
+    /** @return array{lat: float, lng: float, source: ?string}|null */
+    public function getLocation(): ?array
+    {
+        return $this->locationLat === null ? null
+            : ['lat' => (float) $this->locationLat, 'lng' => (float) $this->locationLng, 'source' => $this->locationSource?->value];
     }
 
     /** Estimarea publică a reviziei: null pe tipurile neeligibile, chiar dacă datele există intern. */

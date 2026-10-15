@@ -138,6 +138,96 @@ final class SubjectMediaTest extends WebTestCase
         return $this->mediaDir.'/'.$media['subjectId'].'/'.$media['id'].'-'.$variant.'.webp';
     }
 
+    /** @return array<string, mixed> */
+    private function link(string $subject, ?string $who, mixed $url, mixed $label = null): array
+    {
+        $server = ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'];
+        if ($who !== null) {
+            $server['HTTP_AUTHORIZATION'] = 'Bearer '.$this->token($who);
+        }
+        $this->client->request('POST', '/api/civic_subjects/'.$this->s[$subject]->getId()->toBase32().'/links', server: $server, content: json_encode(['url' => $url, 'label' => $label]));
+
+        return json_decode((string) $this->client->getResponse()->getContent(), true) ?? [];
+    }
+
+    public function testLinkuriValidate(): void
+    {
+        $l = $this->link('vlad', 'vlad', '  HTTPS://YouTube.com/watch?v=abc#t=1 ', "  Filmare\n de pe teren ");
+        self::assertSame(201, $this->code());
+        self::assertSame(['LINK', 'PUBLISHED', 'https://youtube.com/watch?v=abc#t=1', 'Filmare de pe teren'], [$l['kind'], $l['status'], $l['url'], $l['label']]);
+        self::assertArrayNotHasKey('displayUrl', $l);
+
+        foreach (['javascript:alert(1)', 'data:text/html,x', 'ftp://exemplu.ro/f', 'https://user:parola@exemplu.ro', 'https://exemplu.ro/a b', '//exemplu.ro', 'exemplu.ro', '', 42] as $bad) {
+            $this->link('vlad', 'vlad', $bad);
+            self::assertSame(422, $this->code(), json_encode($bad));
+        }
+        $this->link('vlad', 'vlad', 'https://youtube.com/watch?v=abc#t=1');
+        self::assertSame(422, $this->code(), 'duplicat');
+        $this->link('vlad', 'vlad', 'https://exemplu.ro/'.str_repeat('a', 2048));
+        self::assertSame(422, $this->code(), 'prea lung');
+
+        $this->link('vlad', 'maria', 'https://exemplu.ro');
+        self::assertSame(403, $this->code());
+        $this->link('vlad', null, 'https://exemplu.ro');
+        self::assertSame(401, $this->code());
+
+        // Linkul nu are fișier de servit.
+        $this->call('GET', '/api/media/'.$l['id'].'/display');
+        self::assertSame(404, $this->code());
+    }
+
+    public function testLinkuriLimitaSeparataDePozeSiModerare(): void
+    {
+        for ($i = 0; $i < 10; ++$i) {
+            $this->link('vlad', 'vlad', "https://exemplu.ro/$i");
+            self::assertSame(201, $this->code());
+        }
+        $this->link('vlad', 'vlad', 'https://exemplu.ro/10');
+        self::assertSame(422, $this->code());
+        $this->upload('vlad', 'vlad');
+        self::assertSame(201, $this->code(), 'pozele au limita lor');
+
+        $l = $this->link('ion', 'ion', 'https://exemplu.ro/ion');
+        self::assertSame('PENDING', $l['status']);
+        $subjectId = $this->s['ion']->getId()->toBase32();
+        self::assertSame([], $this->call('GET', "/api/civic_subjects/$subjectId/media")['items']);
+        self::assertSame(['LINK'], array_column($this->call('GET', '/api/moderation/media', 'admin')['items'], 'kind'));
+        $this->call('POST', '/api/media/'.$l['id'].'/approve', 'admin');
+        self::assertSame(['https://exemplu.ro/ion'], array_column($this->call('GET', "/api/civic_subjects/$subjectId/media")['items'], 'url'));
+    }
+
+    public function testIstoriculPublicFaraContinutulCelorScoase(): void
+    {
+        $poza = $this->upload('vlad', 'vlad');
+        $pastrat = $this->link('vlad', 'vlad', 'https://exemplu.ro/pastrat', 'Păstrat');
+        $scos = $this->link('vlad', 'vlad', 'https://exemplu.ro/date-personale');
+        $this->call('DELETE', '/api/media/'.$scos['id'], 'admin');
+        $this->call('DELETE', '/api/media/'.$poza['id'], 'vlad');
+        // Al lui ion: scos înainte de aprobare - n-a fost niciodată public.
+        $pending = $this->link('ion', 'ion', 'https://exemplu.ro/ion');
+        $this->call('DELETE', '/api/media/'.$pending['id'], 'ion');
+        self::assertSame(204, $this->code());
+
+        $events = $this->call('GET', '/api/civic_subjects/'.$this->s['vlad']->getId()->toBase32().'/media/history')['events'];
+        self::assertSame(200, $this->code());
+        self::assertSame(
+            [['ADDED', 'PHOTO'], ['ADDED', 'LINK'], ['ADDED', 'LINK'], ['REMOVED'], ['REMOVED']],
+            array_map(static fn (array $e): array => $e['event'] === 'ADDED' ? [$e['event'], $e['kind']] : [$e['event']], $events),
+        );
+        // Scoaterile pot cădea în aceeași secundă: verificăm perechile, nu ordinea.
+        $removed = array_column(array_slice($events, 3), 'by', 'kind');
+        ksort($removed);
+        self::assertSame(['LINK' => 'ADMIN', 'PHOTO' => 'AUTHOR'], $removed);
+        $json = json_encode($events);
+        self::assertStringNotContainsString('date-personale', $json);
+        self::assertStringContainsString('exemplu.ro\/pastrat', $json);
+        self::assertSame($pastrat['id'], array_values(array_filter($events, static fn (array $e): bool => isset($e['url'])))[0]['mediaId']);
+
+        self::assertSame([], $this->call('GET', '/api/civic_subjects/'.$this->s['ion']->getId()->toBase32().'/media/history')['events']);
+        $this->call('GET', '/api/civic_subjects/'.$this->s['ascuns']->getId()->toBase32().'/media/history');
+        self::assertSame(404, $this->code());
+    }
+
     public function testJpegReencodatFaraMetadateSiFaraRevizieNoua(): void
     {
         $revision = $this->s['vlad']->getRevisionNumber();
@@ -191,7 +281,7 @@ final class SubjectMediaTest extends WebTestCase
         $subject = $em->find(CivicSubject::class, $this->s['vlad']->getId());
         $author = $subject->getAuthor();
         for ($i = 0; $i < 10; ++$i) {
-            $em->persist(new SubjectMedia($subject, $author, MediaStatus::PUBLISHED, $i, 10, 10, 100));
+            $em->persist(SubjectMedia::photo($subject, $author, MediaStatus::PUBLISHED, $i, 10, 10, 100));
         }
         $em->flush();
         $this->upload('vlad', 'vlad');

@@ -19,8 +19,10 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final class VoteResultCalculator
 {
-    public function __construct(private readonly EntityManagerInterface $em)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly int $locationConfirmMin = 3,
+    ) {
     }
 
     public function recalculate(CivicSubject $subject): void
@@ -36,6 +38,30 @@ final class VoteResultCalculator
             [$counts, $stale] = $computed[$type->getCode()] ?? [[], 0];
             $result->replace($counts, $stale);
         }
+        $this->refreshLocationConfirmation($subject);
+    }
+
+    /**
+     * ADR-0011 p.9: locul e confirmat de utilizatori cu cel puțin LOCATION_CONFIRM_MIN voturi „Da” pe revizia
+     * curentă și mai multe „Da” decât „Nu”. Votul autorului nu se numără. Mutarea pinului face revizie nouă,
+     * deci aici numărătoarea pornește automat de la zero.
+     */
+    private function refreshLocationConfirmation(CivicSubject $subject): void
+    {
+        if (!$subject->hasLocation()) {
+            $subject->applyLocationVotes(0, false);
+
+            return;
+        }
+        $counts = $this->em->getConnection()->fetchAllKeyValue(
+            'SELECT v.value, COUNT(*) FROM vote v JOIN subject_revision r ON r.id = v.revision_id
+             WHERE v.subject_id = ? AND v.vote_type_code = ? AND r.number = ? AND v.user_id <> ?
+             GROUP BY v.value',
+            [$subject->getId()->toRfc4122(), DefaultVoteTypes::LOCATION, $subject->getRevisionNumber(), $subject->getAuthor()->getId()->toRfc4122()],
+        );
+        $yes = (int) ($counts[1] ?? 0);
+        $no = (int) ($counts[0] ?? 0);
+        $subject->applyLocationVotes($yes, $yes >= $this->locationConfirmMin && $yes > $no);
     }
 
     /**

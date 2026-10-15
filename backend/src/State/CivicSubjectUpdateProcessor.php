@@ -13,6 +13,7 @@ use App\Repository\CivicSubjectRepository;
 use App\Subject\SubjectStage;
 use App\Subject\SubjectType;
 use App\Subject\CostEstimate;
+use App\Subject\SubjectLocation;
 use App\Subject\SubjectVisibility;
 use App\Subject\PublishingPolicy;
 use App\Subject\SubjectRevisions;
@@ -22,6 +23,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -39,6 +41,7 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
         private readonly PublishingPolicy $policy,
         private readonly SubjectRevisions $revisions,
         private readonly SlugRegistry $slugs,
+        private readonly SubjectLocation $location,
     ) {
     }
 
@@ -61,6 +64,9 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
         if (!$isAdmin && $type?->isAdminOnly()) {
             throw new AccessDeniedHttpException('Doar administratorii pot folosi acest tip.');
         }
+        if (!$isAdmin && $data->locationConfirmed !== null) {
+            throw new AccessDeniedHttpException('Doar administratorii pot confirma locul direct; ceilalți utilizatori confirmă prin vot.');
+        }
 
         if (!$user instanceof User) {
             throw new AccessDeniedHttpException('Autentificare necesară.');
@@ -78,11 +84,22 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
             }
             // An author under moderation cannot replace already approved public content unchecked.
             $contentChanged = $data->title !== null || $data->description !== null || $data->type !== null
-                || array_intersect(['costEstimate', 'costCurrency', 'costEstimateScope'], array_keys(get_object_vars($data))) !== [];
+                || array_intersect(['costEstimate', 'costCurrency', 'costEstimateScope'], array_keys(get_object_vars($data))) !== []
+                || SubjectLocation::present($data); // ADR-0011 p.12: mutarea pinului e editare de revizie
             if ($contentChanged && !$isAdmin && !$this->policy->canPublish($subject->getAuthor()) && $subject->getVisibility() === SubjectVisibility::PUBLISHED) {
                 $subject->moderate(null, SubjectVisibility::PENDING);
             }
             CostEstimate::apply($subject, get_object_vars($data), $type ?? $subject->getType());
+            if (SubjectLocation::present($data)) {
+                $this->location->apply($subject, $data->location);
+            }
+            if ($data->locationConfirmed !== null) {
+                if (!$subject->hasLocation()) {
+                    throw new UnprocessableEntityHttpException('Subiectul nu are localizare de confirmat.');
+                }
+                // Fără revizie: bifa nu schimbă locul (ADR-0011 p.11).
+                $subject->confirmLocationByAdmin($data->locationConfirmed);
+            }
             $subject->edit($data->title, $data->description, $type);
             if ($data->title !== null) {
                 // ADR-0008: slug nou după titlu; cel vechi rămâne valid (301) dacă subiectul era public.

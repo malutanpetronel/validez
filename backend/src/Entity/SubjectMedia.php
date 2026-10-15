@@ -12,9 +12,9 @@ use Symfony\Bridge\Doctrine\Types\UlidType;
 use Symfony\Component\Uid\Ulid;
 
 /**
- * Fotografie atașată unui subiect (ADR-0011). Nu face parte din revizie (p.2): adăugarea sau scoaterea nu
- * atinge SubjectRevision. La scoatere fișierele se șterg de pe disc, dar rândul rămâne cu removedAt, pentru
- * istoricul public al adăugărilor și scoaterilor (M.2).
+ * Fotografie sau link atașat unui subiect (ADR-0011). Nu face parte din revizie (p.2): adăugarea sau scoaterea
+ * nu atinge SubjectRevision. La scoatere fișierele se șterg de pe disc, dar rândul rămâne cu removedAt, pentru
+ * istoricul public al adăugărilor și scoaterilor.
  */
 #[ORM\Entity(repositoryClass: SubjectMediaRepository::class)]
 #[ORM\Table(name: 'subject_media')]
@@ -23,6 +23,7 @@ use Symfony\Component\Uid\Ulid;
 class SubjectMedia
 {
     public const KIND_PHOTO = 'PHOTO';
+    public const KIND_LINK = 'LINK';
 
     #[ORM\Id]
     #[ORM\Column(type: UlidType::NAME)]
@@ -38,7 +39,7 @@ class SubjectMedia
     private ?User $uploadedBy;
 
     #[ORM\Column(length: 16)]
-    private string $kind = self::KIND_PHOTO;
+    private string $kind;
 
     #[ORM\Column(length: 16, enumType: MediaStatus::class)]
     private MediaStatus $status;
@@ -46,15 +47,22 @@ class SubjectMedia
     #[ORM\Column]
     private int $position;
 
-    #[ORM\Column]
-    private int $width;
+    #[ORM\Column(nullable: true)]
+    private ?int $width = null;
 
-    #[ORM\Column]
-    private int $height;
+    #[ORM\Column(nullable: true)]
+    private ?int $height = null;
 
     /** Dimensiunea variantei de afișare (originalul nu se păstrează). */
-    #[ORM\Column]
-    private int $byteSize;
+    #[ORM\Column(nullable: true)]
+    private ?int $byteSize = null;
+
+    /** Linkuri: doar http/https (ADR-0011 p.8); serverul nu descarcă pagina. */
+    #[ORM\Column(length: 2048, nullable: true)]
+    private ?string $url = null;
+
+    #[ORM\Column(length: 200, nullable: true)]
+    private ?string $label = null;
 
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
@@ -69,28 +77,48 @@ class SubjectMedia
     #[ORM\JoinColumn(name: 'removed_by_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?User $removedBy = null;
 
-    public function __construct(CivicSubject $subject, User $uploadedBy, MediaStatus $status, int $position, int $width, int $height, int $byteSize)
+    private function __construct(string $kind, CivicSubject $subject, User $uploadedBy, MediaStatus $status, int $position)
     {
         $this->id = new Ulid();
+        $this->kind = $kind;
         $this->subject = $subject;
         $this->uploadedBy = $uploadedBy;
         $this->status = $status;
         $this->position = $position;
-        $this->width = $width;
-        $this->height = $height;
-        $this->byteSize = $byteSize;
         $this->createdAt = new \DateTimeImmutable();
+    }
+
+    public static function photo(CivicSubject $subject, User $uploadedBy, MediaStatus $status, int $position, int $width, int $height, int $byteSize): self
+    {
+        $m = new self(self::KIND_PHOTO, $subject, $uploadedBy, $status, $position);
+        $m->width = $width;
+        $m->height = $height;
+        $m->byteSize = $byteSize;
+
+        return $m;
+    }
+
+    public static function link(CivicSubject $subject, User $uploadedBy, MediaStatus $status, int $position, string $url, ?string $label): self
+    {
+        $m = new self(self::KIND_LINK, $subject, $uploadedBy, $status, $position);
+        $m->url = $url;
+        $m->label = $label;
+
+        return $m;
     }
 
     public function getId(): Ulid { return $this->id; }
     public function getSubject(): CivicSubject { return $this->subject; }
     public function getUploadedBy(): ?User { return $this->uploadedBy; }
     public function getKind(): string { return $this->kind; }
+    public function isPhoto(): bool { return $this->kind === self::KIND_PHOTO; }
     public function getStatus(): MediaStatus { return $this->status; }
     public function getPosition(): int { return $this->position; }
-    public function getWidth(): int { return $this->width; }
-    public function getHeight(): int { return $this->height; }
-    public function getByteSize(): int { return $this->byteSize; }
+    public function getWidth(): ?int { return $this->width; }
+    public function getHeight(): ?int { return $this->height; }
+    public function getByteSize(): ?int { return $this->byteSize; }
+    public function getUrl(): ?string { return $this->url; }
+    public function getLabel(): ?string { return $this->label; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
     public function getApprovedAt(): ?\DateTimeImmutable { return $this->approvedAt; }
     public function getRemovedAt(): ?\DateTimeImmutable { return $this->removedAt; }

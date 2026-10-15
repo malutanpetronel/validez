@@ -74,7 +74,7 @@ final class VoteSchemaTest extends KernelTestCase
     public function testVoteTypesAreSeededWithValidRanges(): void
     {
         $rows = $this->db->fetchAllKeyValue('SELECT code, min_value || \'-\' || max_value FROM vote_type ORDER BY code');
-        self::assertSame(['IMPORTANCE' => '1-5', 'VALIDITY' => '0-1', 'YES_NO' => '0-1'], $rows);
+        self::assertSame(['IMPORTANCE' => '1-5', 'LOCATION' => '0-1', 'VALIDITY' => '0-1', 'YES_NO' => '0-1'], $rows);
         $this->assertRejected("INSERT INTO vote_type (code, min_value, max_value) VALUES ('BAD', 3, 1)");
         self::assertFalse((new VoteType('X', 1, 5))->accepts(0));
     }

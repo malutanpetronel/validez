@@ -30,6 +30,9 @@ final class CivicSubjectCreateInput
     public ?string $costCurrency;
     public ?string $costEstimateScope;
 
+    /** ADR-0011 p.9: {lat, lng, source?}; neinițializat = fără pin. Validat în SubjectLocation. */
+    public ?array $location;
+
     /** @return list<string> */
     public static function types(): array
     {

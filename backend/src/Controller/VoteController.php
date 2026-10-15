@@ -103,6 +103,7 @@ final class VoteController extends AbstractController
             'title' => $r->getTitle(),
             'description' => $r->getDescription(),
             'estimate' => $r->publicEstimate(),
+            'location' => $r->getLocation(),
             'byAuthor' => $r->getCreatedBy()->getId()->equals($subject->getAuthor()->getId()),
             'createdAt' => $r->getCreatedAt()->format(\DATE_ATOM),
         ], $revisions)], false);
