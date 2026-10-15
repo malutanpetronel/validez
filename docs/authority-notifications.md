@@ -72,7 +72,7 @@ Regulile de transmitere pot impune cumulativ, de exemplu:
 - minimum 20 de validări;
 - peste 80% voturi „Validez”;
 - minimum 5 utilizatori diferiți;
-- cel puțin 3 fotografii;
+- cel puțin N fotografii, doar dacă regula o cere (fotografiile sunt opționale pe subiect — ADR-0011);
 - localizare GPS confirmată.
 
 Aceste valori sunt exemple configurabile, nu praguri implementate sau valori implicite stabilite. Pentru `VALIDITY`, „Validez / Invalidez” corespund valorilor modelului de vot existent; procentul se calculează din voturile active relevante. Un utilizator are un singur vot activ per subiect/tip: numărul validărilor nu se umflă prin numărarea schimbărilor din `VoteEvent`. Metoda de confirmare GPS și semnificația verificării fotografiilor trebuie definite la implementare.

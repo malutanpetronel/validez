@@ -16,6 +16,7 @@ Deciziile de arhitectură ale proiectului Validez, formalizate ca ADR-uri. Numă
 | [0008](0008-public-urls-slugs-and-indexing.md) | Public URLs with slugs and web indexing (SEO shell) | Accepted |
 | [0009](0009-erasure-registry-for-restores.md) | Erasure registry reapplied after database restores | Accepted |
 | [0010](0010-access-logs-and-vote-routes.md) | Access logs without vote routes | Accepted |
+| [0011](0011-subject-media-links-and-location.md) | Subject media, links and location | Accepted |
 
 ## Template
 
