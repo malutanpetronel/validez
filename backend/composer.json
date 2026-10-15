@@ -6,7 +6,9 @@
     "require": {
         "php": ">=8.2",
         "ext-ctype": "*",
+        "ext-fileinfo": "*",
         "ext-iconv": "*",
+        "ext-imagick": "*",
         "altcha-org/altcha": "^2.1",
         "api-platform/doctrine-orm": "^4.2",
         "api-platform/symfony": "^4.2",

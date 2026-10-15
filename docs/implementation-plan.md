@@ -181,7 +181,11 @@ Build-ul mobil este verificat încă din Step 1 și la integrarea funcționalit�
 
 ## Step 3 — media, linkuri și localizare (ADR-0011)
 
-- [ ] **M.1 — fotografii (BE):** entitate pentru media subiectului, upload cu verificarea tipului după conținut, limite (10 MB, 10/subiect), re-encodare fără metadate + miniatură, scoatere cu ștergerea fișierului, servire prin controller cu verificarea vizibilității + `X-Accel-Redirect`, `PENDING` pentru autorii sub moderare; teste.
+- [x] **M.1 — fotografii (BE):** entitate pentru media subiectului, upload cu verificarea tipului după conținut, limite (10 MB, 10/subiect), re-encodare fără metadate + miniatură, scoatere cu ștergerea fișierului, servire prin controller cu verificarea vizibilității + `X-Accel-Redirect`, `PENDING` pentru autorii sub moderare; teste.
+  - Imaginea PHP are Imagick + libheif (decodor libde265); ieșire WebP: afișare 1600 px, miniatură 400 px. Adaugă și scot fotografii doar autorul subiectului și adminii (decizie 15.10.2026).
+  - Endpoint-uri: `GET|POST /api/civic_subjects/{id}/media`, `GET /api/media/{id}/display|thumb`, `DELETE /api/media/{id}`, `POST /api/media/{id}/approve`, `GET /api/moderation/media`.
+  - Fișierele stau în `MEDIA_DIR` (implicit `/var/www/validez-media`, aceeași cale în php și nginx); pe dev e `backend/var/media`. Pe producție nu se deployează înainte de M.3 (montaj + imagine PHP reconstruită).
+  - Pentru M.4: `<img>` nu trimite tokenul JWT, deci media `PENDING` (vizibile doar autorului și adminilor) se încarcă în FE prin `fetch` cu autorizare + blob URL.
 - [ ] **M.2 — linkuri și localizare (BE):** linkuri `http`/`https` (10/subiect, aceeași moderare ca fotografiile), punct pe hartă în revizia subiectului, cu sursă și „confirmată” (fără revizie), istoricul public al adăugărilor și scoaterilor de media; teste.
 - [ ] **M.3 — infrastructură:** `/srv/www/validez-be.webnou.ro/uploads` în locul montajului de sub `public/uploads`, locație nginx `internal`, backupul zilnic extins cu media, `Deploy.md` (E, E2, E3).
 - [ ] **M.4 — frontend:** galerie și upload (fișier + cameră pe Cordova), avertismentul despre persoane, linkuri, hartă Leaflet/OpenStreetMap cu „locația mea”, vechiul și noul punct la reconfirmare, media în așteptare în `#/moderare`.

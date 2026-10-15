@@ -15,6 +15,8 @@ parameters:
     seo_shell_template_default: '/var/www/validez-fe/shared/seo/index.html'
     # S.4: subiecte pe fisier de sitemap (limita Google: 50.000)
     sitemap_page_size_default: 10000
+    # ADR-0011: media subiectelor, in afara public/; montat la aceeasi cale in php si nginx (dev si prod).
+    media_dir_default: '/var/www/validez-media'
 
 services:
     # default configuration for services in *this* file
@@ -57,6 +59,11 @@ services:
         arguments:
             $directory: '%env(default:erasure_registry_dir_default:ERASURE_REGISTRY_DIR)%'
             $retentionDays: '%erasure_registry_retention_days%'
+
+    App\Media\MediaStorage:
+        arguments:
+            $directory: '%env(default:media_dir_default:MEDIA_DIR)%'
+            $projectDir: '%kernel.project_dir%'
 
 when@test:
     services:

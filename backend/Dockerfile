@@ -12,6 +12,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-install pdo_pgsql intl mbstring zip pcntl gd opcache \
     && rm -rf /var/lib/apt/lists/*
 
+# ADR-0011 (Step 3, M.1): fotografiile subiectelor se re-encodeaza cu Imagick - citire HEIC (libheif +
+# decodorul HEVC libde265, plugin separat in trixie), rotire dupa EXIF, eliminarea metadatelor, iesire WebP.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagickwand-dev libheif-plugin-libde265 \
+    && pecl install imagick \
+    && docker-php-ext-enable imagick \
+    && rm -rf /var/lib/apt/lists/* /tmp/pear
+
+# Limita aplicatiei e 10 MB per fotografie (ADR-0011); PHP primeste putin peste, ca eroarea sa fie a aplicatiei.
+RUN printf 'upload_max_filesize=12M\npost_max_size=13M\n' > /usr/local/etc/php/conf.d/zz-uploads.ini
+
 # Datele se stocheaza in UTC; php-fpm si CLI folosesc acelasi ini.
 RUN echo "date.timezone=UTC" > /usr/local/etc/php/conf.d/zz-timezone.ini
 # Doar FPM: CLI are nevoie de argv pentru console/composer.

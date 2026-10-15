@@ -25,6 +25,8 @@ services:
     container_name: validez-php
     volumes:
       - ./:/var/www/validez-be
+      # ADR-0011: media subiectelor, in afara public/ (pe prod: /srv/www/validez-be.webnou.ro/uploads, M.3).
+      - ./var/media:/var/www/validez-media
       # ADR-0008, S.3: sablonul shell-ului SEO, la aceeasi cale ca pe productie (acolo il copiaza ansible).
       # Pe dev exista dupa un `npx react-scripts build` in frontend/.
       - ../frontend/build:/var/www/validez-fe/shared/seo:ro
@@ -48,6 +50,7 @@ services:
     volumes:
       - ./:/var/www/validez-be:ro
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./var/media:/var/www/validez-media:ro
     depends_on:
       - php
 
