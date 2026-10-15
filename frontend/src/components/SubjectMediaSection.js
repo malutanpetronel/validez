@@ -93,6 +93,7 @@ export default function SubjectMediaSection({subject, canManage}) {
     const items = Array.isArray(data?.items) ? data.items : [];
     const photos = items.filter((m) => m.kind === 'PHOTO');
     const links = items.filter((m) => m.kind === 'LINK');
+    const pendingCount = items.filter((m) => m.status === 'PENDING').length;
     const isPublicImage = (m) => subjectPublic && m.status === 'PUBLISHED';
     const after = (saved) => {
         setNotice(saved?.status === 'PENDING' ? 'Salvat. Va fi vizibil public după aprobarea unui administrator.' : null);
@@ -139,6 +140,11 @@ export default function SubjectMediaSection({subject, canManage}) {
                         </Box>
                     ))}
                 </Box>
+            )}
+            {pendingCount > 0 && (
+                <Typography variant="caption" color="text.secondary">
+                    Cele marcate „În așteptare” le vezi doar tu și administratorii, până la aprobare. Ele intră deja în limita de {data.max} fotografii / {data.maxLinks} linkuri.
+                </Typography>
             )}
 
             {canManage && data && (
