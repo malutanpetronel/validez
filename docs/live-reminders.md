@@ -50,14 +50,14 @@ Marcaje: **[PE LAPTOP]** = `<checkout-validez>` sau checkout-ul Ansible de pe la
 ## 7. După primul deploy
 
 - [x] **[PE SERVER]** Primul administrator, interactiv (parola se cere ascuns, fără `-T`): `docker exec -it -u devuser validez_be_php php /var/www/validez-be/bin/console app:user:create adresa@exemplu.ro "Nume Prenume" --admin --env=prod` (ca în `Deploy.md`). — făcut.
-- [ ] Verificări HTTP pe live:
+- [x] Verificări HTTP pe live: — toate subpunctele verificate (15.10.2026).
   - [x] `GET https://validez-be.webnou.ro/api/tree_nodes` → 200 fără autentificare.
   - [x] `POST https://validez-be.webnou.ro/api/tree_nodes` fără token → 401.
   - [x] `https://validez-be.webnou.ro/api/docs` → 404 din proxy (vhost.d), nu din Symfony.
   - [x] CORS doar pentru `https://validez.webnou.ro` (și `http://localhost` pentru WebView-ul Cordova).
   - [x] Login din FE cu ALTCHA, creare nod, refresh după 30 de minute fără re-login. — verificat 15.10.2026: login + creare nod ok; în Network `tree_nodes` 401 → `refresh` 200 → `tree_nodes` 201 (token de acces stricat manual); expirarea reală de 30 min nu a fost așteptată separat.
   - [x] Înregistrare publică: email cu cod, confirmare, login automat, retrimitere după cooldown; un cont neconfirmat nu poate intra — verificat 12.10.2026.
-  - [ ] Mai multe cereri succesive la API: toate corecte, niciun „File not found." (ar indica nginx care ajunge la PHP-ul altui proiect — aliasul `validez-fpm` și rețeaua `validez_be_internal` sunt acolo exact pentru asta).
+  - [x] Mai multe cereri succesive la API: toate corecte, niciun „File not found." (ar indica nginx care ajunge la PHP-ul altui proiect — aliasul `validez-fpm` și rețeaua `validez_be_internal` sunt acolo exact pentru asta). — verificat 15.10.2026: 30 cereri `GET /api/tree_nodes` → 30×200, niciun „File not found.”.
   - [x] Login greșit de 6 ori → blocare; de pe alt IP → încă merge (confirmă `SYMFONY_TRUSTED_PROXIES`) — verificat 12.10.2026, telefon pe date mobile.
 
 ## 8. Mentenanță periodică
@@ -75,7 +75,7 @@ Marcaje: **[PE LAPTOP]** = `<checkout-validez>` sau checkout-ul Ansible de pe la
 ## 10. Confidențialitate
 
 - [x] Confirmă operatorul și contactul Validez pentru pagina `#/privacy`, precum și perioadele de păstrare și furnizorii reali de găzduire/email înainte de publicarea politicii. — decis 14.10.2026 (operator, retenție, găzduire; vezi pagina privacy).
-- [ ] Verifică informarea cookie, redeschiderea și pagina privacy pe browser și Android; verifică și accesul din înregistrare.
+- [x] Verifică informarea cookie, redeschiderea și pagina privacy pe browser și Android; verifică și accesul din înregistrare. — verificat 15.10.2026 pe browser și Android.
 - [x] **Android, API de producție** (15.10.2026, verificat de Petro pe telefon: arborele se încarcă după `npm run android`): hook-ul `frontend/hooks/check-api-base.js` (`before_prepare`, doar Android) oprește `cordova run/build android` dacă `www/` conține build-ul de dev (`http://localhost:8020` din `.env.local`) — `npm run build && cordova run android` nu mai poate instala o aplicație cu arborele gol.
 - [x] **Voturi (ADR-0007), înainte de activare pe producție:** rolul PostgreSQL al aplicației nu trebuie să fie owner pe `integrity_event_log` (owner-ul poate face `TRUNCATE`, poate dezactiva sau elimina triggerul append-only). Migrațiile rulează cu un rol separat de cel folosit de aplicație la runtime, iar rolul aplicației primește doar `SELECT, INSERT` pe jurnal. Configurarea curentă încă folosește același utilizator (`validez`). Scriptul [configure-roles.sql](../backend/docker/postgres/admin/configure-roles.sql) și [instrucțiunile](postgresql-roles.md) sunt pregătite și testate local cu rollback; nu sunt aplicate pe producție. Adaptarea Compose/playbookului trebuie să elimine și secretele administrative/de migrare din fișierele montate în PHP, nu doar să schimbe `DATABASE_URL`. Scriptul se reaplică după migrări, înainte de trafic. — aplicat pe producție 13.10.2026 (`Deploy.md` secțiunea F: roluri `validez_owner`/`validez_migrator`/`validez_app`, runtime doar cu `validez_app`).
 - [x] **Voturi, activare (13.10.2026):** rolurile PostgreSQL separate aplicate; secțiunea „Voturi” din privacy în versiunea 2026-10-13 (termene concrete: urmele de integritate cât timp există subiectul și rezultatele lui, copiile de siguranță cel mult 30 de zile); `VOTING_ENABLED=true` în `/var/www/validez-be/shared/backend/.env`, deploy BE cu `-e validez_allow_voting=true`. Verificarea juridică de specialitate rămâne de făcut; dacă schimbă prelucrarea semnificativ, se incrementează versiunea informării (rândul următor).
