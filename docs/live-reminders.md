@@ -55,14 +55,14 @@ Marcaje: **[PE LAPTOP]** = `<checkout-validez>` sau checkout-ul Ansible de pe la
   - [x] `POST https://validez-be.webnou.ro/api/tree_nodes` fără token → 401.
   - [x] `https://validez-be.webnou.ro/api/docs` → 404 din proxy (vhost.d), nu din Symfony.
   - [x] CORS doar pentru `https://validez.webnou.ro` (și `http://localhost` pentru WebView-ul Cordova).
-  - [ ] Login din FE cu ALTCHA, creare nod, refresh după 30 de minute fără re-login.
+  - [x] Login din FE cu ALTCHA, creare nod, refresh după 30 de minute fără re-login. — verificat 15.10.2026: login + creare nod ok; în Network `tree_nodes` 401 → `refresh` 200 → `tree_nodes` 201 (token de acces stricat manual); expirarea reală de 30 min nu a fost așteptată separat.
   - [x] Înregistrare publică: email cu cod, confirmare, login automat, retrimitere după cooldown; un cont neconfirmat nu poate intra — verificat 12.10.2026.
   - [ ] Mai multe cereri succesive la API: toate corecte, niciun „File not found." (ar indica nginx care ajunge la PHP-ul altui proiect — aliasul `validez-fpm` și rețeaua `validez_be_internal` sunt acolo exact pentru asta).
   - [x] Login greșit de 6 ori → blocare; de pe alt IP → încă merge (confirmă `SYMFONY_TRUSTED_PROXIES`) — verificat 12.10.2026, telefon pe date mobile.
 
 ## 8. Mentenanță periodică
 
-- [ ] **[PE SERVER]** Curățarea refresh token-urilor expirate (tabela `refresh_token` crește la fiecare login/refresh, cu rotație): cron zilnic, linia din `Deploy.md` pasul 13 (`crontab -e`): `30 4 * * * docker exec -u devuser validez_be_php php /var/www/validez-be/bin/console gesdinet:jwt:clear --env=prod >/dev/null 2>&1`.
+- [x] **[PE SERVER]** Curățarea refresh token-urilor expirate (tabela `refresh_token` crește la fiecare login/refresh, cu rotație): cron zilnic, linia din `Deploy.md` pasul 13 (`crontab -e`): `30 4 * * * docker exec -u devuser validez_be_php php /var/www/validez-be/bin/console gesdinet:jwt:clear --env=prod >/dev/null 2>&1` — pus și verificat 15.10.2026.
 - [ ] Backup pentru `/srv/www/validez-be.webnou.ro/db_data` (sau `pg_dump` programat).
 
 ## 9. De știut (fără acțiune imediată)
