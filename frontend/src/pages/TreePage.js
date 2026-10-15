@@ -57,6 +57,14 @@ export default function TreePage() {
     const [returnContext] = useState(() => location.state?.treeReturn);
     const [subjectBranches, setSubjectBranches] = useState({});
     const [selectedSubject, setSelectedSubject] = useState(null);
+    // Contor pentru SubjectPage.focusTitle: crește la fiecare selectare a unui subiect după încărcarea paginii
+    // (click în arbore sau în lista categoriei), nu la deschiderea directă dintr-un URL.
+    const [focusSubject, setFocusSubject] = useState(0);
+    // Subiect deschis din lista categoriei (link → adresa nouă): aceeași aducere în vedere. Prima intrare în aplicație
+    // are location.key „default” - acolo (adresă deschisă direct sau reîncărcare) nu derulăm.
+    useEffect(() => {
+        if (selectedSubject && location.key !== 'default') setFocusSubject((n) => n + 1);
+    }, [selectedSubject, location.key]);
     const [subjectNodeKey, setSubjectNodeKey] = useState(null);
     const [urlError, setUrlError] = useState(null);
     // Doar un 404 real scoate pagina din index; o eroare de retea / API indisponibil nu (ADR-0008).
@@ -315,6 +323,8 @@ export default function TreePage() {
         setSelectedSubject(subject.id);
         setSubjectNodeKey(subject.nodeId ?? null);
         setUrlError(null);
+        // Și la un nou click pe subiectul deja deschis: titlul revine în vedere.
+        setFocusSubject((n) => n + 1);
         goTo(subject.canonicalPath ?? null);
     };
     const decorate = (nodes) => nodes.map((node) => {
@@ -506,7 +516,7 @@ export default function TreePage() {
                 {urlError ? <Alert severity="warning">{urlError}</Alert> :
                     selectedSubject ? <Stack spacing={1.5} sx={{minWidth: 0}}>
                         <CategoryBreadcrumbs items={crumbs}/>
-                        <SubjectPage key={selectedSubject} subjectId={selectedSubject} embedded meta onUpdated={(subject) => {
+                        <SubjectPage key={selectedSubject} subjectId={selectedSubject} embedded meta focusTitle={focusSubject} onUpdated={(subject) => {
                             loadBranch(subject.nodeId, true).catch(showError);
                             if (subject.canonicalPath) goTo(subject.canonicalPath, true);
                         }}/>

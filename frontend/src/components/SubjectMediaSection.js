@@ -11,37 +11,17 @@ import LinkIcon from '@mui/icons-material/Link';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import HistoryIcon from '@mui/icons-material/History';
-import {
-    absoluteMediaUrl, addLink, fetchMedia, fetchMediaHistory, fetchProtectedImage, removeMedia, uploadPhoto,
-} from '../api/media';
+import {addLink, fetchMediaHistory, removeMedia, uploadPhoto} from '../api/media';
 import {hasCordovaCamera, pickWithCordovaCamera, prepareImage} from '../media/prepareImage';
+import {isPublicPhoto} from '../media/useSubjectMedia';
 import {formatDate} from '../subjects/labels';
+import MediaImage from './MediaImage';
+import PhotoViewer from './PhotoViewer';
 
 const PEOPLE_WARNING = 'Nu include fețe sau numere de înmatriculare care nu sunt necesare. Metadatele (inclusiv locul unde a fost făcută poza) se elimină automat.';
 const VIDEO_HOSTS = /(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/i;
 
 const hostOf = (url) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } };
-
-/**
- * Imaginea unei fotografii: publică (subiect publicat, media aprobată) direct prin <img>, cu cache; altfel cu
- * autorizare, ca blob URL - <img> nu trimite tokenul JWT.
- */
-export function MediaImage({item, variant = 'thumb', isPublic, alt, sx}) {
-    const path = variant === 'thumb' ? item.thumbUrl : item.displayUrl;
-    const [src, setSrc] = useState(isPublic ? absoluteMediaUrl(path) : null);
-    const [failed, setFailed] = useState(false);
-    useEffect(() => {
-        if (isPublic) { setSrc(absoluteMediaUrl(path)); return undefined; }
-        let active = true;
-        let url = null;
-        fetchProtectedImage(path).then((u) => { url = u; if (active) setSrc(u); else URL.revokeObjectURL(u); })
-            .catch(() => { if (active) setFailed(true); });
-        return () => { active = false; if (url) URL.revokeObjectURL(url); };
-    }, [path, isPublic]);
-    if (failed) return <Box sx={{...sx, display: 'grid', placeItems: 'center', bgcolor: 'action.hover'}}><Typography variant="caption">Indisponibilă</Typography></Box>;
-    return src ? <Box component="img" src={src} alt={alt} loading="lazy" sx={{objectFit: 'cover', display: 'block', ...sx}}/>
-        : <Box sx={{...sx, bgcolor: 'action.hover'}}/>;
-}
 
 function History({subjectId, version}) {
     const [events, setEvents] = useState(null);
@@ -69,35 +49,24 @@ function History({subjectId, version}) {
 /**
  * Fotografiile și linkurile subiectului (ADR-0011). Adaugă și scot doar autorul subiectului și administratorii;
  * la autorii sub moderare, media noi așteaptă aprobarea individual (p.12). Media nu creează revizie (p.2).
+ * Datele vin din useSubjectMedia (aceleași cu coperta); vizualizatorul e comandat de pagină (`viewer`), ca și
+ * coperta să-l poată deschide.
  */
-export default function SubjectMediaSection({subject, canManage}) {
-    const [data, setData] = useState(null);
-    const [version, setVersion] = useState(0);
+export default function SubjectMediaSection({subject, canManage, media, viewer, onViewer}) {
+    const {data, items, photos, links, version, reload} = media;
     const [error, setError] = useState(null);
     const [notice, setNotice] = useState(null);
     const [busy, setBusy] = useState(false);
-    const [open, setOpen] = useState(null);
     const [confirm, setConfirm] = useState(null);
     const [link, setLink] = useState({url: '', label: ''});
     const [showHistory, setShowHistory] = useState(false);
     const fileInput = useRef(null);
-    const subjectPublic = subject.visibility === 'PUBLISHED';
-
-    useEffect(() => {
-        let active = true;
-        fetchMedia(subject.id).then((d) => { if (active) setData(d); }).catch((e) => { if (active) setError(e.message); });
-        return () => { active = false; };
-    }, [subject.id, version]);
-
-    // Un răspuns neașteptat (fără items) e tratat ca listă goală, nu oprește pagina subiectului.
-    const items = Array.isArray(data?.items) ? data.items : [];
-    const photos = items.filter((m) => m.kind === 'PHOTO');
-    const links = items.filter((m) => m.kind === 'LINK');
+    const listError = media.error;
     const pendingCount = items.filter((m) => m.status === 'PENDING').length;
-    const isPublicImage = (m) => subjectPublic && m.status === 'PUBLISHED';
+    const isPublicImage = (m) => isPublicPhoto(subject, m);
     const after = (saved) => {
         setNotice(saved?.status === 'PENDING' ? 'Salvat. Va fi vizibil public după aprobarea unui administrator.' : null);
-        setVersion((v) => v + 1);
+        reload();
     };
     const run = async (task) => {
         setBusy(true); setError(null); setNotice(null);
@@ -114,9 +83,9 @@ export default function SubjectMediaSection({subject, canManage}) {
         setLink({url: '', label: ''});
         return saved;
     });
-    const remove = (item) => { setConfirm(null); setOpen(null); run(() => removeMedia(item.id)); };
+    const remove = (item) => { setConfirm(null); onViewer(null); run(() => removeMedia(item.id)); };
 
-    if (!data && !error) return null;
+    if (!data && !listError) return null;
     if (data && !items.length && !canManage) {
         return <Box><Button size="small" startIcon={<HistoryIcon/>} onClick={() => setShowHistory((s) => !s)}>Istoric fotografii și linkuri</Button>
             <Collapse in={showHistory} unmountOnExit><History subjectId={subject.id} version={version}/></Collapse></Box>;
@@ -125,14 +94,15 @@ export default function SubjectMediaSection({subject, canManage}) {
     return (
         <Stack spacing={1.5}>
             <Typography variant="subtitle1" component="h2" sx={{fontWeight: 600}}>Fotografii și linkuri</Typography>
-            {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
+            {(error || listError) && <Alert severity="error" onClose={() => setError(null)}>{error || listError}</Alert>}
             {notice && <Alert severity="info" onClose={() => setNotice(null)}>{notice}</Alert>}
 
-            {photos.length > 0 && (
+            {/* O singură fotografie, pentru cine nu o poate scoate, apare doar ca copertă. */}
+            {(photos.length > 1 || (canManage && photos.length > 0)) && (
                 <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 1}}>
-                    {photos.map((m) => (
+                    {photos.map((m, index) => (
                         <Box key={m.id} sx={{position: 'relative'}}>
-                            <Box component="button" type="button" onClick={() => setOpen(m)} aria-label="Deschide fotografia"
+                            <Box component="button" type="button" onClick={() => onViewer(index)} aria-label={`Deschide fotografia ${index + 1}`}
                                  sx={{p: 0, border: 0, width: '100%', cursor: 'pointer', borderRadius: 2, overflow: 'hidden', bgcolor: 'transparent'}}>
                                 <MediaImage item={m} isPublic={isPublicImage(m)} alt={`Fotografie la „${subject.title}”`} sx={{width: '100%', aspectRatio: '1 / 1'}}/>
                             </Box>
@@ -203,19 +173,10 @@ export default function SubjectMediaSection({subject, canManage}) {
                 <Collapse in={showHistory} unmountOnExit><History subjectId={subject.id} version={version}/></Collapse>
             </Box>
 
-            <Dialog open={!!open} onClose={() => setOpen(null)} maxWidth="lg">
-                {open && <>
-                    <DialogContent sx={{p: 1}}>
-                        <MediaImage item={open} variant="display" isPublic={isPublicImage(open)} alt={`Fotografie la „${subject.title}”`}
-                                    sx={{maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', mx: 'auto'}}/>
-                        <Typography variant="caption" color="text.secondary" sx={{display: 'block', px: 1, pt: 0.5}}>Adăugată {formatDate(open.createdAt)}</Typography>
-                    </DialogContent>
-                    <DialogActions>
-                        {canManage && <Button color="error" startIcon={<DeleteOutlineIcon/>} disabled={busy} onClick={() => setConfirm(open)}>Scoate fotografia</Button>}
-                        <Button onClick={() => setOpen(null)}>Închide</Button>
-                    </DialogActions>
-                </>}
-            </Dialog>
+            <PhotoViewer photos={photos} index={viewer} onIndex={onViewer} onClose={() => onViewer(null)} isPublic={isPublicImage}
+                         title={subject.title} actions={canManage ? (photo) => (
+                             <Button color="error" startIcon={<DeleteOutlineIcon/>} disabled={busy} onClick={() => setConfirm(photo)}>Scoate fotografia</Button>
+                         ) : undefined}/>
 
             <Dialog open={!!confirm} onClose={() => setConfirm(null)}>
                 <DialogTitle>{confirm?.kind === 'PHOTO' ? 'Scoți fotografia?' : 'Scoți linkul?'}</DialogTitle>

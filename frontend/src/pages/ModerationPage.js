@@ -5,7 +5,7 @@ import {useAuth} from '../auth/AuthContext';
 import usePageMeta from '../seo/usePageMeta';
 import {fetchSubjects, updateSubject} from '../api/subjects';
 import {approveMedia, fetchPendingMedia, removeMedia} from '../api/media';
-import {MediaImage} from '../components/SubjectMediaSection';
+import MediaImage from '../components/MediaImage';
 import {formatDate} from '../subjects/labels';
 
 /** ADR-0011 p.12: fotografiile și linkurile autorilor sub moderare; subiectul lor rămâne public. */

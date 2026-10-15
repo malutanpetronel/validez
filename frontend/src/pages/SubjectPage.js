@@ -4,6 +4,7 @@ import {Alert, Box, Button, Chip, Paper, Stack, Typography} from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import PlaceIcon from '@mui/icons-material/Place';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import {useAuth} from '../auth/AuthContext';
 import {fetchSubject} from '../api/subjects';
 import {canEditSubject, formatDate, locationConfirmationText, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS} from '../subjects/labels';
@@ -13,14 +14,19 @@ import AuthorPublishing from '../components/AuthorPublishing';
 import SubjectPrivateNote from '../components/SubjectPrivateNote';
 import SubjectVotes from '../components/SubjectVotes';
 import SubjectMediaSection from '../components/SubjectMediaSection';
+import MediaImage from '../components/MediaImage';
+import useSubjectMedia, {isPublicPhoto} from '../media/useSubjectMedia';
 import {SubjectMap} from '../components/SubjectMap';
 import CategoryBreadcrumbs from '../components/CategoryBreadcrumbs';
 import {fetchNodeByPath} from '../api/tree';
 import usePageMeta, {excerpt} from '../seo/usePageMeta';
 import {categoryPathOf} from '../seo/paths';
 
-/** embedded: în panoul arborelui (fără buton înapoi, breadcrumbs, redirect canonic); meta: titlul/meta paginii vin de aici. */
-export default function SubjectPage({subjectId, embedded = false, meta = false, onUpdated}) {
+/**
+ * embedded: în panoul arborelui (fără buton înapoi, breadcrumbs, redirect canonic); meta: titlul/meta paginii vin de aici.
+ * focusTitle: contor; la fiecare creștere (selectarea subiectului cu click) linia titlului e adusă în vedere și primește focus.
+ */
+export default function SubjectPage({subjectId, embedded = false, meta = false, onUpdated, focusTitle = 0}) {
     const params = useParams();
     const location = useLocation();
     const navigate = useNavigate();
@@ -33,6 +39,20 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
     const [noteVersion, setNoteVersion] = useState(0);
     const [crumbs, setCrumbs] = useState([]);
     const locationVotes = useRef(null);
+    const titleRef = useRef(null);
+    const [viewer, setViewer] = useState(null);
+    const media = useSubjectMedia(id, user?.id);
+
+    // Doar la o selectare cu click (contorul > 0), nu la deschiderea directă dintr-un URL.
+    const loadedId = subject?.id;
+    useEffect(() => {
+        if (!focusTitle || !loadedId || !titleRef.current) return undefined;
+        const frame = requestAnimationFrame(() => {
+            titleRef.current?.scrollIntoView({behavior: 'smooth', block: 'start'});
+            titleRef.current?.focus({preventScroll: true});
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [focusTitle, loadedId]);
 
     useEffect(() => {
         setSubject(null);
@@ -97,7 +117,8 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
                             {subject.visibility === 'HIDDEN' && <Chip size="small" label="Ascuns" color="error" variant="outlined"/>}
                             {subject.visibility === 'PENDING' && <Chip size="small" label="În așteptarea aprobării" color="warning" variant="outlined"/>}
                         </Stack>
-                        <Typography variant="h5" component="h1" sx={{wordBreak: 'break-word'}}>{subject.title}</Typography>
+                        <Typography ref={titleRef} tabIndex={-1} variant="h5" component="h1"
+                                    sx={{wordBreak: 'break-word', scrollMarginTop: 80, outline: 'none'}}>{subject.title}</Typography>
                         <Typography variant="body2" color="text.secondary">
                             În <Box component="strong" sx={{color: 'primary.main'}}>{subject.nodeName}</Box>
                             {' · de '}<Box component="span" sx={{color: 'primary.main', fontStyle: 'italic'}}>{subject.authorName}</Box>
@@ -105,6 +126,21 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
                             {subject.updatedAt !== subject.createdAt && <> · modificat <Box component="span" sx={{color: 'primary.main'}}>{formatDate(subject.updatedAt)}</Box></>}
                         </Typography>
                         <SubjectEstimate subject={subject}/>
+                        {media.photos.length > 0 && (() => {
+                            const cover = media.photos[0];
+                            return (
+                                <Box component="button" type="button" onClick={() => setViewer(0)}
+                                     aria-label={media.photos.length > 1 ? `Deschide fotografiile (${media.photos.length})` : 'Deschide fotografia'}
+                                     sx={{p: 0, border: 0, display: 'block', width: '100%', cursor: 'zoom-in', borderRadius: 2,
+                                         overflow: 'hidden', position: 'relative', bgcolor: 'transparent'}}>
+                                    <MediaImage key={cover.id} item={cover} variant="display" isPublic={isPublicPhoto(subject, cover)}
+                                                alt={`Fotografie la „${subject.title}”`} sx={{width: '100%', aspectRatio: '16 / 9', maxHeight: 420}}/>
+                                    {media.photos.length > 1 && <Chip size="small" icon={<PhotoLibraryIcon/>} label={`${media.photos.length} fotografii`}
+                                                                      sx={{position: 'absolute', right: 8, bottom: 8, color: '#fff', bgcolor: 'rgba(0,0,0,0.6)', '& .MuiChip-icon': {color: '#fff'}}}/>}
+                                    {cover.status === 'PENDING' && <Chip size="small" color="warning" label="În așteptare" sx={{position: 'absolute', left: 8, bottom: 8}}/>}
+                                </Box>
+                            );
+                        })()}
                         <Typography sx={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{subject.description}</Typography>
                         {subject.location && (
                             <Stack spacing={0.75}>
@@ -116,7 +152,8 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
                                 <SubjectMap key={`${subject.location.lat},${subject.location.lng}`} location={subject.location}/>
                             </Stack>
                         )}
-                        <SubjectMediaSection key={subject.id} subject={subject} canManage={canEditSubject(user, subject)}/>
+                        <SubjectMediaSection key={subject.id} subject={subject} canManage={canEditSubject(user, subject)}
+                                             media={media} viewer={viewer} onViewer={setViewer}/>
                         {isAdmin && <AuthorPublishing key={subject.authorId} authorId={subject.authorId}/>}
                         {subject.type === 'PROPOSAL' && user?.id === subject.authorId && <SubjectPrivateNote key={`${subject.id}:${noteVersion}`} subjectId={subject.id}/>}
                         {canEditSubject(user, subject) && (
