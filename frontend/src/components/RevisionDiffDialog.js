@@ -8,8 +8,25 @@ import CloseIcon from '@mui/icons-material/Close';
 import {fetchRevisions} from '../api/votes';
 import {formatDate, TYPE_LABELS} from '../subjects/labels';
 import {diffWords, onlyWhitespaceChanged} from '../subjects/wordDiff';
+import {LocationDiffMap} from './SubjectMap';
+import {distanceMeters, formatDistance} from '../map/leafletSetup';
 
 const estimateText = (e) => (e ? `${e.costEstimate} ${e.costCurrency} — ${e.costEstimateScope}` : 'fără estimare');
+const sameLocation = (a, b) => (!a && !b) || (!!a && !!b && a.lat === b.lat && a.lng === b.lng);
+
+/** ADR-0011 p.11: la reconfirmare votantul vede vechiul și noul punct. */
+function LocationDiff({before, after}) {
+    if (sameLocation(before, after)) return null;
+    const text = !before ? 'Pin adăugat pe hartă.' : !after ? 'Pinul a fost scos de pe hartă.'
+        : `Pinul a fost mutat cu ${formatDistance(distanceMeters(before, after))}.`;
+    return (
+        <Stack spacing={0.75}>
+            <Typography variant="subtitle2">Locul</Typography>
+            <Typography variant="body2">{text}{before && after && ' Cerc gri: punctul vechi; marker: punctul nou.'}</Typography>
+            <LocationDiffMap before={before} after={after}/>
+        </Stack>
+    );
+}
 
 /** Text cu diferența marcată: <del> pentru eliminat, <ins> pentru adăugat. Peste prag: versiunile separat. */
 function TextDiff({label, before, after, wide}) {
@@ -109,7 +126,9 @@ export default function RevisionDiffDialog({subjectId, from, to, onClose}) {
                                     {estimateText(a.estimate) !== estimateText(b.estimate) && (
                                         <Typography><strong>Estimare:</strong> <del>{estimateText(a.estimate)}</del> → <ins>{estimateText(b.estimate)}</ins></Typography>
                                     )}
+                                    <LocationDiff before={a.location} after={b.location}/>
                                     {a.type === b.type && a.title === b.title && a.description === b.description && estimateText(a.estimate) === estimateText(b.estimate)
+                                        && sameLocation(a.location, b.location)
                                         && <Alert severity="info">Nicio diferență vizibilă între aceste revizii.</Alert>}
                                 </Stack>
                             )}

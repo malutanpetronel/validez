@@ -156,7 +156,8 @@ export default function SubjectVotes({subjectId}) {
                 </Alert>
             )}
             {message && <Alert severity={message.severity} onClose={() => setMessage(null)}>{message.text}</Alert>}
-            {summary.types.map((type) => (
+            {/* LOCATION e inactiv cât subiectul nu are pin (ADR-0011 p.9): nu-l arătăm, dacă nu ai un vot de retras. */}
+            {summary.types.filter((type) => type.code !== 'LOCATION' || type.active || type.mine).map((type) => (
                 <Box key={type.code} sx={{p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'background.paper'}}>
                     <Stack direction="row" spacing={1} useFlexGap sx={{alignItems: 'center', flexWrap: 'wrap'}}>
                         <Typography variant="subtitle2" component="h3">{VOTE_TYPE_LABELS[type.code] ?? type.code}</Typography>

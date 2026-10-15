@@ -20,13 +20,23 @@ export const VISIBILITY_LABELS = {PUBLISHED: 'Publicat', HIDDEN: 'Ascuns', PENDI
 export const allowedTypes = (isAdmin) => (isAdmin ? Object.keys(TYPE_LABELS) : USER_TYPES);
 
 // Voturi (ADR-0007). Valorile sunt cele de pe server (VALIDITY/YES_NO 0–1, IMPORTANCE 1–5).
-export const VOTE_TYPE_LABELS = {VALIDITY: 'Validare', YES_NO: 'Susținere', IMPORTANCE: 'Importanță'};
+export const VOTE_TYPE_LABELS = {VALIDITY: 'Validare', YES_NO: 'Susținere', IMPORTANCE: 'Importanță', LOCATION: 'Locul'};
 export const VOTE_TYPE_HINTS = {
     VALIDITY: 'Ce se descrie aici este real și corect?',
     YES_NO: 'Susții această inițiativă?',
     IMPORTANCE: '1 = puțin important, 5 = foarte important',
+    // ADR-0011 p.9: votul confirmă locul; votul autorului nu se numără la confirmare.
+    LOCATION: 'Locul marcat pe hartă este corect?',
 };
-const BINARY_OPTIONS = {VALIDITY: [[1, 'Validez'], [0, 'Invalidez']], YES_NO: [[1, 'Susțin'], [0, 'Nu susțin']]};
+const BINARY_OPTIONS = {VALIDITY: [[1, 'Validez'], [0, 'Invalidez']], YES_NO: [[1, 'Susțin'], [0, 'Nu susțin']], LOCATION: [[1, 'Corect'], [0, 'Greșit']]};
+
+/** Starea confirmării locului (location din subject:read). */
+export const locationConfirmationText = (location) => {
+    if (!location) return '';
+    if (location.confirmedBy === 'ADMIN') return 'Loc confirmat de un administrator';
+    if (location.confirmedBy === 'USERS') return `Loc confirmat de ${location.confirmations} utilizatori`;
+    return location.confirmations > 0 ? `Loc neconfirmat încă (${location.confirmations} confirmări)` : 'Loc neconfirmat încă';
+};
 
 /** Opțiunile unui tip de vot, ca [valoare, etichetă]; pentru tipuri noi, intervalul primit de la server. */
 export const voteOptions = (type) => BINARY_OPTIONS[type.code]

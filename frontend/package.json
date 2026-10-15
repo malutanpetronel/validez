@@ -22,6 +22,7 @@
     "navigation-controller": "^4.0.1",
     "ra-i18n-polyglot": "^5.14.1",
     "ra-language-english": "^5.14.1",
+    "rc-tree": "^5.13.1",
     "react": "^18.2.0",
     "react-admin": "^5.14.1",
     "react-dom": "^18.2.0",
@@ -30,8 +31,7 @@
     "react-router": "^7.18.4",
     "react-router-dom": "^7.18.4",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4",
-    "rc-tree": "^5.13.1"
+    "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -72,17 +72,28 @@
   "devDependencies": {
     "cordova-android": "^12.0.1",
     "cordova-browser": "^7.0.0",
+    "cordova-plugin-camera": "^8.0.0",
+    "cordova-plugin-geolocation": "^5.0.0",
     "typescript": "^4.9.5"
   },
   "cordova": {
     "platforms": [
       "browser",
       "android"
-    ]
+    ],
+    "plugins": {
+      "cordova-plugin-camera": {
+        "ANDROIDX_CORE_VERSION": "1.6.+"
+      },
+      "cordova-plugin-geolocation": {
+        "GPS_REQUIRED": "true"
+      }
+    }
   },
   "jest": {
     "moduleNameMapper": {
-      "^react-router/dom$": "<rootDir>/node_modules/react-router/dist/development/dom-export.js"
+      "^react-router/dom$": "<rootDir>/node_modules/react-router/dist/development/dom-export.js",
+      "^react-leaflet$": "<rootDir>/src/testing/reactLeafletMock.js"
     }
   }
 }

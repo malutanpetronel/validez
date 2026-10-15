@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {
-    Alert, AppBar, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormHelperText, IconButton,
+    Alert, AppBar, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormHelperText, IconButton,
     InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography, useMediaQuery,
 } from '@mui/material';
 import {useTheme} from '@mui/material/styles';
@@ -8,6 +8,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import {useAuth} from '../auth/AuthContext';
 import {createSubject, fetchSubjectNote, saveSubjectNote, updateSubject} from '../api/subjects';
 import {allowedTypes, STAGE_LABELS, TYPE_LABELS, VISIBILITY_LABELS} from '../subjects/labels';
+import LocationPicker from './LocationPicker';
+
+const samePoint = (a, b) => (!a && !b) || (!!a && !!b && a.lat.toFixed(6) === b.lat.toFixed(6) && a.lng.toFixed(6) === b.lng.toFixed(6));
 
 /**
  * Creare (node = {id, name}) sau editare (subject). Pe telefon: pe tot ecranul, Renunță/Salvează sus
@@ -40,6 +43,11 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
     const [noteError, setNoteError] = useState(null);
     const [noteRetry, setNoteRetry] = useState(0);
     const [estimateDirty, setEstimateDirty] = useState(false);
+    // ADR-0011 p.9/p.11: pinul face parte din revizie; se trimite doar dacă s-a schimbat (merge-patch).
+    const initialLocation = subject?.location ? {lat: subject.location.lat, lng: subject.location.lng, source: subject.location.source} : null;
+    const [location, setLocation] = useState(initialLocation);
+    const [locationConfirmed, setLocationConfirmed] = useState(subject?.location?.confirmedBy === 'ADMIN');
+    const locationChanged = !samePoint(location, initialLocation) || (location && initialLocation && location.source !== initialLocation.source);
     useEffect(() => {
         if (!ownNote || subject?.type !== 'PROPOSAL') return;
         let active = true;
@@ -94,9 +102,13 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                 for (const k of ['title', 'description', 'type', ...(isAdmin ? ['stage', 'visibility'] : [])]) {
                     if (form[k] !== baseline[k]) changes[k] = form[k];
                 }
+                if (locationChanged) changes.location = location;
+                // Doar adminul; fără revizie. După mutarea pinului confirmarea veche oricum se anulează pe server.
+                if (isAdmin && location && locationConfirmed !== (baseline.location?.confirmedBy === 'ADMIN')) changes.locationConfirmed = locationConfirmed;
                 saved = Object.keys(changes).length ? await updateSubject(baseline.id, changes) : baseline;
             } else {
-                saved = await createSubject({node: node.id, type: form.type, title: form.title, description: form.description, ...estimate});
+                saved = await createSubject({node: node.id, type: form.type, title: form.title, description: form.description, ...estimate,
+                    ...(location ? {location} : {})});
             }
             // Keep the saved ID if the separate note request fails: retries must not create duplicates.
             savedSubject.current = saved;
@@ -179,6 +191,15 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                         </>}
                     </>}
                     {!proposal && subject?.type === 'PROPOSAL' && <Alert severity="info">Nota și estimarea sunt păstrate, dar devin indisponibile pentru acest tip de subiect.</Alert>}
+                    <LocationPicker value={location} disabled={saving}
+                                    onChange={(next) => { if (!samePoint(next, location)) setLocationConfirmed(false); setLocation(next); }}/>
+                    {editing && locationChanged && initialLocation && subject.typeLocked && (
+                        <Alert severity="warning">Mutarea sau scoaterea pinului creează o revizie nouă: cei care au votat vor fi rugați să-și reconfirme votul.</Alert>
+                    )}
+                    {isAdmin && editing && location && (
+                        <FormControlLabel control={<Checkbox checked={locationConfirmed} onChange={(e) => setLocationConfirmed(e.target.checked)}/>}
+                                          label="Loc confirmat de administrator (nu creează revizie)"/>
+                    )}
                     {isAdmin && editing && (
                         <Stack direction={{xs: 'column', sm: 'row'}} spacing={2}>
                             <FormControl fullWidth>

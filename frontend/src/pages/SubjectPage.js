@@ -1,16 +1,19 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {Link as RouterLink, useLocation, useNavigate, useParams} from 'react-router-dom';
 import {Alert, Box, Button, Chip, Paper, Stack, Typography} from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
+import PlaceIcon from '@mui/icons-material/Place';
 import {useAuth} from '../auth/AuthContext';
 import {fetchSubject} from '../api/subjects';
-import {canEditSubject, formatDate, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS} from '../subjects/labels';
+import {canEditSubject, formatDate, locationConfirmationText, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS} from '../subjects/labels';
 import SubjectForm from '../components/SubjectForm';
 import SubjectEstimate from '../components/SubjectEstimate';
 import AuthorPublishing from '../components/AuthorPublishing';
 import SubjectPrivateNote from '../components/SubjectPrivateNote';
 import SubjectVotes from '../components/SubjectVotes';
+import SubjectMediaSection from '../components/SubjectMediaSection';
+import {SubjectMap} from '../components/SubjectMap';
 import CategoryBreadcrumbs from '../components/CategoryBreadcrumbs';
 import {fetchNodeByPath} from '../api/tree';
 import usePageMeta, {excerpt} from '../seo/usePageMeta';
@@ -29,6 +32,7 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
     const [editing, setEditing] = useState(false);
     const [noteVersion, setNoteVersion] = useState(0);
     const [crumbs, setCrumbs] = useState([]);
+    const locationVotes = useRef(null);
 
     useEffect(() => {
         setSubject(null);
@@ -42,6 +46,23 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
         });
         return () => { active = false; };
     }, [id, user?.id]);
+
+    // ADR-0011 p.9: votul LOCATION poate confirma locul; la o schimbare a rezultatelor lui reîncărcăm subiectul
+    // (starea confirmării vine de la server). Prima numărătoare doar se reține.
+    useEffect(() => {
+        locationVotes.current = null;
+        const onVotes = (event) => {
+            if (event.detail?.subjectId !== id) return;
+            const type = event.detail.summary?.types?.find((t) => t.code === 'LOCATION');
+            const signature = type ? JSON.stringify(type.result) : null;
+            if (locationVotes.current !== null && signature !== locationVotes.current) {
+                fetchSubject(id).then(setSubject).catch(() => {});
+            }
+            locationVotes.current = signature;
+        };
+        window.addEventListener('subject-votes-updated', onVotes);
+        return () => window.removeEventListener('subject-votes-updated', onVotes);
+    }, [id]);
 
     // ADR-0008 (doar ca pagină de sine stătătoare): URL-ul canonic — și după un titlu nou salvat aici —,
     // breadcrumbs ale categoriei, titlu/meta; subiectele nepublicate nu se indexează.
@@ -85,6 +106,17 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
                         </Typography>
                         <SubjectEstimate subject={subject}/>
                         <Typography sx={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{subject.description}</Typography>
+                        {subject.location && (
+                            <Stack spacing={0.75}>
+                                <Stack direction="row" spacing={1} sx={{alignItems: 'center', flexWrap: 'wrap'}} useFlexGap>
+                                    <PlaceIcon fontSize="small" color="primary"/>
+                                    <Chip size="small" variant="outlined" color={subject.location.confirmed ? 'success' : 'default'}
+                                          label={locationConfirmationText(subject.location)}/>
+                                </Stack>
+                                <SubjectMap key={`${subject.location.lat},${subject.location.lng}`} location={subject.location}/>
+                            </Stack>
+                        )}
+                        <SubjectMediaSection key={subject.id} subject={subject} canManage={canEditSubject(user, subject)}/>
                         {isAdmin && <AuthorPublishing key={subject.authorId} authorId={subject.authorId}/>}
                         {subject.type === 'PROPOSAL' && user?.id === subject.authorId && <SubjectPrivateNote key={`${subject.id}:${noteVersion}`} subjectId={subject.id}/>}
                         {canEditSubject(user, subject) && (
