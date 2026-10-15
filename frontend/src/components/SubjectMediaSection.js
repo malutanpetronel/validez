@@ -175,7 +175,8 @@ export default function SubjectMediaSection({subject, canManage, media, viewer, 
 
             <PhotoViewer photos={photos} index={viewer} onIndex={onViewer} onClose={() => onViewer(null)} isPublic={isPublicImage}
                          title={subject.title} actions={canManage ? (photo) => (
-                             <Button color="error" startIcon={<DeleteOutlineIcon/>} disabled={busy} onClick={() => setConfirm(photo)}>Scoate fotografia</Button>
+                             // Vizualizatorul stă peste dialogurile MUI: îl închidem înainte de confirmare.
+                             <Button color="error" startIcon={<DeleteOutlineIcon/>} disabled={busy} onClick={() => { onViewer(null); setConfirm(photo); }}>Scoate fotografia</Button>
                          ) : undefined}/>
 
             <Dialog open={!!confirm} onClose={() => setConfirm(null)}>

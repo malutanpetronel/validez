@@ -34,3 +34,28 @@ test('o singură fotografie: fără săgeți și fără contor', () => {
     expect(screen.queryByLabelText('Fotografia următoare')).toBeNull();
     expect(screen.queryByText(/1 \/ 1/)).toBeNull();
 });
+
+test('nivelurile de mărire; o fotografie nouă se deschide nemărită; Esc închide', () => {
+    render(<Harness/>);
+    fireEvent.click(screen.getByRole('button', {name: '2,5×'}));
+    expect(screen.getByRole('button', {name: '2,5×'})).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByLabelText('Fotografia următoare'));
+    expect(screen.getByRole('button', {name: '1×'})).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.keyDown(window, {key: 'Escape'});
+    expect(screen.queryByRole('dialog')).toBeNull();
+});
+
+test('swipe pe prima fotografie trece la ultima; mărită, swipe-ul nu schimbă fotografia', () => {
+    if (!window.PointerEvent) window.PointerEvent = class extends MouseEvent {};
+    render(<Harness/>);
+    const swipe = (from, to) => {
+        const img = screen.getByRole('img');
+        fireEvent.pointerDown(img, {pointerId: 1, clientX: from, clientY: 100});
+        fireEvent.pointerUp(img, {pointerId: 1, clientX: to, clientY: 105});
+    };
+    swipe(100, 220);
+    expect(counter()).toBe('3 / 3');
+    fireEvent.click(screen.getByRole('button', {name: '4×'}));
+    swipe(300, 100);
+    expect(counter()).toBe('3 / 3');
+});

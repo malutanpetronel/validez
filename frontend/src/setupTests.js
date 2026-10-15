@@ -11,3 +11,8 @@ jest.mock('altcha/i18n/ro', () => ({}), {virtual: true});
 
 // Testele arborelui (MUI + rc-tree, ~2 s) depășesc 5 s doar sub încărcare mare a mașinii (rulare paralelă).
 jest.setTimeout(15000);
+
+// react-zoom-pan-pinch (PhotoViewer, ca PhotoModal din ArtaNFT) folosește ResizeObserver, absent în jsdom.
+if (!global.ResizeObserver) {
+    global.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+}

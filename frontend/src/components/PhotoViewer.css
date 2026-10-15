@@ -1,0 +1,21 @@
+/* Vizualizatorul pe tot ecranul (preluat din ArtaNFT, PhotoModal). Culorile vin din tema MUI prin variabile CSS. */
+.photo-modal { position: fixed; inset: 0; z-index: 1500; overflow: hidden; background: var(--modal-bg, rgba(12, 14, 18, .97)); color: var(--modal-text, #fff); }
+.photo-modal figure { position: absolute; inset: 0; margin: 0; touch-action: none; }
+.photo-modal-viewport { width: 100vw !important; height: 100dvh !important; cursor: zoom-in; }
+.photo-modal-zoomable.zoomed .photo-modal-viewport { cursor: grab; }
+.photo-modal-zoomable.zoomed .photo-modal-viewport:active { cursor: grabbing; }
+.photo-modal-content { width: 100vw !important; height: 100dvh !important; display: flex !important; align-items: center; justify-content: center; }
+.photo-modal-content img { display: block; width: 100vw; height: 100dvh; object-fit: contain; user-select: none; -webkit-user-drag: none; }
+.photo-modal figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 1.5rem 1rem 4rem; max-height: 7rem; overflow: auto; overflow-wrap: anywhere; text-align: center; font-size: .85rem; background: linear-gradient(transparent, var(--modal-bg, rgba(12, 14, 18, .97))); pointer-events: none; }
+.photo-modal-pending { color: var(--modal-warning, #ed6c02); font-weight: 600; }
+.photo-modal button { position: absolute; z-index: 2; border: 1px solid var(--modal-btn-border, #6c757d); border-radius: 8px; background: var(--modal-btn-bg, #343a40); color: var(--modal-text, #fff); width: 44px; height: 44px; font-size: 2rem; line-height: 1; opacity: .92; cursor: pointer; }
+.photo-modal-close { top: 1rem; right: 1rem; }
+.photo-modal-prev { left: .5rem; top: 50%; transform: translateY(-50%); }
+.photo-modal-next { right: .5rem; top: 50%; transform: translateY(-50%); }
+.photo-modal button:focus-visible { outline: 2px solid var(--modal-accent, #1976d2); outline-offset: 2px; }
+.photo-modal-zoom-controls { position: absolute; top: 1rem; left: 50%; transform: translateX(-50%); display: flex; gap: .5rem; z-index: 2; }
+.photo-modal-zoom-controls button { position: static; width: auto; height: auto; padding: .4rem .85rem; font-size: .85rem; }
+.photo-modal-zoom-controls button.active { background: var(--modal-accent, #1976d2); color: var(--modal-accent-text, #fff); border-color: var(--modal-accent, #1976d2); }
+@media (max-width: 575px) { .photo-modal-zoom-controls { top: .5rem; gap: .35rem; } .photo-modal-zoom-controls button { padding: .3rem .6rem; font-size: .75rem; } }
+.photo-modal-actions { position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%); display: flex; gap: .5rem; z-index: 2; }
+.photo-modal-actions button, .photo-modal-actions .MuiButton-root { position: static; width: auto; height: auto; padding: .5rem .75rem; font-size: .85rem; white-space: nowrap; }
