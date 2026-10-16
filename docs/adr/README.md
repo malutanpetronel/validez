@@ -17,6 +17,7 @@ Deciziile de arhitectură ale proiectului Validez, formalizate ca ADR-uri. Numă
 | [0009](0009-erasure-registry-for-restores.md) | Erasure registry reapplied after database restores | Accepted |
 | [0010](0010-access-logs-and-vote-routes.md) | Access logs without vote routes | Accepted |
 | [0011](0011-subject-media-links-and-location.md) | Subject media, links and location | Accepted |
+| [0012](0012-administrative-geography-as-separate-dimension.md) | Administrative geography as a separate dimension (SIRUTA, derived from pin) | Accepted |
 
 ## Template
 

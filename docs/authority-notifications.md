@@ -4,13 +4,13 @@
 
 ## Clasificare, instituții și competențe
 
-Arborele `TreeNode` rămâne clasificarea tematică și geografică. Instituțiile sunt într-un registru unic `Authority`, separat de arbore. `CompetenceRule` leagă un nod de o instituție responsabilă; fiecărui nod îi pot fi asociate una sau mai multe instituții, iar aceeași instituție poate deservi sute de noduri.
+Arborele `TreeNode` este clasificarea tematică; geografia e o dimensiune separată (`AdministrativeUnit`, aria efectivă a subiectului — [ADR-0012](adr/0012-administrative-geography-as-separate-dimension.md)). Instituțiile sunt într-un registru unic `Authority`, separat de arbore. `CompetenceRule` leagă un nod tematic și o arie (`AdministrativeUnit`, cu descendenți) de o instituție responsabilă; fiecărui nod îi pot fi asociate una sau mai multe instituții, iar aceeași instituție poate deservi sute de noduri.
 
 Exemple de asocieri (instituțiile enumerate nu sunt noduri copil):
 
 | Categorie | Instituții asociate |
 |---|---|
-| Drumuri → Cluj → Calitate | CNAIR, Consiliul Județean Cluj, Primăria Cluj-Napoca, Poliția Rutieră |
+| Drumuri → Calitate, arie: județul Cluj | CNAIR (DN), Consiliul Județean Cluj (DJ), Primăria Cluj-Napoca (străzi), Poliția Rutieră |
 | Mediu → Poluare | Garda de Mediu, APM, Primărie |
 
 Exemplele ilustrează configurarea; competența concretă se stabilește prin reguli, inclusiv aria geografică și responsabilitatea pentru situația raportată. Administratorii gestionează registrul și regulile. O regulă poate fi aplicabilă doar nodului sau întregului subarbore, explicit. Instituțiile rezultate din mai multe reguli sunt deduplicate.
@@ -27,6 +27,8 @@ La crearea unei sesizări, aplicația identifică regulile aplicabile categoriei
 ☑ CNAIR
 ☐ Garda de Mediu
 ```
+
+Bifarea automată se face numai dacă regula este neambiguă și aria necesară evaluării ei este determinată: prin derivare `RESOLVED`, prin completare manuală validă sau implicit prin `scope = NATIONAL` ([ADR-0012](adr/0012-administrative-geography-as-separate-dimension.md), p.10).
 
 Utilizatorul poate debifa instituțiile propuse sau adăuga alte instituții din registru. Se păstrează selecția finală și proveniența fiecărei asocieri (regulă automată sau adăugare manuală). Schimbarea categoriei/localizării recalculează propunerile și permite revizuirea selecției, fără să anuleze în tăcere alegerile utilizatorului.
 
@@ -93,7 +95,7 @@ Modul manual, modul cu propunere la atingerea pragurilor și modul automat sunt 
 | Entitate | Responsabilitate |
 |---|---|
 | `Authority` | Registru unic: identitate, denumire, arie de competență, contacte și canale disponibile; fără `subject_id`. |
-| `CompetenceRule` | Nod + instituție, responsabilitate, arie geografică, aplicare pe subarbore și perioadă de valabilitate. |
+| `CompetenceRule` | Nod tematic + instituție, responsabilitate, arie (`AdministrativeUnit`), aplicare pe subarbore și perioadă de valabilitate. |
 | `SubjectAuthority` | Asocierea subiect–instituție, selecția finală, proveniența automată/manuală și regula sursă, dacă există. |
 | `AuthoritySubmission` | Depunere pentru un subiect: număr intern unic, inițiator/mod automat, document și pachet fixate la trimitere, data și evaluarea pragurilor. |
 | `AuthorityDelivery` | Destinatarul unei depuneri: instituție, canal/contact folosit, încercări/dovezi, stare, număr și dată de înregistrare externă. |
