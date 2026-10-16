@@ -72,6 +72,9 @@ BEGIN;
 SELECT 1 FROM public.app_user LIMIT 1 FOR UPDATE;
 SELECT 1 FROM public.civic_subject LIMIT 1 FOR UPDATE;
 COMMIT;
+-- ADR-0012 p.3: obiectele postgis sunt citibile, functiile utilizabile.
+SELECT srid FROM public.spatial_ref_sys WHERE srid = 4326;
+SELECT ST_AsText(ST_SetSRID(ST_MakePoint(23.6, 46.77), 4326));
 DO $checks$
 DECLARE statement text;
 BEGIN
@@ -84,6 +87,9 @@ BEGIN
         'CREATE TABLE public.__validez_role_test_forbidden (id integer)',
         'CREATE TEMP TABLE __validez_role_test_temp (id integer)',
         'INSERT INTO public.doctrine_migration_versions (version) VALUES (''x'')',
+        'INSERT INTO public.spatial_ref_sys SELECT * FROM public.spatial_ref_sys WHERE false',
+        'UPDATE public.spatial_ref_sys SET srtext = srtext WHERE false',
+        'DELETE FROM public.spatial_ref_sys WHERE false',
         'SET ROLE validez_owner'
     ] LOOP
         BEGIN
@@ -96,7 +102,7 @@ BEGIN
 END
 $checks$;
 SQL
-pass "SELECT/INSERT și lockuri de rând permise; jurnal, trigger, CREATE, TEMP, migrări și escaladare respinse"
+pass "SELECT/INSERT și lockuri de rând permise; postgis doar citire; jurnal, trigger, CREATE, TEMP, migrări, scriere în spatial_ref_sys și escaladare respinse"
 
 echo "== migrator (conexiune nouă ca validez_migrator, fără SET ROLE explicit)"
 psql_as validez_migrator "$TEST_DB" >/dev/null <<'SQL'

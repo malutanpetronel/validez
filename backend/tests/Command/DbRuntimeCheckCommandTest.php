@@ -23,5 +23,7 @@ final class DbRuntimeCheckCommandTest extends KernelTestCase
         self::assertSame(1, $code);
         self::assertStringContainsString('nu validez_app', $output);
         self::assertStringContainsString('rolul runtime are superuser', $output);
+        // ADR-0012 p.3: superuserul poate scrie în spatial_ref_sys; comanda trebuie să semnaleze obiectele extensiei.
+        self::assertStringContainsString('scriere permisă pe spatial_ref_sys', $output);
     }
 }

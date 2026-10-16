@@ -38,7 +38,9 @@ Tema, aria geografică și instituția competentă sunt trei dimensiuni distinct
 Derivarea din poligoane face parte din arhitectură, deci se folosește PostGIS:
 
 - imaginea PostgreSQL de producție și de dezvoltare devine varianta PostGIS a aceleiași versiuni majore, ca volumul de date existent să rămână compatibil;
-- extensia `postgis` se creează prin migrare, de rolul owner/migrator, nu de `validez_app`;
+- extensia `postgis` nu e „trusted” (verificat în imagine: `postgis.control` nu are `trusted`), deci o creează doar un superuser. **Corectură (16.10.2026):** extensia se creează administrativ — `initdb` pe volume noi, un pas administrativ din `bin/deploy-db.sh` înaintea migrărilor pe bazele existente —, iar migrarea doar verifică prezența ei și se oprește cu un mesaj clar dacă lipsește. Nici migratorul (`validez_owner`), nici `validez_app` nu primesc drepturi de superuser;
+- se instalează doar `postgis`, nu și `postgis_topology` / `postgis_tiger_geocoder` din scriptul `initdb` al imaginii (scriptul imaginii e oricum ascuns de directorul `initdb` propriu montat peste `/docker-entrypoint-initdb.d`);
+- `validez_app` are doar `SELECT` pe obiectele extensiei (identificate prin apartenența la extensie); tabelele aplicației, inclusiv cele cu geometrii, primesc DML ca orice tabelă operațională;
 - poligoanele se stochează ca `geometry` (SRID 4326) cu index GiST; pinul rămâne latitudine/longitudine, iar punctul se construiește din ele la derivare.
 
 ### 4. Trei noțiuni separate: loc, arie declarată, arie efectivă
@@ -169,7 +171,8 @@ Statisticile de tip rezolvate / fără răspuns / timp mediu cer stări verifica
 
 ## Consecințe
 
-- **Infrastructură:** schimbarea imaginii PostgreSQL în varianta PostGIS (dezvoltare și producție), cu migrarea care creează extensia rulată de rolul migrator. Ordinea de deploy existentă (migrare → configurare roluri → verificare ca runtime → publicare) rămâne. Pașii exacți intră în `Deploy.md`.
+- **Infrastructură:** schimbarea imaginii PostgreSQL în varianta PostGIS (dezvoltare și producție), după verificarea restaurării, a variantei Alpine, a arhitecturii și a extensiilor existente. Ordinea de deploy devine: extensii (administrativ) → migrare → configurare roluri → verificare ca runtime → publicare. Pașii exacți intră în `Deploy.md`.
+- **Doctrine:** `schema_filter` exclude exact tabelele gestionate separat (obiectele PostGIS și tabela de poligoane); crearea și modificarea lor rămân în migrări explicite.
 - **Import:** o comandă de import pentru SIRUTA + poligoane, rulabilă repetat (idempotentă după codul SIRUTA), care creează un `BoundarySet` nou și declanșează recalcularea clasificării curente din p.7.
 - **Model:** `SubjectAdministrativeUnit` conține doar unități declarate; încadrarea pinului și clasificarea curentă se stochează separat; `SubjectRevision` primește instantaneul geografic.
 - **Date existente:** nodurile geografice deja create în arbore, dacă există, rămân. Nu se migrează automat. Administratorii le pot converti manual în teme locale. Subiectele existente primesc `scope = NULL` (p.5).

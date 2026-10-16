@@ -3,9 +3,10 @@
 # ansible_vps/petro-vps/deploy_validez_be.yml, cu release-ul nou deja în /var/www/validez-be/current,
 # containerele db și php pornite și nginx OPRIT. Orice eșec întoarce cod nenul: playbook-ul nu pornește nginx.
 #
-#   normal:     migrări (validez_migrator, container temporar) → configure-roles.sql (administrativ)
-#               → ca runtime, în containerul PHP: app:db:runtime-check, apoi app:votes:verify
-#   --bootstrap (o singură dată, prima tranziție): migrări cu /etc/validez-be/bootstrap-admin.env
+#   normal:     extensions.sql (administrativ) → migrări (validez_migrator, container temporar)
+#               → configure-roles.sql (administrativ) → ca runtime, în containerul PHP: app:db:runtime-check,
+#               apoi app:votes:verify
+#   --bootstrap (o singură dată, prima tranziție): extensions.sql → migrări cu /etc/validez-be/bootstrap-admin.env
 #               → configure-roles.sql → oprire; urmează parolele și deployul normal.
 #
 # Nu afișează și nu exportă secrete: citește din compose.env doar numele containerelor și căile.
@@ -41,17 +42,21 @@ else
     MIGRATION_ENV=$MIGRATOR_ENV
 fi
 
-echo "== [1/3] PostgreSQL pregătit"
+echo "== [1/4] PostgreSQL pregătit"
 for i in $(seq 1 24); do
     docker exec "$DB" sh -c 'pg_isready -q -U "$POSTGRES_USER" -d "$POSTGRES_DB"' && break
     [ "$i" = 24 ] && { echo "PostgreSQL nu răspunde după 2 minute" >&2; exit 1; }
     sleep 5
 done
 
-echo "== [1/3] Migrări ($( [ $MODE = bootstrap ] && echo 'bootstrap, utilizatorul administrativ' || echo 'validez_migrator' ), container temporar)"
+# ADR-0012 p.3: postgis nu e "trusted"; o creează superuserul, migrarea doar verifică prezența ei.
+echo "== [1/4] Extensii (administrativ, extensions.sql)"
+docker exec -i "$DB" sh -c 'psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < docker/postgres/admin/extensions.sql
+
+echo "== [2/4] Migrări ($( [ $MODE = bootstrap ] && echo 'bootstrap, utilizatorul administrativ' || echo 'validez_migrator' ), container temporar)"
 MIGRATOR_ENV_FILE=$MIGRATION_ENV compose run --rm --no-deps -T migrate
 
-echo "== [2/3] Configurarea rolurilor (administrativ, configure-roles.sql)"
+echo "== [3/4] Configurarea rolurilor (administrativ, configure-roles.sql)"
 docker exec -i "$DB" sh -c 'psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < docker/postgres/admin/configure-roles.sql
 
 if [ $MODE = bootstrap ]; then
@@ -61,7 +66,7 @@ if [ $MODE = bootstrap ]; then
     exit 0
 fi
 
-echo "== [3/3] Verificare ca runtime (conexiunea Doctrine a containerului PHP)"
+echo "== [4/4] Verificare ca runtime (conexiunea Doctrine a containerului PHP)"
 docker exec -u 1000:1000 -w /var/www/validez-be "$PHP" sh -c \
     'php bin/console app:db:runtime-check --expect-user=validez_app --env=prod && php bin/console app:votes:verify --env=prod'
 echo "== Poarta de baze de date: OK"

@@ -84,6 +84,28 @@ REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM PUBLIC, validez_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO validez_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO validez_app;
 
+-- ADR-0012 p.3: obiectele extensiilor din public (ex. spatial_ref_sys, geometry_columns de la postgis) sunt doar
+-- citite de runtime. Identificate prin apartenenta la extensie (pg_depend 'e'), nu dupa nume: tabelele aplicatiei,
+-- inclusiv cele cu geometrii, raman in regula generala de mai sus.
+DO $extension_objects$
+DECLARE obj record;
+BEGIN
+    FOR obj IN
+        SELECT c.relname, c.relkind
+        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm', 'S')
+          AND EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_class'::regclass
+                      AND d.objid = c.oid AND d.deptype = 'e')
+    LOOP
+        EXECUTE format('REVOKE ALL ON %s public.%I FROM validez_app',
+            CASE obj.relkind WHEN 'S' THEN 'SEQUENCE' ELSE 'TABLE' END, obj.relname);
+        IF obj.relkind <> 'S' THEN
+            EXECUTE format('GRANT SELECT ON TABLE public.%I TO validez_app', obj.relname);
+        END IF;
+    END LOOP;
+END
+$extension_objects$;
+
 -- Jurnalul nu poate fi rescris/trunchiat de runtime, nici prin schimbarea triggerului.
 REVOKE ALL ON public.integrity_event_log FROM validez_app;
 GRANT SELECT, INSERT ON public.integrity_event_log TO validez_app;
@@ -115,6 +137,17 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_class WHERE relowner = 'validez_app'::regrole)
        OR EXISTS (SELECT 1 FROM pg_proc WHERE proowner = 'validez_app'::regrole) THEN
         RAISE EXCEPTION 'validez_app detine obiecte; proprietatea trebuie sa fie a validez_owner.';
+    END IF;
+    -- ADR-0012 p.3: runtime doar citeste obiectele extensiilor.
+    IF EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm')
+          AND EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.deptype = 'e')
+          AND (has_table_privilege('validez_app', c.oid, 'INSERT') OR has_table_privilege('validez_app', c.oid, 'UPDATE')
+               OR has_table_privilege('validez_app', c.oid, 'DELETE') OR has_table_privilege('validez_app', c.oid, 'TRUNCATE')
+               OR has_table_privilege('validez_app', c.oid, 'TRIGGER'))
+    ) THEN
+        RAISE EXCEPTION 'validez_app poate scrie in obiectele unei extensii.';
     END IF;
     -- Fiecare tabela operationala trebuie sa fie utilizabila de runtime imediat dupa script (prinde tabelele noi
     -- dintr-o migrare, inainte de trafic). Exceptii intentionate: jurnalul si evidenta migrarilor.

@@ -55,8 +55,10 @@ services:
       - php
 
   db:
-    # Imaginea oficiala include extensiile contrib, deci si ltree.
-    image: postgres:16-alpine
+    # ADR-0012 p.3: imaginea PostGIS e construita peste postgres:16-alpine (aceeasi versiune majora, tot Alpine/musl,
+    # aceleasi extensii contrib, deci si ltree). Verificat 16.10.2026: PG 16.15, x86_64, colatie en_US.utf8 (libc).
+    # Scriptul initdb al imaginii (10_postgis.sh, cu topology/tiger) e ascuns de directorul initdb propriu de mai jos.
+    image: postgis/postgis:16-3.5-alpine
     container_name: validez-db
     environment:
       POSTGRES_DB: validez
@@ -66,7 +68,8 @@ services:
       - "5442:5432"
     volumes:
       - pg-data:/var/lib/postgresql/data
-      # Ruleaza doar la prima initializare a volumului (CREATE EXTENSION ltree, inclusiv in template1).
+      # Ruleaza doar la prima initializare a volumului (ltree si postgis, inclusiv in template1).
+      # Pe un volum existent: docker/postgres/admin/extensions.sql, ca superuser (Deploy.md).
       - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
 
   adminer:

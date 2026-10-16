@@ -102,6 +102,23 @@ final class DbRuntimeCheckCommand extends Command
             }
         }
 
+        // ADR-0012 p.3: obiectele extensiilor (spatial_ref_sys etc.) sunt doar citite de runtime.
+        $extensionObjects = $this->db->fetchAllAssociative(
+            "SELECT c.relname AS name,
+                    has_table_privilege(c.oid, 'INSERT') OR has_table_privilege(c.oid, 'UPDATE')
+                    OR has_table_privilege(c.oid, 'DELETE') OR has_table_privilege(c.oid, 'TRUNCATE')
+                    OR has_table_privilege(c.oid, 'TRIGGER') AS writable
+             FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm')
+               AND EXISTS (SELECT 1 FROM pg_depend dep WHERE dep.classid = 'pg_class'::regclass AND dep.objid = c.oid AND dep.deptype = 'e')
+             ORDER BY c.relname"
+        );
+        foreach ($extensionObjects as $e) {
+            if ($e['writable']) {
+                $problems[] = sprintf('scriere permisă pe %s (obiect al unei extensii)', $e['name']);
+            }
+        }
+
         if ($problems !== []) {
             $io->error(\count($problems).' probleme pentru conexiunea runtime');
             $io->listing($problems);

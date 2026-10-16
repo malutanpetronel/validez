@@ -15,7 +15,9 @@ version: "3.5"
 services:
     db:
         container_name: ${DB_CONTAINER}
-        image: postgres:16-alpine
+        # ADR-0012 p.3: PostGIS peste postgres:16-alpine (aceeasi versiune majora, acelasi volum de date).
+        # Extensia o creeaza bin/deploy-db.sh ca superuser, inaintea migrarilor (docker/postgres/admin/extensions.sql).
+        image: postgis/postgis:16-3.5-alpine
         restart: always
         logging:
             driver: json-file

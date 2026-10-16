@@ -35,6 +35,7 @@ Marcaje: **[PE LAPTOP]** = `<checkout-validez>` sau checkout-ul Ansible de pe la
 - [x] **[PE SERVER]** Chei JWT generate pe server, nu copiate de pe dev, în `/var/www/validez-be/shared/backend/config/jwt/` (`private.pem`, `public.pem`, cu passphrase-ul din `.env`), proprietar 1000:1000.
 - [x] **[PE SERVER]** Directorul de date PostgreSQL: `/srv/www/validez-be.webnou.ro/db_data` (din `backend/docker-compose.prod.yml`).
 - [x] `ltree`: migrarea rulează `CREATE EXTENSION IF NOT EXISTS ltree`; utilizatorul din imaginea oficială `postgres:16-alpine` e superuser, deci merge. Dacă vreodată baza vine din altă parte, extensia trebuie creată de un superuser.
+- [ ] `postgis` (ADR-0012 p.3, G.1a): imaginea DB devine `postgis/postgis:16-3.5-alpine`; extensia nu e „trusted”, deci o creează `bin/deploy-db.sh` ca superuser (`docker/postgres/admin/extensions.sql`) înaintea migrărilor, iar migrarea `Version20261016190000` doar o verifică. Primul deploy: `Deploy.md` secțiunea M (verificarea versiunilor și a restaurării înainte de schimbarea imaginii).
 
 ## 5. Pe server, o singură dată (FE)
 

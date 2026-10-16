@@ -32,7 +32,7 @@ cleanup(){
         || MIGRATOR_ENV_FILE=$TMP/migrator.env compose down --remove-orphans >/dev/null 2>&1 || true; fi
     # Fișierele PostgreSQL aparțin UID-ului din container.
     docker run --rm -v "$TMP:/t" "$IMAGE" sh -c 'rm -rf /t/* 2>/dev/null' >/dev/null 2>&1 || true
-    docker run --rm -v "$TMP:/t" postgres:16-alpine sh -c 'rm -rf /t/*' >/dev/null 2>&1 || true
+    docker run --rm -v "$TMP:/t" postgis/postgis:16-3.5-alpine sh -c 'rm -rf /t/*' >/dev/null 2>&1 || true
     rm -rf "$TMP" 2>/dev/null || echo "  ATENȚIE: șterge manual $TMP" >&2
 }
 trap cleanup EXIT
@@ -96,9 +96,13 @@ out=$(deploy_db 2>&1) || { echo "$out" | tail -n 25; die "deploy normal"; }
 grep -q 'Conexiune runtime: rol validez_app (sesiune validez_app)' <<<"$out" || die "runtime nu a raportat validez_app"
 grep -q 'Date de vot consistente' <<<"$out" || die "app:votes:verify nu a rulat"
 pass "migrări ca validez_migrator, roluri reaplicate, PHP conectat ca validez_app, app:votes:verify OK"
-[ "$(admin_sql <<<"SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' AND pg_get_userbyid(c.relowner) <> 'validez_owner'" | tr -d ' ')" = 0 ] \
+# Fără obiectele extensiilor (spatial_ref_sys de la postgis rămâne a superuserului care a creat extensia).
+[ "$(admin_sql <<<"SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' AND pg_get_userbyid(c.relowner) <> 'validez_owner' AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid='pg_class'::regclass AND d.objid=c.oid AND d.deptype='e')" | tr -d ' ')" = 0 ] \
     || die "există tabele ale aplicației care nu aparțin validez_owner"
 pass "toate tabelele aplicației aparțin validez_owner"
+[ "$(admin_sql <<<"SELECT COUNT(*) FROM pg_extension WHERE extname = 'postgis'" | tr -d ' ')" = 1 ] || die "extensia postgis lipsește după deploy"
+grep -q 'Extensii (administrativ, extensions.sql)' <<<"$out" || die "deployul nu a rulat pasul de extensii"
+pass "postgis prezent, pasul administrativ de extensii a rulat înaintea migrărilor (ADR-0012 p.3)"
 
 echo "== secretele nu ajung în PHP runtime"
 envdump=$(docker exec ${PROJECT}_php env)
