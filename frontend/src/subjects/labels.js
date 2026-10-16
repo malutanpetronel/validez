@@ -38,6 +38,22 @@ export const locationConfirmationText = (location) => {
     return location.confirmations > 0 ? `Loc neconfirmat încă (${location.confirmations} confirmări)` : 'Loc neconfirmat încă';
 };
 
+/**
+ * Încadrarea administrativă a pinului (ADR-0012 p.6, G.2): `location.administrative` din subject:read.
+ * Întoarce {text, determined}; null fără încadrare (fără pin sau fără limite active).
+ */
+export const administrativeText = (location) => {
+    const admin = location?.administrative;
+    if (!admin) return null;
+    if (admin.state === 'RESOLVED' || admin.state === 'RESOLVED_MANUALLY') {
+        return {determined: true, text: [admin.unit?.name, admin.county?.name].filter(Boolean).join(', ')};
+    }
+    const names = (admin.candidates ?? []).map((c) => c.name).join(' sau ');
+    if (admin.state === 'OUTSIDE') return {determined: false, text: 'Locul e în afara limitelor administrative ale României'};
+    if (admin.state === 'UNMATCHED') return {determined: false, text: `Încadrare neclară (între limite): ${names}`};
+    return {determined: false, text: `Încadrare neclară, aproape de o limită administrativă: ${names}`};
+};
+
 /** Opțiunile unui tip de vot, ca [valoare, etichetă]; pentru tipuri noi, intervalul primit de la server. */
 export const voteOptions = (type) => BINARY_OPTIONS[type.code]
     ?? Array.from({length: type.maxValue - type.minValue + 1}, (_, i) => [type.minValue + i, String(type.minValue + i)]);

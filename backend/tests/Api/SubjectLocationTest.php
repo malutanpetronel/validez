@@ -122,7 +122,8 @@ final class SubjectLocationTest extends WebTestCase
     public function testPinulLaCreareIntraInRevizia1(): void
     {
         $s = $this->create('admin', self::CLUJ);
-        self::assertSame(['lat' => 46.771235, 'lng' => 23.6236, 'source' => 'DEVICE', 'confirmed' => false, 'confirmedBy' => null, 'confirmations' => 0], $s['location']);
+        // administrative: null — în acest test nu există un set de limite activ (G.2, ADR-0012 p.6)
+        self::assertSame(['lat' => 46.771235, 'lng' => 23.6236, 'source' => 'DEVICE', 'confirmed' => false, 'confirmedBy' => null, 'confirmations' => 0, 'administrative' => null], $s['location']);
         $revisions = $this->call('GET', "/api/civic_subjects/{$s['id']}/revisions")['revisions'];
         self::assertSame(['lat' => 46.771235, 'lng' => 23.6236, 'source' => 'DEVICE'], $revisions[0]['location']);
         $types = array_column($this->call('GET', "/api/civic_subjects/{$s['id']}/votes")['types'], 'active', 'code');

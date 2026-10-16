@@ -11,6 +11,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Dto\CivicSubjectCreateInput;
 use App\Dto\CivicSubjectUpdateInput;
+use App\Geo\PinClassificationState;
 use App\Repository\CivicSubjectRepository;
 use App\State\CivicSubjectCreateProcessor;
 use App\State\CivicSubjectProvider;
@@ -46,6 +47,9 @@ use Symfony\Component\Uid\Ulid;
 #[ORM\Entity(repositoryClass: CivicSubjectRepository::class)]
 #[ORM\Table(name: 'civic_subject')]
 #[ORM\Index(name: 'idx_civic_subject_node_created', columns: ['node_id', 'created_at'])]
+// G.2: coada încadrărilor nedeterminate (moderare); index parțial, creat în Version20261016230000.
+// Predicatul e scris exact în forma normalizată de PostgreSQL (pg_get_expr), altfel diff-ul Doctrine îl recreează.
+#[ORM\Index(name: 'idx_civic_subject_pin_admin_open', columns: ['pin_admin_state'], options: ['where' => "((pin_admin_state)::text = ANY ((ARRAY['AMBIGUOUS'::character varying, 'UNMATCHED'::character varying, 'OUTSIDE'::character varying])::text[]))"])]
 #[ORM\UniqueConstraint(name: 'uniq_civic_subject_slug', columns: ['slug'])]
 #[ORM\HasLifecycleCallbacks]
 class CivicSubject
@@ -141,6 +145,36 @@ class CivicSubject
     /** Primul vot înregistrat vreodată; blochează tipul, chiar dacă votul a fost retras (ADR-0007 §3). */
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $firstVotedAt = null;
+
+    /**
+     * Încadrarea administrativă a pinului (ADR-0012 p.6, G.2) — partea „clasificare curentă” din p.7: calculată de
+     * App\Geo\PinClassifier față de setul de limite activ, la punerea sau mutarea pinului. NULL = fără pin sau
+     * fără set activ. Candidații: [{code, name, county, contains, distanceM}], în ordinea propunerii.
+     */
+    #[ORM\Column(length: 20, nullable: true, enumType: PinClassificationState::class)]
+    private ?PinClassificationState $pinAdminState = null;
+
+    #[ORM\ManyToOne(targetEntity: AdministrativeUnit::class)]
+    #[ORM\JoinColumn(name: 'pin_admin_unit_id', referencedColumnName: 'id', nullable: true, onDelete: 'RESTRICT')]
+    private ?AdministrativeUnit $pinAdminUnit = null;
+
+    /** @var list<array<string, mixed>>|null */
+    #[ORM\Column(type: Types::JSON, nullable: true, options: ['jsonb' => true])]
+    private ?array $pinAdminCandidates = null;
+
+    #[ORM\ManyToOne(targetEntity: BoundarySet::class)]
+    #[ORM\JoinColumn(name: 'pin_admin_boundary_set_id', referencedColumnName: 'id', nullable: true, onDelete: 'RESTRICT')]
+    private ?BoundarySet $pinAdminBoundarySet = null;
+
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $pinAdminComputedAt = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: 'pin_admin_resolved_by_id', referencedColumnName: 'id', nullable: true, onDelete: 'RESTRICT')]
+    private ?User $pinAdminResolvedBy = null;
+
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $pinAdminResolvedAt = null;
 
     public function __construct(TreeNode $node, User $author, SubjectType $type, string $title, string $description)
     {
@@ -289,7 +323,67 @@ class CivicSubject
         $this->locationUsersConfirmed = $usersConfirmed && $this->hasLocation();
     }
 
-    /** @return array{lat: float, lng: float, source: string, confirmed: bool, confirmedBy: ?string, confirmations: int}|null */
+    /** @param list<array<string, mixed>> $candidates */
+    public function applyPinClassification(PinClassificationState $state, ?AdministrativeUnit $unit, array $candidates, BoundarySet $set): void
+    {
+        if ($state === PinClassificationState::RESOLVED_MANUALLY) {
+            throw new \LogicException('Rezolvarea manuală trece prin resolvePinClassification.');
+        }
+        if (($state === PinClassificationState::RESOLVED) !== ($unit !== null)) {
+            throw new \LogicException('Doar o încadrare RESOLVED are UAT-ul determinat automat.');
+        }
+        $this->pinAdminState = $state;
+        $this->pinAdminUnit = $unit;
+        $this->pinAdminCandidates = $candidates;
+        $this->pinAdminBoundarySet = $set;
+        $this->pinAdminComputedAt = new \DateTimeImmutable();
+        $this->pinAdminResolvedBy = null;
+        $this->pinAdminResolvedAt = null;
+    }
+
+    /** Fără pin sau fără set de limite activ: nicio încadrare. */
+    public function clearPinClassification(): void
+    {
+        $this->pinAdminState = null;
+        $this->pinAdminUnit = null;
+        $this->pinAdminCandidates = null;
+        $this->pinAdminBoundarySet = null;
+        $this->pinAdminComputedAt = null;
+        $this->pinAdminResolvedBy = null;
+        $this->pinAdminResolvedAt = null;
+    }
+
+    public function getPinAdminState(): ?PinClassificationState { return $this->pinAdminState; }
+    public function getPinAdminUnit(): ?AdministrativeUnit { return $this->pinAdminUnit; }
+    /** @return list<array<string, mixed>> */
+    public function getPinAdminCandidates(): array { return $this->pinAdminCandidates ?? []; }
+    public function getPinAdminBoundarySet(): ?BoundarySet { return $this->pinAdminBoundarySet; }
+
+    /**
+     * Încadrarea administrativă a pinului, pentru afișare (ADR-0012 p.6). Candidații apar doar la stările
+     * nedeterminate; UAT-ul și județul, doar când încadrarea e determinată.
+     *
+     * @return array{state: string, unit: ?array{code: string, name: string}, county: ?array{code: string, name: string}, candidates: list<array<string, mixed>>, provisional: bool}|null
+     */
+    private function pinAdministrative(): ?array
+    {
+        if ($this->pinAdminState === null) {
+            return null;
+        }
+        $unit = $this->pinAdminUnit;
+        $county = $unit?->getParent();
+
+        return [
+            'state' => $this->pinAdminState->value,
+            'unit' => $unit === null ? null : ['code' => $unit->getCode(), 'name' => $unit->getDisplayName()],
+            'county' => $county === null ? null : ['code' => $county->getCode(), 'name' => $county->getDisplayName()],
+            'candidates' => $this->pinAdminState->isDetermined() ? [] : $this->getPinAdminCandidates(),
+            // ADR-0012 p.2: setul de limite activ e provizoriu (precizie neconfirmată oficial)
+            'provisional' => $this->pinAdminBoundarySet?->getAccuracyStatus() === \App\Geo\BoundaryAccuracyStatus::PROVISIONAL,
+        ];
+    }
+
+    /** @return array{lat: float, lng: float, source: string, confirmed: bool, confirmedBy: ?string, confirmations: int, administrative: ?array}|null */
     #[Groups(['subject:read'])]
     public function getLocation(): ?array
     {
@@ -305,6 +399,7 @@ class CivicSubject
             'confirmed' => $confirmedBy !== null,
             'confirmedBy' => $confirmedBy,
             'confirmations' => $this->locationConfirmations,
+            'administrative' => $this->pinAdministrative(),
         ];
     }
 }

@@ -7,6 +7,7 @@ namespace App\Subject;
 use App\Entity\CivicSubject;
 use App\Entity\SubjectVoteType;
 use App\Entity\VoteType;
+use App\Geo\PinClassifier;
 use App\Vote\DefaultVoteTypes;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -16,10 +17,12 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
  * lipsă = neschimbat, null = scos, obiect {lat, lng, source?} = pus sau mutat. Se apelează din procesoare,
  * înaintea SubjectRevisions::recordIfChanged, ca mutarea pinului să creeze revizie.
  * Tipul de vot LOCATION („Locul e corect?”) e activ doar cât subiectul are pin.
+ * ADR-0012 p.6 (G.2): la punerea, mutarea sau scoaterea pinului se recalculează încadrarea administrativă;
+ * un pin retrimis identic nu o atinge (păstrează și o eventuală rezolvare manuală).
  */
 final class SubjectLocation
 {
-    public function __construct(private readonly EntityManagerInterface $em)
+    public function __construct(private readonly EntityManagerInterface $em, private readonly PinClassifier $classifier)
     {
     }
 
@@ -32,11 +35,15 @@ final class SubjectLocation
     /** @param array<string, mixed>|null $input */
     public function apply(CivicSubject $subject, ?array $input): void
     {
+        $before = $subject->storedLocation();
         if ($input === null) {
             $subject->setLocation(null, null, null);
         } else {
             [$lat, $lng, $source] = self::parse($input);
             $subject->setLocation($lat, $lng, $source);
+        }
+        if ($subject->storedLocation() !== $before || ($subject->hasLocation() && $subject->getPinAdminState() === null)) {
+            $this->classifier->classify($subject);
         }
         $this->syncVoteType($subject);
     }

@@ -7,7 +7,7 @@ import PlaceIcon from '@mui/icons-material/Place';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import {useAuth} from '../auth/AuthContext';
 import {fetchSubject} from '../api/subjects';
-import {canEditSubject, formatDate, locationConfirmationText, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS} from '../subjects/labels';
+import {administrativeText, canEditSubject, formatDate, locationConfirmationText, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS} from '../subjects/labels';
 import SubjectForm from '../components/SubjectForm';
 import SubjectEstimate from '../components/SubjectEstimate';
 import AuthorPublishing from '../components/AuthorPublishing';
@@ -171,6 +171,13 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
                             <Stack spacing={0.75}>
                                 <Stack direction="row" spacing={1} sx={{alignItems: 'center', flexWrap: 'wrap'}} useFlexGap>
                                     <PlaceIcon fontSize="small" color="primary"/>
+                                    {administrativeText(subject.location) && (
+                                        <Typography variant="body2" data-testid="subject-administrative"
+                                                    color={administrativeText(subject.location).determined ? 'text.primary' : 'warning.main'}
+                                                    title={subject.location.administrative.provisional ? 'Limite administrative provizorii: lângă o limită, încadrarea poate fi neclară.' : undefined}>
+                                            {administrativeText(subject.location).text}
+                                        </Typography>
+                                    )}
                                     <Chip size="small" variant="outlined" color={subject.location.confirmed ? 'success' : 'default'}
                                           label={locationConfirmationText(subject.location)}/>
                                 </Stack>
