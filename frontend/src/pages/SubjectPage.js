@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {Link as RouterLink, useLocation, useNavigate, useParams} from 'react-router-dom';
-import {Alert, Box, Button, Chip, Paper, Stack, Typography} from '@mui/material';
+import {Alert, Box, Button, Chip, Paper, Skeleton, Stack, Typography} from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import PlaceIcon from '@mui/icons-material/Place';
@@ -21,12 +21,30 @@ import CategoryBreadcrumbs from '../components/CategoryBreadcrumbs';
 import {fetchNodeByPath} from '../api/tree';
 import usePageMeta, {excerpt} from '../seo/usePageMeta';
 import {categoryPathOf} from '../seo/paths';
+import {hideSplash} from '../splash';
+
+/** Forma cardului cât se încarcă: titlu, rând de detalii, copertă 16:9, text - fără salt la apariția conținutului. */
+function SubjectSkeleton({header}) {
+    return (
+        <Paper sx={{p: {xs: 2, sm: 3}}} aria-busy="true" aria-label="Se încarcă subiectul">
+            <Stack spacing={1.5}>
+                {header}
+                <Stack direction="row" spacing={0.75}><Skeleton variant="rounded" width={72} height={24}/><Skeleton variant="rounded" width={64} height={24}/></Stack>
+                <Skeleton variant="text" sx={{fontSize: '1.5rem', width: '75%'}}/>
+                <Skeleton variant="text" sx={{width: '55%'}}/>
+                <Skeleton variant="rounded" sx={{width: '100%', height: 'auto', aspectRatio: '16 / 9', maxHeight: 420}}/>
+                <Skeleton variant="text"/><Skeleton variant="text"/><Skeleton variant="text" sx={{width: '60%'}}/>
+            </Stack>
+        </Paper>
+    );
+}
 
 /**
  * embedded: în panoul arborelui (fără buton înapoi, breadcrumbs, redirect canonic); meta: titlul/meta paginii vin de aici.
  * focusTitle: contor; la fiecare creștere (selectarea subiectului cu click) linia titlului e adusă în vedere și primește focus.
+ * header: primul rând din card (în arbore, breadcrumb-ul categoriei - cardul pornește la nivelul arborelui).
  */
-export default function SubjectPage({subjectId, embedded = false, meta = false, onUpdated, focusTitle = 0}) {
+export default function SubjectPage({subjectId, embedded = false, meta = false, onUpdated, focusTitle = 0, header = null}) {
     const params = useParams();
     const location = useLocation();
     const navigate = useNavigate();
@@ -42,9 +60,15 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
     const titleRef = useRef(null);
     const [viewer, setViewer] = useState(null);
     const media = useSubjectMedia(id, user?.id);
+    // Cardul apare o singură dată, cu subiectul și lista de fotografii: coperta nu mai împinge descrierea în jos.
+    const ready = Boolean(error) || (subject !== null && (media.data !== null || media.error !== null));
+    useEffect(() => {
+        if (ready) hideSplash();
+    }, [ready]);
 
-    // Doar la o selectare cu click (contorul > 0), nu la deschiderea directă dintr-un URL.
-    const loadedId = subject?.id;
+    // Doar la o selectare cu click (contorul > 0), nu la deschiderea directă dintr-un URL. Titlul există abia când
+    // cardul e afișat (subiect + fotografii), deci așteptăm și lista de fotografii.
+    const loadedId = subject && (media.data !== null || media.error !== null) ? subject.id : undefined;
     useEffect(() => {
         if (!focusTitle || !loadedId || !titleRef.current) return undefined;
         const frame = requestAnimationFrame(() => {
@@ -107,10 +131,11 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
             {!embedded && <div><Button component={RouterLink} to="/" state={location.state} startIcon={<ArrowBackIcon/>}>Înapoi la arbore</Button></div>}
             {!embedded && <CategoryBreadcrumbs items={crumbs}/>}
             {error && <Alert severity="warning">{error}</Alert>}
-            {!error && !subject && <Typography color="text.secondary">Se încarcă…</Typography>}
-            {subject && (
+            {!ready && <SubjectSkeleton header={header}/>}
+            {ready && subject && (
                 <Paper sx={{p: {xs: 2, sm: 3}}}>
                     <Stack spacing={1.5}>
+                        {header}
                         <Stack direction="row" spacing={0.75} useFlexGap sx={{flexWrap: 'wrap'}}>
                             <Chip size="small" label={TYPE_LABELS[subject.type] ?? subject.type} variant="outlined"/>
                             <Chip size="small" label={STAGE_LABELS[subject.stage] ?? subject.stage} color={STAGE_COLORS[subject.stage] ?? 'default'}/>

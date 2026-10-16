@@ -1,5 +1,5 @@
-import {Link as RouterLink, Outlet} from 'react-router-dom';
-import {useMemo, useState} from 'react';
+import {Link as RouterLink, Outlet, useLocation} from 'react-router-dom';
+import {useEffect, useMemo, useState} from 'react';
 import {AppBar, Box, Button, Container, CssBaseline, Divider, Menu, MenuItem, Select, ThemeProvider, Toolbar, Typography} from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {createValidezTheme} from './theme';
@@ -7,6 +7,7 @@ import useAutomaticTheme from './useAutomaticTheme';
 import version from './version.json';
 import CookieNotice from './components/CookieNotice';
 import {useAuth} from './auth/AuthContext';
+import {hideSplash, waitsForData} from './splash';
 
 export default function Layout() {
     const {user, isAdmin, logout} = useAuth();
@@ -14,6 +15,15 @@ export default function Layout() {
     const closeUserMenu = () => setUserMenuAnchor(null);
     const {preference, chooseTheme, mode} = useAutomaticTheme();
     const theme = useMemo(() => createValidezTheme(mode), [mode]);
+    const {pathname} = useLocation();
+    // Ecranul de încărcare: fundalul temei alese (poate diferi de cea a sistemului); paginile fără date de așteptat îl ascund acum.
+    useEffect(() => {
+        const splash = document.getElementById('splash');
+        if (splash) splash.style.background = theme.palette.background.default;
+    }, [theme]);
+    useEffect(() => {
+        if (!waitsForData(pathname)) hideSplash();
+    }, [pathname]);
     return (
         <ThemeProvider theme={theme}>
         <CssBaseline/>

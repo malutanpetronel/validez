@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import {hideSplash, SPLASH_TIMEOUT_MS} from './splash';
 
 const renderApp = () => {
     ReactDOM.createRoot(document.getElementById('root')).render(
@@ -10,6 +11,8 @@ const renderApp = () => {
     );
     // Cordova (Android): ascunde ecranul de pornire imediat ce interfața e randată (în browser nu există).
     window.requestAnimationFrame(() => navigator.splashscreen?.hide());
+    // Ecranul de încărcare propriu îl ascunde pagina când are datele; aici doar limita de siguranță.
+    window.setTimeout(hideSplash, SPLASH_TIMEOUT_MS);
 };
 
 // cordova.js exista DOAR in build-urile Cordova (android/browser); pe web (npm start / nginx) lipseste.

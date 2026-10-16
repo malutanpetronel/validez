@@ -31,12 +31,14 @@ import {useAuth} from '../auth/AuthContext';
 import usePageMeta from '../seo/usePageMeta';
 import {categoryPathOf, categoryUrl, parseTarget} from '../seo/paths';
 import CategoryBreadcrumbs from '../components/CategoryBreadcrumbs';
+import {hideSplash, isSubjectPath} from '../splash';
 import {
     ancestorsOf, appendChild, dropTarget, findBySlugPath, findNode, indexByKey, isNoopMove, rebaseSlugPaths, renameInTree,
     replaceLevel, setChildren, toTreeNode,
 } from '../tree/treeData';
 
 const DIALOG_TITLES = {root: 'Tematică nouă', child: 'Nod copil nou', rename: 'Redenumește nodul'};
+const VISUALLY_HIDDEN = {position: 'absolute', width: 1, height: 1, p: 0, m: '-1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0};
 
 /**
  * Plan Step 1.5: creare rădăcină/copil, redenumire, expandare cu încărcare pe ramuri,
@@ -232,6 +234,12 @@ export default function TreePage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname, loading]);
 
+    // Ecranul de încărcare (src/splash.js): fără subiect în adresă, pagina e gata odată cu arborele; cu subiect îl
+    // ascunde SubjectPage, după subiect și fotografii. O adresă greșită nu-l ține până la limita de siguranță.
+    useEffect(() => {
+        if (urlError || (!loading && !isSubjectPath(location.pathname))) hideSplash();
+    }, [loading, urlError, location.pathname]);
+
     /**
      * Reîncarcă de pe server nivelurile date (null = rădăcinile) - structura confirmată de server,
      * după o mutare reușită sau eșuată. `previous` păstrează ramurile încărcate ale nodului mutat.
@@ -410,7 +418,8 @@ export default function TreePage() {
 
     return (
         <Stack spacing={2}>
-            <Typography variant="h5" component="h1" color="primary">Tematici</Typography>
+            {/* Fără titlu vizibil (spațiu); h1 doar pentru cititoarele de ecran, cât nu e deschis un subiect (titlul lui e h1). */}
+            {!selectedSubject && <Typography component="h1" sx={VISUALLY_HIDDEN}>Tematici</Typography>}
 
             {!isAdmin && (
                 <Alert severity="info">
@@ -514,21 +523,26 @@ export default function TreePage() {
                     )}
                 </Paper>
                 {urlError ? <Alert severity="warning">{urlError}</Alert> :
-                    selectedSubject ? <Stack spacing={1.5} sx={{minWidth: 0}}>
-                        <CategoryBreadcrumbs items={crumbs}/>
-                        <SubjectPage key={selectedSubject} subjectId={selectedSubject} embedded meta focusTitle={focusSubject} onUpdated={(subject) => {
+                    selectedSubject ? <Box sx={{minWidth: 0}}>
+                        {/* Breadcrumb-ul în card: cardul pornește la aceeași înălțime cu arborele. */}
+                        <SubjectPage key={selectedSubject} subjectId={selectedSubject} embedded meta focusTitle={focusSubject}
+                                     header={<CategoryBreadcrumbs items={crumbs}/>} onUpdated={(subject) => {
                             loadBranch(subject.nodeId, true).catch(showError);
                             if (subject.canonicalPath) goTo(subject.canonicalPath, true);
                         }}/>
-                    </Stack> :
+                    </Box> :
                     selected ? <Stack spacing={1.5} sx={{minWidth: 0}}>
-                        <CategoryBreadcrumbs items={crumbs} currentIsLast/>
-                        {(selected.children ?? []).some((c) => c.slugPath) && (
-                            <Stack component="nav" aria-label="Subcategorii" direction="row" spacing={1} useFlexGap sx={{flexWrap: 'wrap'}}>
-                                {selected.children.filter((c) => c.slugPath).map((c) => (
-                                    <Chip key={c.key} component={RouterLink} to={categoryUrl(c.slugPath)} clickable variant="outlined" label={c.title}/>
-                                ))}
-                            </Stack>
+                        {(crumbs?.length > 0 || (selected.children ?? []).some((c) => c.slugPath)) && (
+                            <Paper sx={{px: 2, py: 1.5}}><Stack spacing={1}>
+                                <CategoryBreadcrumbs items={crumbs} currentIsLast/>
+                                {(selected.children ?? []).some((c) => c.slugPath) && (
+                                    <Stack component="nav" aria-label="Subcategorii" direction="row" spacing={1} useFlexGap sx={{flexWrap: 'wrap'}}>
+                                        {selected.children.filter((c) => c.slugPath).map((c) => (
+                                            <Chip key={c.key} component={RouterLink} to={categoryUrl(c.slugPath)} clickable variant="outlined" label={c.title}/>
+                                        ))}
+                                    </Stack>
+                                )}
+                            </Stack></Paper>
                         )}
                         <SubjectList key={selected.key} node={{id: selected.key, name: selected.title}}
                             scope="direct" navigationState={navigationState()}/>
