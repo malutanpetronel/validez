@@ -80,7 +80,7 @@ export default function Layout() {
                     )}
                 </Toolbar>
             </AppBar>
-            <Container component="main" sx={{flex: 1, py: 3}}>
+            <Container component="main" sx={{flex: 1, pb: 3}}>
                 <Outlet/>
             </Container>
             <Box component="footer" sx={{py: 1.5, textAlign: 'center', color: 'text.secondary', fontSize: 13}}>
