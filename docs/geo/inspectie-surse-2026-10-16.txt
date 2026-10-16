@@ -1,0 +1,183 @@
+NOTICE:  table "siruta" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+COPY 16978
+=== 1. SIRUTA: inregistrari pe TIP (40 judet/Bucuresti, 1-5 UAT, 6 sector)
+ tip | niv | count 
+-----+-----+-------
+   1 |   2 |    40
+   2 |   2 |   216
+   3 |   2 |  2862
+   4 |   2 |    62
+   6 |   3 |     6
+  40 |   1 |    42
+
+--- coduri SIRSUP ale judetelor (parintele lor) si existenta unei inregistrari pentru tara
+ sirsup | count 
+--------+-------
+      1 |    42
+
+ inregistrare_cu_siruta_1 
+--------------------------
+                        0
+
+--- Bucuresti: judetul, municipiul si sectoarele (parinte SIRSUP)
+ siruta |        denloc        | tip | niv | sirsup | jud 
+--------+----------------------+-----+-----+--------+-----
+    403 | MUNICIPIUL BUCUREŞTI |  40 |   1 |      1 |  40
+ 179141 | BUCUREŞTI SECTORUL 1 |   6 |   3 | 179132 |  40
+ 179150 | BUCUREŞTI SECTORUL 2 |   6 |   3 | 179132 |  40
+ 179169 | BUCUREŞTI SECTORUL 3 |   6 |   3 | 179132 |  40
+ 179178 | BUCUREŞTI SECTORUL 4 |   6 |   3 | 179132 |  40
+ 179187 | BUCUREŞTI SECTORUL 5 |   6 |   3 | 179132 |  40
+ 179196 | BUCUREŞTI SECTORUL 6 |   6 |   3 | 179132 |  40
+
+=== 2. ANCPI 2024: niveluri, unicitate natcode, versiuni
+ natlevel |                natlevname                 | count 
+----------+-------------------------------------------+-------
+ 1stOrder | Tara                                      |     1
+ 2ndOrder | Judet                                     |    42
+ 3rdOrder | Comuna                                    |  2862
+ 3rdOrder | Municipiu resedinta de judet              |    40
+ 3rdOrder | Municipiu, altul decat resedinta de judet |    62
+ 3rdOrder | Oras                                      |   216
+ 3rdOrder | Sectoarele municipiului Bucuresti         |     6
+
+       verificare        | count 
+-------------------------+-------
+ uat natcode duplicate   |     0
+ judet natcode duplicate |     0
+ uat natcode non-numeric |     0
+
+    min     |    max     | cu_endversion 
+------------+------------+---------------
+ 2024-02-19 | 2024-02-19 |             0
+
+=== 3. Potrivire EXACTA de cod: judete ANCPI vs SIRUTA TIP 40
+ parte | natcode | name | denloc 
+-------+---------+------+--------
+
+=== 4. Potrivire EXACTA de cod: UAT ANCPI vs SIRUTA TIP 1-6
+ comune_ambelor | doar_ancpi | doar_siruta 
+----------------+------------+-------------
+           3186 |          0 |           0
+
+--- doar in ANCPI 2024 (cod absent din SIRUTA 2026 ca UAT)
+ natcode | name | natlevname | tip_in_siruta | denumire_in_siruta 
+---------+------+------------+---------------+--------------------
+
+--- doar in SIRUTA 2026 (UAT fara poligon ANCPI 2024)
+ siruta | denloc | tip | sirsup 
+--------+--------+-----+--------
+
+--- parinte: judetul din localid ANCPI (al doilea segment) vs SIRSUP; doar diferentele
+ natcode | name | localid | sirsup 
+---------+------+---------+--------
+
+--- denumiri: cod comun, nume diferit (comparatie exacta dupa scoaterea prefixului MUNICIPIUL/ORAS si a majusculelor; doar raportare)
+ nume_diferite | doar_sedila_vs_virgula 
+---------------+------------------------
+            26 |                      0
+
+ natcode |       ancpi       |          siruta           
+---------+-------------------+---------------------------
+ 26877   | MARGHITA          | MUNICIPIUL  MARGHITA
+ 38679   | RĂUŞENI           | RĂUSENI
+ 40241   | CODLEA            | MUNICIPIUL  CODLEA
+ 42708   | CHIŞCANI          | CHISCANI
+ 43279   | GRADIŞTEA         | GRĂDIŞTEA
+ 63300   | CUZA VODA         | CUZA VODĂ
+ 65841   | MORENI            | MUNICIPIUL  MORENI
+ 79932   | CRUŞET            | CRUŞEŢ
+ 83561   | GHEORGHENI        | MUNICIPIUL  GHEORGHENI
+ 83632   | TOPLIŢA           | MUNICIPIUL  TOPLIŢA
+ 87059   | LUPENI            | MUNICIPIUL  LUPENI
+ 87175   | VULCAN            | MUNICIPIUL  VULCAN
+ 95612   | ALEXANDRU I. CUZA | ALEXANDRU I.CUZA
+ 101243  | RADULEŞTI         | RĂDULEŞTI
+ 109096  | ŞISEŞTI           | ŞIŞEŞTI
+ 119242  | SARMAŞU           | ORAŞ SĂRMAŞU
+ 130348  | IPOTESTI          | IPOTEŞTI
+ 136241  | COCORASTII COLT   | COCORĂŞTII COLŢ
+ 151683  | TURNU MAGURELE    | MUNICIPIUL TURNU MĂGURELE
+ 159883  | C.A. ROSETTI      | C.A.ROSETTI
+ 169681  | FÂRŢĂŢEŞTI        | FÂRTĂŢEŞTI
+ 172082  | PĂUSEŞTI-MĂGLAŞI  | PĂUŞEŞTI-MĂGLAŞI
+ 174860  | ADJUD             | MUNICIPIUL  ADJUD
+ 179533  | POPEŞTI LEORDENI  | ORAŞ POPEŞTI-LEORDENI
+ 179720  | POIANA  ILVEI     | POIANA ILVEI
+ 179953  | CICEU - MIHĂIEŞTI | CICEU-MIHĂIEŞTI
+
+=== 5. Validitatea geometriilor (originalul ramane in geom; reparatia in geom_valid, doar pentru diagnostic)
+ALTER TABLE
+ALTER TABLE
+ nivel | invalide | total 
+-------+----------+-------
+ uat   |        0 |  3186
+ judet |        0 |    42
+ tara  |        0 |     1
+
+ natcode | name | st_isvalidreason 
+---------+------+------------------
+
+UPDATE 3186
+UPDATE 42
+ natcode | name | aria_originala_m2 | aria_reparata_m2 
+---------+------+-------------------+------------------
+
+CREATE INDEX
+=== 6. Relatii intre UAT-uri vecine (pe geometria reparata): frontiera comuna vs intersectie cu suprafata pozitiva
+NOTICE:  table "pairs" does not exist, skipping
+DROP TABLE
+SELECT 9364
+ALTER TABLE
+UPDATE 0
+         relatie          | count | suprafata_totala_m2 | max_m2 
+--------------------------+-------+---------------------+--------
+ frontiera comuna (linie) |  9295 |                     |       
+ atingere intr-un punct   |    69 |                     |       
+
+--- distributia suprapunerilor cu suprafata pozitiva
+ clasa | count 
+-------+-------
+
+ a_code | a_name | b_code | b_name | m2 
+--------+--------+--------+--------+----
+
+=== 7. Goluri si depasiri: UAT-uri vs judetul lor, judete vs tara
+NOTICE:  table "county_cmp" does not exist, skipping
+DROP TABLE
+SELECT 42
+ judete_comparate | gol_total_m2 | gol_max_m2 | depasire_total_m2 
+------------------+--------------+------------+-------------------
+               42 |          2.7 |        2.6 |               2.8
+
+ natcode |      name       | gol_m2 | depasire_m2 
+---------+-----------------+--------+-------------
+ 252     | MEHEDINŢI       |    2.6 |         0.0
+ 47      | BACĂU           |    0.1 |         0.0
+ 56      | BIHOR           |    0.0 |         0.0
+ 65      | BISTRIŢA-NĂSAUD |    0.0 |         0.0
+ 74      | BOTOŞANI        |    0.0 |         0.0
+ 92      | BRĂILA          |    0.0 |         0.0
+ 109     | BUZĂU           |    0.0 |         0.0
+ 38      | ARGEŞ           |    0.0 |         0.0
+
+ tara_minus_judete_m2 | judete_minus_tara_m2 
+----------------------+----------------------
+                  0.0 |                  0.0
+
+=== 8. Reproiectare: centroidul Cluj-Napoca in WGS84 (doar control grosier; datumul se verifica fata de ArcGIS)
+ natcode |         name         |                  st_astext                   
+---------+----------------------+----------------------------------------------
+ 54975   | CLUJ-NAPOCA          | POINT(23.601158386911646 46.776136361969904)
+ 179141  | BUCUREŞTI SECTORUL 1 | POINT(26.050470527204514 44.48835282467726)
+
+                                                                          proj4text                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ +proj=sterea +lat_0=46 +lon_0=25 +k=0.99975 +x_0=500000 +y_0=500000 +ellps=krass +towgs84=2.329,-147.042,-92.08,0.309,-0.325,-0.497,5.69 +units=m +no_defs 
+
+
+real	1m35,404s
+user	0m0,011s
+sys	0m0,007s
