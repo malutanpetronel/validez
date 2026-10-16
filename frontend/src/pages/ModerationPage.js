@@ -5,7 +5,9 @@ import {useAuth} from '../auth/AuthContext';
 import usePageMeta from '../seo/usePageMeta';
 import {fetchSubjects, updateSubject} from '../api/subjects';
 import {approveMedia, fetchPendingMedia, removeMedia} from '../api/media';
+import {fetchPendingPinClassifications} from '../api/geo';
 import MediaImage from '../components/MediaImage';
+import PinAdministrative from '../components/PinAdministrative';
 import {formatDate} from '../subjects/labels';
 
 /** ADR-0011 p.12: fotografiile și linkurile autorilor sub moderare; subiectul lor rămâne public. */
@@ -86,5 +88,33 @@ export default function ModerationPage() {
         </Stack></Paper>)}
         {data.total > 20 && <Pagination page={page} count={Math.ceil(data.total / 20)} onChange={(_, value) => setPage(value)}/>}
         <PendingMedia/>
+        <PendingPinClassifications/>
+    </Stack>;
+}
+
+/**
+ * ADR-0012 p.6 (G.2b): pinii cu încadrare administrativă neclară. Adminul alege o variantă aici; un pin în afara
+ * limitelor se corectează mutând pinul, din editarea subiectului.
+ */
+function PendingPinClassifications() {
+    const [items, setItems] = useState(null);
+    const [version, setVersion] = useState(0);
+    const [error, setError] = useState(null);
+    useEffect(() => {
+        let active = true;
+        fetchPendingPinClassifications().then((d) => { if (active) setItems(d.items); }).catch((e) => { if (active) setError(e.message); });
+        return () => { active = false; };
+    }, [version]);
+    return <Stack spacing={2}>
+        <Typography variant="h5" component="h2">Încadrări administrative neclare</Typography>
+        {error && <Alert severity="error">{error}</Alert>}
+        {!items && !error && <Typography>Se încarcă…</Typography>}
+        {items && !items.length && <Typography>Nu există pini cu încadrare neclară.</Typography>}
+        {items?.map((it) => <Paper key={it.subjectId} sx={{p: 2}}><Stack spacing={1}>
+            <Typography variant="body2"><RouterLink to={it.subjectPath ?? `/subiecte/${it.subjectId}`}>{it.subjectTitle}</RouterLink></Typography>
+            <PinAdministrative subjectId={it.subjectId} location={{...it.location, administrative: it.administrative}} canResolve
+                               onResolved={() => setVersion((v) => v + 1)}/>
+            {it.administrative.state === 'OUTSIDE' && <Typography variant="body2" color="text.secondary">Se corectează mutând pinul, din editarea subiectului.</Typography>}
+        </Stack></Paper>)}
     </Stack>;
 }

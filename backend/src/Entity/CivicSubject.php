@@ -353,6 +353,29 @@ class CivicSubject
         $this->pinAdminResolvedAt = null;
     }
 
+    /**
+     * ADR-0012 p.6 (G.2b): rezolvarea manuală a unei încadrări nedeterminate — doar AMBIGUOUS/UNMATCHED și doar
+     * un candidat din listă. Candidații rămân (proveniența alegerii). Mutarea pinului o anulează (classify).
+     *
+     * @throws \DomainException cu codul motivului: not_resolvable | not_a_candidate
+     */
+    public function resolvePinClassification(AdministrativeUnit $unit, User $by): void
+    {
+        if (!\in_array($this->pinAdminState, [PinClassificationState::AMBIGUOUS, PinClassificationState::UNMATCHED], true)) {
+            throw new \DomainException('not_resolvable');
+        }
+        if (!\in_array($unit->getCode(), array_column($this->getPinAdminCandidates(), 'code'), true)) {
+            throw new \DomainException('not_a_candidate');
+        }
+        $this->pinAdminState = PinClassificationState::RESOLVED_MANUALLY;
+        $this->pinAdminUnit = $unit;
+        $this->pinAdminResolvedBy = $by;
+        $this->pinAdminResolvedAt = new \DateTimeImmutable();
+    }
+
+    public function getPinAdminResolvedBy(): ?User { return $this->pinAdminResolvedBy; }
+    public function getPinAdminResolvedAt(): ?\DateTimeImmutable { return $this->pinAdminResolvedAt; }
+
     public function getPinAdminState(): ?PinClassificationState { return $this->pinAdminState; }
     public function getPinAdminUnit(): ?AdministrativeUnit { return $this->pinAdminUnit; }
     /** @return list<array<string, mixed>> */
@@ -365,7 +388,7 @@ class CivicSubject
      *
      * @return array{state: string, unit: ?array{code: string, name: string}, county: ?array{code: string, name: string}, candidates: list<array<string, mixed>>, provisional: bool}|null
      */
-    private function pinAdministrative(): ?array
+    public function getPinAdministrative(): ?array
     {
         if ($this->pinAdminState === null) {
             return null;
@@ -399,7 +422,7 @@ class CivicSubject
             'confirmed' => $confirmedBy !== null,
             'confirmedBy' => $confirmedBy,
             'confirmations' => $this->locationConfirmations,
-            'administrative' => $this->pinAdministrative(),
+            'administrative' => $this->getPinAdministrative(),
         ];
     }
 }

@@ -11,6 +11,7 @@ import {fetchChildren} from '../api/tree';
 import {fetchSubjects, updateSubject} from '../api/subjects';
 import {fetchCategorySuggestions, reviewCategory, suggestCategory, publishingStatus, setPublishingRevoked} from '../api/contributions';
 import {fetchPendingMedia} from '../api/media';
+import {fetchPendingPinClassifications} from '../api/geo';
 
 jest.mock('../api/tree');
 jest.mock('../api/subjects');
@@ -18,6 +19,7 @@ jest.mock('../api/contributions');
 // ModerationPage cere și media în așteptare (ADR-0011): fără mock, fetch-ul real cu tokenul fals primea 401,
 // refresh-ul eșua și sesiunea se ștergea în mijlocul testului.
 jest.mock('../api/media');
+jest.mock('../api/geo');
 
 const mount = (element) => render(<AuthProvider><MemoryRouter initialEntries={['/test']}><Routes>
     <Route path="/test" element={element}/>
@@ -35,6 +37,7 @@ beforeEach(() => {
     suggestCategory.mockResolvedValue({id: 'SUGGESTION', status: 'PENDING'});
     reviewCategory.mockResolvedValue({});
     fetchPendingMedia.mockResolvedValue({items: []});
+    fetchPendingPinClassifications.mockResolvedValue({items: []});
 });
 
 test('Help explică aprobările, dreptul revocabil și propunerile de categorii', () => {
