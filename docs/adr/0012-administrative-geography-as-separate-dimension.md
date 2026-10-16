@@ -32,6 +32,11 @@ Tema, aria geografică și instituția competentă sunt trei dimensiuni distinct
 - Codul SIRUTA e identificatorul stabil; denumirile și slug-urile pot fi corectate fără să rupă legăturile.
 - Fiecare UAT are poligonul limitei administrative, dintr-o sursă publică cu cod SIRUTA. Sursa exactă și licența ei se fixează la implementare.
 - **Setul de limite e versionat** (`BoundarySet`: sursă, dată, sumă de control). Un import nou creează o versiune nouă; versiunile vechi nu se șterg cât timp sunt referite.
+- **Completare (16.10.2026), după [inspecția surselor](../geo/inspectie-surse-2026-10-16.md):**
+  - **Țara** are identificatorul propriu `RO` și `siruta = NULL`: nomenclatorul SIRUTA nu conține o înregistrare pentru țară. Codul `1` folosit de ANCPI (și ca `SIRSUP` al județelor) se păstrează doar ca identificator extern al sursei, nu drept cod SIRUTA. `siruta` e deci obligatoriu pentru județe și UAT-uri, nu pentru țară; filtrul API (p.8) acceptă `RO` pentru țară, pe lângă codurile SIRUTA.
+  - **București:** în ierarhia aplicației, sectoarele stau direct sub 403 (nivel de județ), ca la ANCPI. Părintele original din SIRUTA (179132, `MUNICIPIUL BUCUREȘTI`, fără poligon propriu) se păstrează în datele de proveniență ale sectoarelor; nivelul intermediar nu se importă.
+  - **Denumiri:** sursa e SIRUTA. Se păstrează denumirea originală, iar forma de afișare e normalizată: Unicode NFC, sedilă în virgulă (`Ş`/`Ţ` → `Ș`/`Ț`), spații repetate reduse la unul. Diferențele de litere, cratime și prefixe față de ANCPI nu se corectează automat.
+  - **Cadrul de coordonate:** `BoundarySet` păstrează și cadrul declarat de sursă, transformarea folosită la import (exact cum a fost aplicată) și rezultatul verificării preciziei (neverificat / acceptat / respins, cu precizia în metri și justificarea). Un set de limite se activează pentru derivare doar cu verificarea acceptată. Nu se aplică translații empirice pentru alinierea surselor.
 
 ### 3. PostGIS
 
@@ -97,6 +102,8 @@ Point-in-polygon nu garantează încadrarea corectă: pinul poate fi pus greșit
 - Rezolvarea manuală se poate face doar între candidați. O încadrare `RESOLVED` nu se poate suprascrie manual.
 - Mutarea pinului anulează rezolvarea manuală și refă derivarea.
 - Confirmarea locului prin votul `LOCATION` (ADR-0011) confirmă pinul, nu și încadrarea administrativă. O stare diferită de `RESOLVED` se afișează lângă confirmare.
+
+**Zona de incertitudine lângă frontieră (16.10.2026).** Limitele și transformarea lor în WGS84 au o precizie finită (inspecția a găsit o deplasare sistematică de 4–6 m între două livrări ANCPI). De aceea un pin aflat la mai puțin de distanța de incertitudine D față de frontiera dintre UAT-uri primește `AMBIGUOUS`, cu UAT-urile din acea zonă drept candidați, chiar dacă geometric cade într-un singur poligon. Valoarea D nu se fixează aici: se justifică prin precizia declarată a limitelor și a transformării și se înregistrează în `BoundarySet` odată cu verificarea preciziei.
 
 ### 7. Instantaneul reviziei vs. clasificarea curentă
 
