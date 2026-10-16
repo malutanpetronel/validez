@@ -154,6 +154,12 @@ class AdministrativeUnit
         $this->retiredAt = null;
     }
 
+    /** SIRSUP din ultima versiune a nomenclatorului (proveniență; nu schimbă ierarhia aplicației). */
+    public function setSirutaParentCode(?int $sirutaParentCode): void
+    {
+        $this->sirutaParentCode = $sirutaParentCode;
+    }
+
     public function retire(): void
     {
         $this->retiredAt ??= new \DateTimeImmutable();

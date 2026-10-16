@@ -23,8 +23,8 @@ use Symfony\Component\Uid\Ulid;
  *   parametrii de datum), ca rezultatul să poată fi reprodus și verificat.
  * - accuracy*: verificarea preciziei (ADR-0012 p.2). uncertaintyDistanceMeters = distanța D a zonei de
  *   incertitudine de lângă frontieră (p.6), justificată în accuracyJustification.
- * - activatedAt/deactivatedAt: setul folosit pentru derivare. Un singur set activ (index unic parțial) și doar
- *   cu verificarea acceptată (CHECK) — nu se activează un set al cărui cadru n-a fost lămurit.
+ * - activatedAt/deactivatedAt: setul folosit pentru derivare. Un singur set activ (index unic parțial), doar
+ *   ACCEPTED sau PROVISIONAL (CHECK) — nu se activează un set cu incertitudinea nedocumentată.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'boundary_set')]
@@ -115,7 +115,7 @@ class BoundarySet
         $this->importedAt = new \DateTimeImmutable();
     }
 
-    /** Rezultatul verificării preciziei; ACCEPTED cere precizia, D și justificarea. Un set activ nu se mai reevaluează. */
+    /** Rezultatul verificării preciziei; ACCEPTED/PROVISIONAL cer precizia, D și justificarea. Un set activ nu se mai reevaluează. */
     public function recordAccuracy(BoundaryAccuracyStatus $status, ?string $accuracyMeters, ?string $uncertaintyDistanceMeters, string $justification): void
     {
         if ($this->isActive()) {
@@ -124,8 +124,8 @@ class BoundarySet
         if (trim($justification) === '') {
             throw new \InvalidArgumentException('Verificarea preciziei cere o justificare.');
         }
-        if ($status === BoundaryAccuracyStatus::ACCEPTED && ($accuracyMeters === null || $uncertaintyDistanceMeters === null)) {
-            throw new \InvalidArgumentException('Un set acceptat cere precizia și distanța de incertitudine.');
+        if ($status->allowsActivation() && ($accuracyMeters === null || $uncertaintyDistanceMeters === null)) {
+            throw new \InvalidArgumentException('Un set acceptat sau provizoriu cere precizia și distanța de incertitudine.');
         }
         foreach ([$accuracyMeters, $uncertaintyDistanceMeters] as $m) {
             if ($m !== null && (!is_numeric($m) || (float) $m < 0)) {
@@ -141,8 +141,8 @@ class BoundarySet
 
     public function activate(): void
     {
-        if ($this->accuracyStatus !== BoundaryAccuracyStatus::ACCEPTED) {
-            throw new \LogicException('Doar un set cu precizia acceptată poate fi activat.');
+        if (!$this->accuracyStatus->allowsActivation()) {
+            throw new \LogicException('Doar un set cu precizia acceptată sau provizorie (documentată) poate fi activat.');
         }
         if ($this->deactivatedAt !== null) {
             throw new \LogicException('Un set dezactivat nu se reactivează; importă-l ca set nou.');
