@@ -1,0 +1,217 @@
+== încărcarea exportului ArcGIS cu ogr2ogr (driver ESRIJSON), fără reparare, SRS EPSG:3844 ca fișierul 2024
+arc_uat incarcate: 3186
+=== A. Export: numar, unicitate, versiune
+ entitati | coduri_distincte | coduri_nenumerice | versiuni | versiune | cu_sfarsit_de_versiune 
+----------+------------------+-------------------+----------+----------+------------------------
+     3186 |             3186 |                 0 |        1 | 20250324 |                      0
+
+            nationallevelname_1            | count 
+-------------------------------------------+-------
+ Comuna                                    |  2862
+ Municipiu resedinta de judet              |    40
+ Municipiu, altul decat resedinta de judet |    62
+ Oras                                      |   216
+ Sectoarele municipiului Bucuresti         |     6
+
+=== B. Coduri: potrivire EXACTA cu SIRUTA 2026 TIP 1-6
+ comune | doar_arcgis | doar_siruta 
+--------+-------------+-------------
+   3186 |           0 |           0
+
+--- judetul din inspireId_localId (al doilea segment) vs SIRSUP (fara sectoare); doar diferentele
+ nationalcode | name_1 | inspireid_localid | sirsup 
+--------------+--------+-------------------+--------
+
+--- sectoarele Bucurestiului: cod, nume, localId, upperLevelUnit
+ nationalcode |        name_1        | inspireid_localid | upperlevelunit 
+--------------+----------------------+-------------------+----------------
+ 179141       | BUCUREŞTI SECTORUL 1 | 1.403.179141      |              2
+ 179150       | BUCUREŞTI SECTORUL 2 | 1.403.179150      |              2
+ 179169       | BUCUREŞTI SECTORUL 3 | 1.403.179169      |              2
+ 179178       | BUCUREŞTI SECTORUL 4 | 1.403.179178      |              2
+ 179187       | BUCUREŞTI SECTORUL 5 | 1.403.179187      |              2
+ 179196       | BUCUREŞTI SECTORUL 6 | 1.403.179196      |              2
+
+--- denumiri ArcGIS vs fisierul 2024 (cod comun, nume diferit)
+ nationalcode | fisier_2024 | arcgis 
+--------------+-------------+--------
+
+=== C. Validitate (originalul in geom; reparatia separat, in geom_valid)
+ invalide | goale | total 
+----------+-------+-------
+        0 |     0 |  3186
+
+ nationalcode | name_1 | st_isvalidreason 
+--------------+--------+------------------
+
+ALTER TABLE
+UPDATE 3186
+ nationalcode | name_1 | aria_originala_m2 | aria_reparata_m2 
+--------------+--------+-------------------+------------------
+
+CREATE INDEX
+=== D. Relatii intre UAT-uri vecine: frontiera comuna vs intersectie cu suprafata pozitiva
+SELECT 9364
+ALTER TABLE
+UPDATE 33
+                   relatie                    | count | suprafata_totala_m2 | max_m2 
+----------------------------------------------+-------+---------------------+--------
+ frontiera comuna (linie)                     |  9261 |                     |       
+ atingere intr-un punct                       |    70 |                     |       
+ intersectie cu suprafata (interioare comune) |    33 |               0.088 |  0.060
+
+ clasa  | count 
+--------+-------
+ < 1 m2 |    33
+
+ a_code |       a_name       | b_code |      b_name      |  m2   
+--------+--------------------+--------+------------------+-------
+ 63580  | ÎNTORSURA BUZĂULUI | 64265  | DOBÂRLĂU         | 0.060
+ 61167  | CERCHEZU           | 63161  | DUMBRĂVENI       | 0.005
+ 147134 | BOSANCI            | 149049 | HORODNICENI      | 0.004
+ 71536  | CARPEN             | 73503  | ORODEL           | 0.003
+ 146655 | SIRET              | 146995 | BĂLCĂUŢI         | 0.002
+ 153384 | MOŞTENI            | 155127 | FRĂSINET         | 0.002
+ 157424 | JEBEL              | 159437 | PARŢA            | 0.002
+ 55277  | MIHAI VITEAZU      | 58918  | PETREŞTII DE JOS | 0.002
+ 146995 | BĂLCĂUŢI           | 148916 | GRĂMEŞTI         | 0.002
+ 131274 | POIANA CÂMPINA     | 132315 | BĂNEŞTI          | 0.001
+ 89561  | GEOAGIU            | 91688  | TURDAŞ           | 0.001
+ 152172 | BOTOROAGA          | 152270 | BUJORENI         | 0.001
+ 64194  | CERNAT             | 64504  | MALNAŞ           | 0.001
+ 64871  | TURIA              | 65139  | MICFALĂU         | 0.001
+ 146860 | ARBORE             | 151442 | IASLOVĂŢ         | 0.001
+
+=== E. Acoperire: uniunea UAT-urilor ArcGIS fata de tara si judetele din fisierul 2024
+SELECT 42
+ tara_minus_uat_m2 | uat_minus_tara_m2 
+-------------------+-------------------
+         4612960.2 |         6413425.3
+
+ jud |      name       | judet_2024_minus_uat_m2 | uat_minus_judet_2024_m2 
+-----+-----------------+-------------------------+-------------------------
+ 225 | IAŞI            |               1439038.7 |               1480120.4
+ 127 | CLUJ            |               1259025.8 |               1309240.4
+ 350 | TIMIŞ           |               1208020.2 |               1273863.0
+ 243 | MARAMUREŞ       |               1160814.7 |               1272464.8
+ 378 | VASLUI          |               1194649.4 |               1234607.9
+ 332 | SUCEAVA         |               1140012.1 |               1204157.8
+ 10  | ALBA            |               1098556.0 |               1145790.1
+ 190 | HARGHITA        |               1078254.8 |               1128224.6
+ 261 | MUREŞ           |               1065637.4 |               1116147.1
+ 47  | BACĂU           |               1047430.1 |               1097260.7
+ 270 | NEAMŢ           |               1042421.2 |               1086721.0
+ 29  | ARAD            |               1015943.8 |               1074491.6
+ 56  | BIHOR           |               1002464.2 |               1059290.9
+ 109 | BUZĂU           |                992642.2 |               1038747.3
+ 136 | CONSTANŢA       |                972360.5 |               1026169.1
+ 74  | BOTOŞANI        |                963724.6 |               1001052.0
+ 305 | SATU-MARE       |                943109.1 |                976312.0
+ 369 | TULCEA          |                885019.7 |                949058.8
+ 314 | SĂLAJ           |                923872.6 |                888645.6
+ 38  | ARGEŞ           |                875977.2 |                927655.3
+ 118 | CARAŞ-SEVERIN   |                862115.8 |                926864.8
+ 65  | BISTRIŢA-NĂSAUD |                857275.2 |                897549.8
+ 216 | IALOMIŢA        |                860237.8 |                893951.9
+ 172 | GALAŢI          |                849974.7 |                883619.9
+ 83  | BRAŞOV          |                841569.1 |                882055.5
+ 396 | VRANCEA         |                840399.1 |                877002.3
+ 207 | HUNEDOARA       |                830844.2 |                884366.4
+ 289 | OLT             |                828820.7 |                870629.2
+ 252 | MEHEDINŢI       |                821174.2 |                858736.2
+ 323 | SIBIU           |                797739.3 |                838785.6
+ 387 | VÂLCEA          |                759573.4 |                803260.2
+ 298 | PRAHOVA         |                740765.9 |                776438.2
+ 154 | DÂMBOVIŢA       |                721096.4 |                751745.5
+ 163 | DOLJ            |                697220.5 |                753722.4
+ 145 | COVASNA         |                689723.4 |                717687.9
+ 92  | BRĂILA          |                676699.9 |                712708.9
+ 181 | GORJ            |                669157.0 |                711424.7
+ 519 | CĂLĂRAŞI        |                669348.7 |                707933.2
+ 341 | TELEORMAN       |                638083.0 |                682160.0
+ 234 | ILFOV           |                596936.4 |                608792.1
+ 528 | GIURGIU         |                586518.4 |                613443.7
+ 403 | BUCUREŞTI       |                153237.0 |                155050.2
+
+=== F. Geometrie ArcGIS 2025 vs fisier 2024, in aceeasi proiectie (Stereo70)
+SELECT 3186
+   clasa    | count | deplasare_medie_m | deplasare_max_m | dif_puncte 
+------------+-------+-------------------+-----------------+------------
+ e) >= 1 ha |  3186 |             3.324 |          50.702 |       2465
+
+--- numar de varfuri: ArcGIS vs 2024
+ varfuri_arcgis | varfuri_2024 | uat_cu_numar_diferit 
+----------------+--------------+----------------------
+        4542357 |      4539892 |                  157
+
+--- UAT-uri cu diferenta simetrica >= 1 m2 (modificari de geometrie)
+ nationalcode |     name_1      | symdiff_m2 | dif_arie_m2 | deplasare_medie_m | puncte_arcgis | puncte_2024 
+--------------+-----------------+------------+-------------+-------------------+---------------+-------------
+ 162791       | BOGDĂNIŢA       |  2407699.1 |  -2188054.9 |             42.75 |          1559 |        1700
+ 162595       | BOGDANA         |  2360571.8 |   2188790.1 |             50.70 |          1321 |        1462
+ 123102       | ION CREANGĂ     |   933697.5 |    719450.8 |             15.57 |          2329 |        2240
+ 123709       | POIENARI        |   857963.1 |   -718624.9 |             22.81 |          2768 |        2679
+ 107154       | BĂIUŢ           |   664453.4 |   -459475.1 |             12.03 |          1464 |        1333
+ 107519       | BUDEŞTI         |   629243.3 |    460973.9 |             13.31 |           732 |         601
+ 160911       | MURIGHIOL       |   555169.9 |      6150.3 |              3.35 |           919 |         919
+ 43117        | FRECĂŢEI        |   539734.5 |      3246.9 |              3.70 |           969 |         969
+ 21123        | ASĂU            |   527776.8 |      2314.1 |              3.76 |          3185 |        3185
+ 34903        | ŞINTEREAG       |   512737.3 |    311161.9 |              8.47 |          1361 |        1337
+ 106979       | VIŞEU DE SUS    |   502781.3 |      3311.6 |              3.77 |          3503 |        3505
+ 160261       | CRIŞAN          |   499533.3 |      2891.2 |              3.41 |          1365 |        1365
+ 27846        | BUDUREASA       |   497822.6 |      2399.9 |              3.54 |          2584 |        2584
+ 161231       | SFÂNTU GHEORGHE |   493894.5 |      4646.9 |              2.99 |           649 |         649
+ 60419        | CONSTANŢA       |   472044.6 |       944.7 |              3.28 |          3268 |        3268
+ 147358       | BROŞTENI        |   471794.4 |      3238.8 |              3.69 |          2978 |        2978
+ 147713       | CÂRLIBABA       |   467759.3 |      2256.1 |              4.01 |          2897 |        2897
+ 161179       | SARICHIOI       |   463148.1 |      2154.3 |              3.71 |          2777 |        2777
+ 34770        | ŞIEU-ODORHEI    |   459999.2 |   -310220.4 |              9.39 |          1095 |        1071
+ 35054        | TELCIU          |   458272.5 |      2143.1 |              3.70 |          3234 |        3236
+ 53577        | PRIGOR          |   446428.4 |     43008.1 |              3.91 |          1167 |        1031
+ 54617        | ZĂVOI           |   440594.2 |      2965.8 |              3.06 |          2677 |        2677
+ 54270        | TEREGOVA        |   440111.3 |      2551.0 |              2.94 |          1525 |        1525
+ 1696         | CUGIR           |   439905.6 |      2475.9 |              3.29 |          2226 |        2226
+ 40438        | SĂCELE          |   437495.5 |      2427.5 |              3.27 |          4652 |        4652
+ 171021       | MALAIA          |   436983.3 |      2970.8 |              3.08 |          6868 |        6868
+ 8014         | ŞUGAG           |   434121.0 |      1836.6 |              3.19 |          5336 |        5338
+ 145499       | SĂLIŞTE         |   426019.1 |      1713.0 |              2.92 |          5494 |        5494
+ 35429        | ZAGRA           |   424066.1 |      1136.3 |              3.62 |          3544 |        3548
+ 106746       | BORŞA           |   422374.3 |      3140.8 |              3.92 |          2890 |        2892
+ 160225       | CIUCUROVA       |   422010.5 |      1167.1 |              3.59 |          4543 |        4543
+ 106817       | TÂRGU LĂPUŞ     |   421539.2 |      1855.3 |              3.79 |          5857 |        5859
+ 159963       | CASIMCEA        |   416851.7 |      2027.4 |              3.22 |          2257 |        2258
+ 167179       | ZORLENI         |   414677.1 |       976.7 |              3.78 |          2437 |        2437
+ 43493        | MĂRAŞU          |   408448.6 |      1487.9 |              3.52 |          1185 |        1185
+ 47079        | GURA TEGHII     |   404730.3 |      3477.1 |              3.38 |          3551 |        3551
+ 82430        | TISMANA         |   402936.8 |      2258.9 |              2.86 |          9700 |        9700
+ 34280        | REBRIŞOARA      |   402010.9 |      1110.3 |              3.30 |          2564 |        2566
+ 75098        | GALAŢI          |   389687.5 |      1838.1 |              3.69 |          1328 |        1328
+ 160172       | CHILIA VECHE    |   387659.8 |      4019.5 |              2.93 |          1180 |        1180
+
+--- control: ariile calculate local vs Shape__Area din serviciu
+ dif_max_m2 
+------------
+      0.002
+
+=== G. Deplasare sistematica? Diferenta dintre centroizi (UAT cu acelasi numar de varfuri)
+SELECT 3029
+ uat  | dx_mediu_m | dx_abatere | dy_mediu_m | dy_abatere | d_min_m | d_max_m 
+------+------------+------------+------------+------------+---------+---------
+ 3029 |      3.544 |      0.603 |      3.616 |      0.584 |   4.030 |   6.329
+
+--- pe zone (vest/centru/est x nord/sud, dupa centroid): variatia deplasarii in teritoriu
+ zona_x | zona_y | count | dx_m  | dy_m  | dx_abatere | dy_abatere 
+--------+--------+-------+-------+-------+------------+------------
+ centru | nord   |   586 | 3.721 | 4.014 |      0.289 |      0.300
+ centru | sud    |   688 | 3.282 | 3.125 |      0.250 |      0.218
+ est    | nord   |   525 | 4.363 | 3.691 |      0.163 |      0.327
+ est    | sud    |   406 | 4.033 | 2.839 |      0.250 |      0.234
+ vest   | nord   |   537 | 2.988 | 4.367 |      0.329 |      0.257
+ vest   | sud    |   287 | 2.663 | 3.542 |      0.175 |      0.268
+
+--- dupa translatia proprie (dx, dy al fiecarui UAT): ramane o diferenta de forma?
+ uat  | deplasare_reziduala_medie_m | deplasare_reziduala_max_m 
+------+-----------------------------+---------------------------
+ 3029 |                      0.0140 |                    0.0480
+
+exit=0 durata=107s

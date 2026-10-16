@@ -29,7 +29,23 @@ Inspecție izolată, într-un container PostGIS temporar (`postgis/postgis:16-3.
 
 ## De decis pentru G.1b–G.1c
 
+> Deciziile din 16.10.2026 (după acest raport): București — sectoarele direct sub 403, codul părintelui SIRUTA (179132) păstrat în proveniență; țara — identificator propriu `RO`, `siruta = NULL`, codul ANCPI `1` doar ca identificator extern al sursei; denumiri — SIRUTA ca sursă, cu formă de afișare normalizată (Unicode, sedilă → virgulă, spații repetate) și originalul păstrat. Sursa poligoanelor: vezi secțiunea „Exportul ArcGIS” de mai jos.
+
 - **Sursa poligoanelor:** fișierul ANCPI 2024 (descărcare simplă, sumă de control stabilă, verificat mai sus) sau exportul serviciului ArcGIS (date 2025-03-24, cu frontiere actualizate, dar export prin interogări paginate, de inspectat la fel înainte de folosire).
 - **București:** sectoarele direct sub județul 403 (ca la ANCPI), sau cu 179132 ca nivel intermediar fără poligon propriu.
 - **Țara:** folosirea codului 1 (referit de ambele surse) ca identificator, sau un identificator propriu, separat de SIRUTA.
 - **Denumirile afișate:** din SIRUTA (sursa oficială a nomenclatorului) sau din ANCPI; transformarea sedilei în virgulă (`Ş` → `Ș`) și curățarea spațiilor duble sunt transformări de afișare, de decis explicit.
+
+## Exportul ArcGIS (16.10.2026)
+
+Export cu [tools/geo/export_ancpi_arcgis.py](../../tools/geo/export_ancpi_arcgis.py) în `backend/var/geo/arcgis-20261016/` (16 pagini Esri JSON a câte 200 de entități, 146 MB, `manifest.json` + `SHA256SUMS`; SHA-256 al manifestului `b978117c278583a8688f3fea9cfe9a42c9eee42fbd115a0a2ddeda3ae2956330`). Geometrie în proiecția nativă a serviciului, fără `outSR`, generalizare sau cuantizare. Inspecție cu [tools/geo/inspect-arcgis.sh](../../tools/geo/inspect-arcgis.sh) și [inspectie-arcgis.sql](inspectie-arcgis.sql) (încărcare cu `ogr2ogr`, driver ESRIJSON, fără reparare); ieșirea: [inspectie-arcgis-2026-10-16.txt](inspectie-arcgis-2026-10-16.txt).
+
+1. **Completitudine: fără probleme.** Lista de OBJECTID luată înainte și după export e identică (3186); fiecare OBJECTID apare o dată, `nationalCode` e unic, toate entitățile au versiunea de date `20250324`, iar `dataLastEditDate` al layer-ului (2026-01-19T09:24:10Z) nu s-a schimbat în timpul exportului (16:55:39–16:56:26 UTC). Ariile calculate local coincid cu `Shape__Area` din serviciu (diferență maximă 0,002 m²), deci serviciul nu reproiectează la interogare.
+2. **Coduri și sectoare: identice cu fișierul 2024.** 3186 de coduri, potrivire exactă cu SIRUTA 2026 `TIP` 1–6, județul din `localId` egal cu `SIRSUP`, cele 6 sectoare cu părintele 403. Denumirile coincid cu fișierul 2024.
+3. **Validitate: toate geometriile valide**, niciuna goală.
+4. **Suprapuneri: 33 de perechi de vecini au interioare comune, toate sub 0,06 m²** (0,088 m² în total); restul sunt 9261 de frontiere comune și 70 de atingeri într-un punct. Fișierul 2024 nu avea nicio suprapunere.
+5. **Serviciul are doar nivelul UAT** (un singur layer). Județele și țara ar trebui derivate din uniunea UAT-urilor.
+6. **Toată geometria ArcGIS e deplasată față de fișierul 2024 cu 4–6 m.** La cele 3029 de UAT-uri cu același număr de vârfuri, forma e aceeași (după translație rămân în medie 1,4 cm, maxim 4,8 cm), dar e mutată cu în medie +3,5 m pe est și +3,6 m pe nord, variabil lent în teritoriu (de la 2,7/3,5 m în sud-vest la 4,4/3,7 m în nord-est). Un astfel de câmp de deplasare indică o altă transformare de coordonate în producerea uneia dintre surse, nu modificări de frontieră. Din aceste date nu se poate stabili care dintre cele două e în cadrul corect față de WGS84 (GPS) după transformarea PostGIS EPSG:3844.
+7. **Modificări reale de frontieră, peste deplasarea comună:** perechile vecine cu număr de vârfuri schimbat și diferență simetrică mult peste cea a translației — Bogdana / Bogdănița (±219 ha), Ion Creangă / Poienari (±72 ha), Budești / Băiuț (±46 ha), Șintereag / Șieu-Odorhei (±31 ha), Prigor / Eftimie Murgu (±4 ha) și celelalte din secțiunea anterioară, punctul 6. 157 de UAT-uri au alt număr de vârfuri.
+
+**Consecință:** exportul ArcGIS trece verificările de cod, sectoare, validitate, suprapuneri și completitudine, dar nu poate fi adoptat doar pe baza lor: diferența de cadru de 4–6 m față de fișierul oficial 2024 trebuie lămurită (care sursă corespunde GPS-ului) înainte de alegere.
