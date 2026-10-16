@@ -39,18 +39,20 @@ final class SeoShell
     }
 
     /**
-     * @param array{title: string, description: string, path?: ?string, noindex?: bool, ogType?: string, jsonLd?: list<array<string, mixed>>} $meta
-     *        title fără brand; path = calea canonică (absolutizată aici)
+     * @param array{title: string, description: string, path?: ?string, noindex?: bool, ogType?: string, jsonLd?: list<array<string, mixed>>, image?: ?array{path: string, width: int, height: int, alt: string}} $meta
+     *        title fără brand; path = calea canonică (absolutizată aici); image = og:image al paginii (altfel rămâne cel din șablon)
      */
     public function render(array $meta, string $bodyHtml, int $status = Response::HTTP_OK): Response
     {
         $canonical = isset($meta['path']) && !($meta['noindex'] ?? false) ? $this->url($meta['path']) : null;
+        $image = $meta['image'] ?? null;
         $head = $this->twig->render('seo/head.html.twig', [
             'title' => $meta['title'].' — VALIDEZ',
             'description' => $meta['description'],
             'canonical' => $canonical,
             'noindex' => $meta['noindex'] ?? false,
             'ogType' => $meta['ogType'] ?? 'website',
+            'image' => $image === null ? null : ['url' => $this->url($image['path'])] + $image,
             'jsonLd' => array_map(
                 static fn (array $ld): string => json_encode($ld, \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_APOS | \JSON_HEX_QUOT | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR),
                 $meta['jsonLd'] ?? [],
@@ -59,12 +61,16 @@ final class SeoShell
 
         $html = $this->template();
         // Scoatem ce aducem noi, apoi inserăm prin poziție (nu prin preg_replace: textul utilizatorilor poate conține „$1”).
-        $html = (string) preg_replace([
+        $remove = [
             '#<title>.*?</title>#is',
             '#<meta\s+name="(?:description|robots)"[^>]*>#i',
             '#<meta\s+property="og:(?:title|description|url|type)"[^>]*>#i',
             '#<link\s+rel="canonical"[^>]*>#i',
-        ], '', $html);
+        ];
+        if ($image !== null) {
+            $remove[] = '#<meta\s+(?:property|name)="(?:og:image(?::[a-z_]+)?|twitter:image(?::alt)?)"[^>]*>#i';
+        }
+        $html = (string) preg_replace($remove, '', $html);
         $html = self::insertBefore($html, '</head>', $head);
         $html = self::insertBefore($html, '</div>', $bodyHtml, '<div id="root">');
 

@@ -7,7 +7,8 @@ namespace App\Media;
 /**
  * Re-encodarea fotografiilor (ADR-0011 p.5-6): tipul se verifică după conținut, nu după extensie; imaginea se
  * rotește după EXIF, apoi toate metadatele se elimină; rezultă o variantă de afișare și o miniatură, WebP.
- * Originalul nu se păstrează.
+ * Originalul nu se păstrează. A treia variantă, `og`, e imaginea de share (og:image): JPEG 1200×630, decupată
+ * din centru (decizie 16.10.2026), pentru că nu toate platformele citesc WebP.
  */
 final class ImageProcessor
 {
@@ -16,6 +17,8 @@ final class ImageProcessor
     public const MAX_PIXELS = 40_000_000;
     public const DISPLAY_SIZE = 1600;
     public const THUMB_SIZE = 400;
+    public const OG_WIDTH = 1200;
+    public const OG_HEIGHT = 630;
 
     /** Tipul detectat => coderul ImageMagick impus la citire (nu lăsăm ImageMagick să ghicească formatul). */
     private const FORMATS = [
@@ -61,11 +64,41 @@ final class ImageProcessor
             $thumb = clone $image;
             $this->fit($image, self::DISPLAY_SIZE);
             $this->fit($thumb, self::THUMB_SIZE);
+            // Din varianta de afișare (1600 px): aceeași sursă ca la backfill (app:media:og-backfill).
+            $og = $this->og(clone $image);
 
-            return new ProcessedImage($this->webp($image, 80), $this->webp($thumb, 75), $image->getImageWidth(), $image->getImageHeight());
+            return new ProcessedImage($this->webp($image, 80), $this->webp($thumb, 75), $og, $image->getImageWidth(), $image->getImageHeight());
         } catch (\ImagickException) {
             throw new InvalidImageException('Fotografia nu poate fi citită.');
         }
+    }
+
+    /** Varianta `og` dintr-o variantă de afișare deja salvată (WebP fără metadate) - pentru fotografiile vechi. */
+    public function ogFromDisplay(string $displayBytes): string
+    {
+        try {
+            $image = new \Imagick();
+            $image->readImageBlob($displayBytes);
+
+            return $this->og($image);
+        } catch (\ImagickException) {
+            throw new InvalidImageException('Fotografia nu poate fi citită.');
+        }
+    }
+
+    private function og(\Imagick $image): string
+    {
+        $image->cropThumbnailImage(self::OG_WIDTH, self::OG_HEIGHT); // acoperă 1200×630, apoi decupează centrul
+        $image->setImagePage(0, 0, 0, 0);
+        // PNG/WebP cu transparență: JPEG nu are canal alfa, fundalul devine alb, nu negru.
+        $image->setImageBackgroundColor('white');
+        $image->setImageAlphaChannel(\Imagick::ALPHACHANNEL_REMOVE);
+        $image->setImageFormat('jpeg');
+        $image->setImageCompressionQuality(82);
+        $image->setInterlaceScheme(\Imagick::INTERLACE_PLANE);
+        $image->stripImage();
+
+        return $image->getImageBlob();
     }
 
     private function fit(\Imagick $image, int $max): void

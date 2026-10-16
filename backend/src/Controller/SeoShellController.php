@@ -6,7 +6,10 @@ namespace App\Controller;
 
 use App\Entity\CivicSubject;
 use App\Entity\TreeNode;
+use App\Media\ImageProcessor;
+use App\Media\MediaStorage;
 use App\Repository\CivicSubjectRepository;
+use App\Repository\SubjectMediaRepository;
 use App\Repository\TreeNodeRepository;
 use App\Seo\Labels;
 use App\Seo\SeoShell;
@@ -32,6 +35,8 @@ final class SeoShellController
         private readonly SlugRegistry $slugs,
         private readonly TreeNodeRepository $nodes,
         private readonly CivicSubjectRepository $subjects,
+        private readonly SubjectMediaRepository $media,
+        private readonly MediaStorage $storage,
         private readonly SeoShell $shell,
         private readonly Environment $twig,
     ) {
@@ -103,12 +108,22 @@ final class SeoShellController
         }
         $crumbs = $this->nodes->withBreadcrumbs($subject->getNode())->getBreadcrumbs() ?? [];
         $description = Labels::excerpt($subject->getDescription()) ?: $subject->getTitle();
+        // Prima fotografie publicată (ordinea aleasă de autor/admini); una fără varianta og (încărcată înainte de
+        // 16.10.2026 și negenerată încă de app:media:og-backfill) lasă imaginea site-ului din șablon.
+        $cover = $this->media->findFirstPublishedPhoto($subject);
+        $image = $cover !== null && $this->storage->exists($cover->storageKey('og')) ? [
+            'path' => '/media/og/'.$cover->getId()->toBase32().'.jpg',
+            'width' => ImageProcessor::OG_WIDTH,
+            'height' => ImageProcessor::OG_HEIGHT,
+            'alt' => 'Fotografie: '.$subject->getTitle(),
+        ] : null;
 
         return $this->shell->render([
             'title' => $subject->getTitle(),
             'description' => $description,
             'path' => $canonical,
             'ogType' => 'article',
+            'image' => $image,
             'jsonLd' => [
                 $this->breadcrumbList([...$crumbs, ['name' => $subject->getTitle(), 'url' => $canonical]]),
                 [
@@ -116,6 +131,7 @@ final class SeoShellController
                     '@type' => 'Article',
                     'headline' => mb_substr($subject->getTitle(), 0, 110),
                     'description' => $description,
+                    ...($image === null ? [] : ['image' => $this->shell->url($image['path'])]),
                     'datePublished' => $subject->getCreatedAt()->format(\DATE_ATOM),
                     'dateModified' => $subject->getUpdatedAt()->format(\DATE_ATOM),
                     'mainEntityOfPage' => $this->shell->url($canonical),

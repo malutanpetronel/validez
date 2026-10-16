@@ -282,6 +282,10 @@ final class SubjectMediaTest extends WebTestCase
             self::assertSame([], $out->getImageProfiles('*', false), 'fără profile EXIF/XMP/ICC');
             self::assertStringNotContainsString('Test Autor', (string) file_get_contents($this->stored($m, $variant)));
         }
+        $og = new \Imagick($this->ogFile($m));
+        self::assertSame('JPEG', $og->getImageFormat());
+        self::assertSame([], $og->getImageProperties('exif:*'), 'și imaginea de share e fără EXIF');
+        self::assertStringNotContainsString('Test Autor', (string) file_get_contents($this->ogFile($m)));
         self::assertSame($revision, (int) $this->db->fetchOne('SELECT revision_number FROM civic_subject WHERE id = ?', [$this->s['vlad']->getId()->toRfc4122()]));
     }
 
@@ -400,10 +404,114 @@ final class SubjectMediaTest extends WebTestCase
 
         self::assertFileDoesNotExist($this->stored($m, 'display'));
         self::assertFileDoesNotExist($this->stored($m, 'thumb'));
+        self::assertFileDoesNotExist($this->ogFile($m));
         self::assertSame([], $this->call('GET', '/api/civic_subjects/'.$m['subjectId'].'/media')['items']);
         $this->call('GET', $m['displayUrl'], 'vlad');
         self::assertSame(404, $this->code());
         // Rândul rămâne pentru istoricul public (M.2).
         self::assertSame(1, (int) $this->db->fetchOne('SELECT count(*) FROM subject_media WHERE removed_at IS NOT NULL AND removed_by_id IS NOT NULL'));
+    }
+
+    private function ogFile(array $media): string
+    {
+        return $this->mediaDir.'/'.$media['subjectId'].'/'.$media['id'].'-og.jpg';
+    }
+
+    /** @return array<string, mixed> */
+    private function reorder(string $subject, string $who, mixed $ids): array
+    {
+        $this->client->request('PUT', '/api/civic_subjects/'.$this->s[$subject]->getId()->toBase32().'/media/order', server: [
+            'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json', 'HTTP_AUTHORIZATION' => 'Bearer '.$this->token($who),
+        ], content: json_encode(['ids' => $ids]));
+
+        return json_decode((string) $this->client->getResponse()->getContent(), true) ?? [];
+    }
+
+    public function testOrdonareaFotografiilorLasaLinkurilePeLoc(): void
+    {
+        $revision = $this->s['vlad']->getRevisionNumber();
+        $p0 = $this->upload('vlad', 'vlad');
+        $link = $this->link('vlad', 'vlad', 'https://example.org/a');
+        $p1 = $this->upload('vlad', 'vlad');
+        self::assertSame([0, 1, 2], [$p0['position'], $link['position'], $p1['position']]);
+
+        $this->reorder('vlad', 'maria', [$p1['id'], $p0['id']]);
+        self::assertSame(403, $this->code());
+        $this->reorder('vlad', 'vlad', [$p1['id']]);
+        self::assertSame(422, $this->code(), 'lista trebuie să conțină toate fotografiile');
+        $this->reorder('vlad', 'vlad', [$p1['id'], $p0['id'], $link['id']]);
+        self::assertSame(422, $this->code(), 'linkurile nu se ordonează aici');
+        $this->reorder('vlad', 'vlad', [$p1['id'], $p1['id']]);
+        self::assertSame(422, $this->code());
+        $this->reorder('vlad', 'vlad', 'nu-e-lista');
+        self::assertSame(422, $this->code());
+
+        $items = $this->reorder('vlad', 'vlad', [$p1['id'], $p0['id']])['items'];
+        self::assertSame(200, $this->code());
+        self::assertSame([$p1['id'], $link['id'], $p0['id']], array_column($items, 'id'));
+        self::assertSame([0, 1, 2], array_column($items, 'position'));
+        // Fără revizie nouă și fără intrare în istoric: doar cele trei adăugări.
+        self::assertSame($revision, (int) $this->db->fetchOne('SELECT revision_number FROM civic_subject WHERE id = ?', [$this->s['vlad']->getId()->toRfc4122()]));
+        self::assertCount(3, $this->call('GET', '/api/civic_subjects/'.$p0['subjectId'].'/media/history')['events']);
+        // Adminul poate ordona și el; vizitatorul anonim vede noua ordine.
+        $this->reorder('vlad', 'admin', [$p0['id'], $p1['id']]);
+        self::assertSame(200, $this->code());
+        self::assertSame([$p0['id'], $link['id'], $p1['id']], array_column($this->call('GET', '/api/civic_subjects/'.$p0['subjectId'].'/media')['items'], 'id'));
+    }
+
+    public function testOrdonareaIncludeFotografiileInAsteptare(): void
+    {
+        $a = $this->upload('ion', 'ion');
+        $b = $this->upload('ion', 'ion');
+        self::assertSame(['PENDING', 'PENDING'], [$a['status'], $b['status']]);
+        $items = $this->reorder('ion', 'ion', [$b['id'], $a['id']])['items'];
+        self::assertSame(200, $this->code());
+        self::assertSame([$b['id'], $a['id']], array_column($items, 'id'));
+    }
+
+    public function testImagineaDeShareJpeg1200x630DoarPentruCelePublicate(): void
+    {
+        $m = $this->upload('vlad', 'vlad');
+        self::assertFileExists($this->ogFile($m));
+        $info = getimagesize($this->ogFile($m));
+        self::assertSame([1200, 630, 'image/jpeg'], [$info[0], $info[1], $info['mime']]);
+
+        $this->client->request('GET', '/media/og/'.$m['id'].'.jpg');
+        self::assertSame(200, $this->code());
+        $response = $this->client->getResponse();
+        self::assertSame('/_protected_media/'.$m['subjectId'].'/'.$m['id'].'-og.jpg', $response->headers->get('X-Accel-Redirect'));
+        self::assertStringContainsString('public', (string) $response->headers->get('Cache-Control'));
+
+        $pending = $this->upload('ion', 'ion');
+        self::assertFileExists($this->ogFile($pending), 'se generează la upload, se servește după aprobare');
+        $this->client->request('GET', '/media/og/'.$pending['id'].'.jpg');
+        self::assertSame(404, $this->code());
+        $this->call('POST', '/api/media/'.$pending['id'].'/approve', 'admin');
+        $this->client->request('GET', '/media/og/'.$pending['id'].'.jpg');
+        self::assertSame(200, $this->code());
+
+        $hidden = $this->upload('ascuns', 'vlad');
+        $this->client->request('GET', '/media/og/'.$hidden['id'].'.jpg');
+        self::assertSame(404, $this->code(), 'subiect ascuns');
+        $this->client->request('GET', '/media/og/nu-e-ulid.jpg');
+        self::assertSame(404, $this->code());
+    }
+
+    public function testBackfillGenereazaDoarCeLipseste(): void
+    {
+        $m = $this->upload('vlad', 'vlad');
+        $other = $this->upload('vlad', 'vlad');
+        unlink($this->ogFile($m));
+
+        $tester = new \Symfony\Component\Console\Tester\CommandTester((new \Symfony\Bundle\FrameworkBundle\Console\Application(static::$kernel))->find('app:media:og-backfill'));
+        self::assertSame(0, $tester->execute(['--dry-run' => true]));
+        self::assertStringContainsString('De generat: 1, aveau deja: 1, eșuate: 0', $tester->getDisplay());
+        self::assertFileDoesNotExist($this->ogFile($m));
+
+        self::assertSame(0, $tester->execute([]));
+        self::assertStringContainsString('Generate: 1, aveau deja: 1, eșuate: 0', $tester->getDisplay());
+        $info = getimagesize($this->ogFile($m));
+        self::assertSame([1200, 630, 'image/jpeg'], [$info[0], $info[1], $info['mime']]);
+        self::assertFileExists($this->ogFile($other));
     }
 }

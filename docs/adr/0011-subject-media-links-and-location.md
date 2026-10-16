@@ -50,6 +50,12 @@ Riscuri specifice:
 - **Micșorare în browser:** JPEG/PNG/WebP peste 2560 px pe latura mare pleacă la 2560 px JPEG (mai puține date mobile, sub limita de 10 MB); HEIC pleacă neschimbat. Pe Android, `cordova-plugin-camera` livrează direct JPEG de cel mult 2560 px. Serverul re-encodează oricum (punctul 5).
 - **Media în așteptare** sunt vizibile celui care le-a încărcat și administratorilor; FE le încarcă cu token. Locația nginx `internal` retrimite headerul CORS decis de Symfony, pe care `X-Accel-Redirect` altfel îl pierde.
 
+## Completare (16.10.2026): ordinea fotografiilor și imaginea de share
+
+- Autorul subiectului și adminii ordonează fotografiile. Ordinea, ca și adăugarea, nu face parte din revizie (p.2) și nu intră în istoricul public.
+- Prima fotografie **publicată** este coperta pentru vizitatori și imaginea de share a paginii subiectului (`og:image`). O fotografie în așteptare nu ajunge în share până la aprobare (p.12).
+- Imaginea de share este o variantă separată, JPEG 1200×630 decupat din centru, fără metadate (p.5–6), servită public de pe `validez.webnou.ro/media/og/` doar pentru fotografii publicate ale subiectelor publicate. JPEG pentru că nu toate platformele citesc WebP. La scoatere se șterge împreună cu celelalte variante (p.10).
+
 ## Alternative respinse
 
 - **Minimum 3 fotografii per subiect:** ar forța poze fără valoare pe propuneri clare.

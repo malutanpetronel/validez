@@ -79,4 +79,24 @@ final class SubjectMediaRepository extends ServiceEntityRepository
             ->setParameter('pending', MediaStatus::PENDING->value)
             ->orderBy('m.createdAt', \SortDirection::Ascending)->getQuery()->getResult();
     }
+
+    /** @return list<SubjectMedia> fotografiile atașate (și cele în așteptare), în ordinea afișării - pentru ordonare */
+    public function findActivePhotos(CivicSubject $subject): array
+    {
+        return $this->createQueryBuilder('m')
+            ->where('IDENTITY(m.subject) = :s')->andWhere('m.removedAt IS NULL')->andWhere('m.kind = :photo')
+            ->setParameter('s', $subject->getId(), UlidType::NAME)->setParameter('photo', SubjectMedia::KIND_PHOTO)
+            ->orderBy('m.position', \SortDirection::Ascending)->getQuery()->getResult();
+    }
+
+    /** Prima fotografie publicată: coperta pentru oricine și imaginea de share (og:image). */
+    public function findFirstPublishedPhoto(CivicSubject $subject): ?SubjectMedia
+    {
+        return $this->createQueryBuilder('m')
+            ->where('IDENTITY(m.subject) = :s')->andWhere('m.removedAt IS NULL')->andWhere('m.kind = :photo')
+            ->andWhere('m.status = :published')
+            ->setParameter('s', $subject->getId(), UlidType::NAME)->setParameter('photo', SubjectMedia::KIND_PHOTO)
+            ->setParameter('published', MediaStatus::PUBLISHED->value)
+            ->orderBy('m.position', \SortDirection::Ascending)->setMaxResults(1)->getQuery()->getOneOrNullResult();
+    }
 }

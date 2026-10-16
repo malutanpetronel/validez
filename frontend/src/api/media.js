@@ -47,6 +47,14 @@ export const addLink = (subjectId, url, label) => request(`${subjectUrl(subjectI
 });
 
 export const removeMedia = (mediaId) => request(mediaUrl(mediaId), {method: 'DELETE'});
+
+/** Noua ordine a tuturor fotografiilor atașate (și a celor în așteptare); prima publicată e imaginea de share. */
+export const reorderPhotos = (subjectId, ids) => request(`${subjectUrl(subjectId)}/media/order`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ids}),
+});
+
 export const approveMedia = (mediaId) => request(`${mediaUrl(mediaId)}/approve`, {method: 'POST'});
 export const fetchPendingMedia = () => request(`${API_ENDPOINT}/moderation/media`);
 

@@ -24,8 +24,8 @@ class SubjectMedia
 {
     public const KIND_PHOTO = 'PHOTO';
     public const KIND_LINK = 'LINK';
-    /** Variantele unei fotografii pe disc (MediaStorage). */
-    public const VARIANTS = ['display', 'thumb'];
+    /** Variantele unei fotografii pe disc (MediaStorage); scoaterea și reaplicarea ștergerilor le parcurg pe toate. */
+    public const VARIANTS = ['display', 'thumb', 'og'];
 
     #[ORM\Id]
     #[ORM\Column(type: UlidType::NAME)]
@@ -138,6 +138,12 @@ class SubjectMedia
         $this->approvedAt = new \DateTimeImmutable();
     }
 
+    /** Ordonarea fotografiilor (16.10.2026); nu creează revizie și nu intră în istoricul public (ADR-0011 p.2). */
+    public function moveTo(int $position): void
+    {
+        $this->position = $position;
+    }
+
     /** @param ?User $by null la reaplicarea din registrul de ștergeri (ADR-0011 p.10) */
     public function markRemoved(?User $by, ?\DateTimeImmutable $at = null): void
     {
@@ -148,6 +154,6 @@ class SubjectMedia
     /** Cheile din MediaStorage; aceeași formă pe disc la dev și prod (ADR-0011 p.3). */
     public function storageKey(string $variant): string
     {
-        return $this->subject->getId()->toBase32().'/'.$this->id->toBase32().'-'.$variant.'.webp';
+        return $this->subject->getId()->toBase32().'/'.$this->id->toBase32().'-'.$variant.($variant === 'og' ? '.jpg' : '.webp');
     }
 }

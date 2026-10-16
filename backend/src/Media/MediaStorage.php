@@ -42,6 +42,11 @@ final class MediaStorage
         return $this->fs->fileExists($key);
     }
 
+    public function read(string $key): string
+    {
+        return $this->fs->read($key);
+    }
+
     public function accelPath(string $key): string
     {
         return self::ACCEL_PREFIX.$key;

@@ -37,6 +37,7 @@ use Symfony\Component\Uid\Ulid;
  * - autorii sub moderare (ADR-0006) încarcă media PENDING, aprobate individual de admin (p.12);
  * - fișierele se servesc prin X-Accel-Redirect, după aceleași reguli de vizibilitate ca subiectul (p.4).
  * - istoricul public arată ce s-a adăugat și ce s-a scos, fără conținutul celor scoase (p.2).
+ * - aceiași (autor, admini) ordonează fotografiile; prima publicată e imaginea de share (og:image, 16.10.2026).
  * Subiectele și media pe care utilizatorul nu le poate vedea răspund 404, ca detaliul subiectului.
  */
 final class SubjectMediaController extends AbstractController
@@ -166,7 +167,7 @@ final class SubjectMediaController extends AbstractController
                 $status = $policy->canPublish($user) ? MediaStatus::PUBLISHED : MediaStatus::PENDING;
                 $item = SubjectMedia::photo($subject, $user, $status, $this->media->nextPosition($subject), $image->width, $image->height, \strlen($image->display));
                 $this->em->persist($item);
-                foreach (['display' => $image->display, 'thumb' => $image->thumb] as $variant => $bytes) {
+                foreach (['display' => $image->display, 'thumb' => $image->thumb, 'og' => $image->og] as $variant => $bytes) {
                     $this->storage->write($item->storageKey($variant), $bytes);
                     $written[] = $item->storageKey($variant);
                 }
@@ -183,6 +184,47 @@ final class SubjectMediaController extends AbstractController
         return $this->noStore($this->json($this->serialize($item), 201));
     }
 
+    /**
+     * Noua ordine a fotografiilor: `{ids: [...]}` cu toate fotografiile atașate, inclusiv cele în așteptare.
+     * Fotografiile primesc, în noua ordine, aceleași poziții pe care le ocupau: linkurile (aceeași numerotare)
+     * rămân pe loc. Fără revizie și fără intrare în istoricul public (ADR-0011 p.2).
+     */
+    #[Route('/api/civic_subjects/{id}/media/order', methods: ['PUT'])]
+    #[IsGranted('ROLE_USER')]
+    public function reorder(string $id, Request $request): JsonResponse
+    {
+        $subject = $this->visibleSubject($id);
+        $this->denyAccessUnlessGranted(CivicSubjectVoter::EDIT, $subject);
+        $ids = json_decode($request->getContent(), true)['ids'] ?? null;
+        if (!\is_array($ids) || !array_is_list($ids) || array_filter($ids, static fn ($i): bool => !\is_string($i)) !== []) {
+            throw new UnprocessableEntityHttpException('Lipsește noua ordine a fotografiilor („ids”).');
+        }
+
+        $this->em->wrapInTransaction(function () use ($subject, $ids): void {
+            // Sub lock: o fotografie adăugată sau scoasă între timp face lista trimisă incompletă (422, nu ordine pe jumătate).
+            $this->em->lock($subject, LockMode::PESSIMISTIC_WRITE);
+            $photos = [];
+            foreach ($this->media->findActivePhotos($subject) as $photo) {
+                $photos[$photo->getId()->toBase32()] = $photo;
+            }
+            $sorted = $ids;
+            sort($sorted);
+            $known = array_keys($photos);
+            sort($known);
+            if ($sorted !== $known) {
+                throw new UnprocessableEntityHttpException('Lista fotografiilor s-a schimbat între timp. Reîncarcă pagina.');
+            }
+            $positions = array_map(static fn (SubjectMedia $p): int => $p->getPosition(), array_values($photos));
+            foreach ($ids as $i => $photoId) {
+                $photos[$photoId]->moveTo($positions[$i]);
+            }
+        });
+
+        $items = array_map($this->serialize(...), $this->media->findActive($subject, true));
+
+        return $this->noStore($this->json(['items' => $items]));
+    }
+
     #[Route('/api/media/{id}/{variant}', methods: ['GET'], requirements: ['variant' => 'display|thumb'])]
     public function serve(string $id, string $variant): Response
     {
@@ -197,6 +239,28 @@ final class SubjectMediaController extends AbstractController
             'X-Accel-Redirect' => $this->storage->accelPath($item->storageKey($variant)),
             'Content-Type' => 'image/webp',
             'Cache-Control' => 'private, max-age=300',
+        ]);
+    }
+
+    /**
+     * Imaginea de share (og:image), pe domeniul public: nginx-ul FE trimite `validez.webnou.ro/media/og/` aici
+     * (BE-ul are robots Disallow, iar Twitterbot respectă robots.txt). Doar fotografii publicate ale subiectelor
+     * publicate; fără token, deci fără excepția pentru autor/admini de la `serve`.
+     */
+    #[Route('/media/og/{id}.jpg', name: 'media_og', methods: ['GET', 'HEAD'])]
+    public function og(string $id): Response
+    {
+        $item = Ulid::isValid($id) ? $this->media->find(Ulid::fromString($id)) : null;
+        if ($item === null || $item->isRemoved() || !$item->isPhoto() || $item->getStatus() !== MediaStatus::PUBLISHED
+            || $item->getSubject()->getVisibility() !== SubjectVisibility::PUBLISHED || !$this->storage->exists($item->storageKey('og'))) {
+            throw $this->createNotFoundException('Imaginea nu există.');
+        }
+
+        // O oră: după scoatere, fotografia nu rămâne mult în cache-uri intermediare.
+        return new Response('', 200, [
+            'X-Accel-Redirect' => $this->storage->accelPath($item->storageKey('og')),
+            'Content-Type' => 'image/jpeg',
+            'Cache-Control' => 'public, max-age=3600',
         ]);
     }
 

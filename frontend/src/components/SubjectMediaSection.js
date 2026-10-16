@@ -11,8 +11,12 @@ import LinkIcon from '@mui/icons-material/Link';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import HistoryIcon from '@mui/icons-material/History';
-import {addLink, fetchMediaHistory, removeMedia, uploadPhoto} from '../api/media';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import StarOutlineIcon from '@mui/icons-material/StarOutline';
+import {addLink, fetchMediaHistory, removeMedia, reorderPhotos, uploadPhoto} from '../api/media';
 import {hasCordovaCamera, pickWithCordovaCamera, prepareImage} from '../media/prepareImage';
+import {movePhoto} from '../media/photoOrder';
 import {isPublicPhoto} from '../media/useSubjectMedia';
 import {formatDate} from '../subjects/labels';
 import MediaImage from './MediaImage';
@@ -84,6 +88,12 @@ export default function SubjectMediaSection({subject, canManage, media, viewer, 
         return saved;
     });
     const remove = (item) => { setConfirm(null); onViewer(null); run(() => removeMedia(item.id)); };
+    // Butoane, nu drag and drop: drag-ul HTML5 nu funcționează la atingere (Cordova, telefon).
+    const move = (from, to) => {
+        const ids = movePhoto(photos.map((m) => m.id), from, to);
+        if (ids) run(() => reorderPhotos(subject.id, ids));
+    };
+    const canReorder = canManage && photos.length > 1;
 
     if (!data && !listError) return null;
     if (data && !items.length && !canManage) {
@@ -107,9 +117,25 @@ export default function SubjectMediaSection({subject, canManage, media, viewer, 
                                 <MediaImage item={m} isPublic={isPublicImage(m)} alt={`Fotografie la „${subject.title}”`} sx={{width: '100%', aspectRatio: '1 / 1'}}/>
                             </Box>
                             {m.status === 'PENDING' && <Chip size="small" color="warning" label="În așteptare" sx={{position: 'absolute', left: 4, bottom: 4}}/>}
+                            {canReorder && index === 0 && <Chip size="small" color="primary" label="Copertă" sx={{position: 'absolute', left: 4, top: 4}}/>}
+                            {canReorder && (
+                                <Stack direction="row" sx={{justifyContent: 'center'}}>
+                                    <IconButton size="small" sx={{p: 0.25}} aria-label={`Mută fotografia ${index + 1} înainte`} disabled={busy || index === 0}
+                                                onClick={() => move(index, index - 1)}><ChevronLeftIcon fontSize="small"/></IconButton>
+                                    <IconButton size="small" sx={{p: 0.25}} aria-label={`Fă fotografia ${index + 1} copertă`} title="Fă copertă" disabled={busy || index === 0}
+                                                onClick={() => move(index, 0)}><StarOutlineIcon fontSize="small"/></IconButton>
+                                    <IconButton size="small" sx={{p: 0.25}} aria-label={`Mută fotografia ${index + 1} după`} disabled={busy || index === photos.length - 1}
+                                                onClick={() => move(index, index + 1)}><ChevronRightIcon fontSize="small"/></IconButton>
+                                </Stack>
+                            )}
                         </Box>
                     ))}
                 </Box>
+            )}
+            {canReorder && (
+                <Typography variant="caption" color="text.secondary">
+                    Prima fotografie publicată este coperta și imaginea afișată când subiectul e distribuit (Facebook, WhatsApp, X).
+                </Typography>
             )}
             {pendingCount > 0 && (
                 <Typography variant="caption" color="text.secondary">

@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Api;
 
 use App\Entity\CivicSubject;
+use App\Entity\SubjectMedia;
 use App\Entity\TreeNode;
 use App\Entity\User;
+use App\Media\MediaStorage;
+use App\Subject\MediaStatus;
 use App\Subject\SubjectType;
 use App\Subject\SubjectVisibility;
 use App\Tests\Support\Database;
@@ -14,6 +17,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Filesystem\Filesystem;
 
 /**
  * Step S.3 (ADR-0008): shell-ul HTML al paginilor publice — meta, canonical, JSON-LD, rezumat, 301/404.
@@ -57,6 +61,51 @@ final class SeoShellTest extends WebTestCase
         $this->em->persist($s);
 
         return $s;
+    }
+
+    protected function tearDown(): void
+    {
+        (new Filesystem())->remove(static::getContainer()->getParameter('kernel.project_dir').'/var/test-media');
+        parent::tearDown();
+    }
+
+    public function testImagineaDeSharePrimaFotografiePublicata(): void
+    {
+        $storage = static::getContainer()->get(MediaStorage::class);
+        $photo = fn (MediaStatus $status, int $position): SubjectMedia => SubjectMedia::photo($this->gropi, $this->admin, $status, $position, 1600, 900, 1);
+        $pending = $photo(MediaStatus::PENDING, 0);
+        $first = $photo(MediaStatus::PUBLISHED, 1);
+        $second = $photo(MediaStatus::PUBLISHED, 2);
+        foreach ([$pending, $first, $second] as $p) {
+            $this->em->persist($p);
+        }
+        $this->em->flush();
+        $url = '/categorie/drumuri/cluj/calitate/subiect/gropi-pe-dn1';
+
+        // Fără varianta og pe disc (fotografie veche, înainte de backfill): rămâne imaginea site-ului.
+        $html = $this->get($url);
+        self::assertStringContainsString('<meta property="og:image" content="https://validez.webnou.ro/og-image.jpg"/>', $html);
+        self::assertArrayNotHasKey('image', $this->jsonLd($html)[1]);
+
+        foreach ([$pending, $first, $second] as $p) {
+            $storage->write($p->storageKey('og'), 'jpeg');
+        }
+        $html = $this->get($url);
+        $og = 'https://validez.test/media/og/'.$first->getId()->toBase32().'.jpg';
+        self::assertStringContainsString('<meta property="og:image" content="'.$og.'"/>', $html, 'prima publicată, nu cea în așteptare');
+        self::assertSame(1, substr_count($html, '"og:image"'), 'imaginea din șablon e înlocuită');
+        self::assertSame(1, substr_count($html, '"og:image:width"'));
+        self::assertStringContainsString('<meta property="og:image:width" content="1200"/>', $html);
+        self::assertStringContainsString('<meta property="og:image:height" content="630"/>', $html);
+        self::assertStringContainsString('<meta property="og:image:alt" content="Fotografie: Gropi pe DN1"/>', $html);
+        self::assertSame($og, $this->jsonLd($html)[1]['image']);
+
+        // Ordinea decide: a doua trece prima. Direct în bază: EntityManager-ul din setUp nu mai e al kernelului curent.
+        $this->db->executeStatement('UPDATE subject_media SET position = 3 WHERE id = ?', [$first->getId()->toRfc4122()]);
+        self::assertStringContainsString('/media/og/'.$second->getId()->toBase32().'.jpg', $this->get($url));
+
+        // Pagina de categorie păstrează imaginea site-ului.
+        self::assertStringContainsString('content="https://validez.webnou.ro/og-image.jpg"', $this->get('/categorie/drumuri/cluj/calitate'));
     }
 
     private function get(string $path): string
