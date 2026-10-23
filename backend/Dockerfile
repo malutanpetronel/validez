@@ -1,6 +1,7 @@
 # Validez - Backend (Symfony 7.4 / API Platform 4.2) - imagine php-fpm.
 # Imaginea contine doar runtime-ul; codul se monteaza din backend/ (vezi docker-compose*.yml).
-FROM php:8.2-fpm
+FROM php:8.2.35-fpm
+RUN php -r 'exit(PHP_VERSION_ID >= 80235 && PHP_VERSION_ID < 80300 ? 0 : 1);'
 
 # pdo_pgsql: PostgreSQL (ltree, implementation-plan.md Step 1)
 # gd: dompdf / endroid/qr-code ; intl: validator/serializer ; zip: composer

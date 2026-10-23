@@ -15,7 +15,7 @@ FULL_TAG="${REGISTRY}:${TAG}"
 echo "=> Building: ${FULL_TAG}"
 # Dockerfile-ul nu copiaza fisiere din proiect: build fara context
 # (altfel docker ar urca tot vendor/ ca build context).
-docker build -t "${FULL_TAG}" - < Dockerfile
+docker build --pull -t "${FULL_TAG}" - < Dockerfile
 
 echo "=> Pushing: ${FULL_TAG}"
 docker push "${FULL_TAG}"
