@@ -24,6 +24,14 @@ import PhotoViewer from './PhotoViewer';
 
 const PEOPLE_WARNING = 'Nu include fețe sau numere de înmatriculare care nu sunt necesare. Metadatele (inclusiv locul unde a fost făcută poza) se elimină automat.';
 const VIDEO_HOSTS = /(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/i;
+const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif';
+// HEIC vine des cu type gol în Chrome, de aici și verificarea pe extensie.
+const isImageFile = (f) => /^image\/(jpeg|png|webp|heic|heif)$/i.test(f.type) || /\.(heic|heif)$/i.test(f.name || '');
+const isTextTarget = (el) => !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+const pastedFile = (f, i) => {
+    const ext = (f.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+    return new File([f], `lipita-${Date.now()}${i ? `-${i}` : ''}.${ext}`, {type: f.type});
+};
 
 const hostOf = (url) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } };
 
@@ -61,6 +69,8 @@ export default function SubjectMediaSection({subject, canManage, media, viewer, 
     const [error, setError] = useState(null);
     const [notice, setNotice] = useState(null);
     const [busy, setBusy] = useState(false);
+    const [progress, setProgress] = useState(null);
+    const [dragOver, setDragOver] = useState(false);
     const [confirm, setConfirm] = useState(null);
     const [link, setLink] = useState({url: '', label: ''});
     const [showHistory, setShowHistory] = useState(false);
@@ -77,7 +87,32 @@ export default function SubjectMediaSection({subject, canManage, media, viewer, 
         try { after(await task()); } catch (e) { setError(e.message); } finally { setBusy(false); }
     };
 
-    const upload = (file) => file && run(async () => uploadPhoto(subject.id, await prepareImage(file)));
+    // Drop, paste și selectare trec toate pe aici; fișierele pleacă pe rând, nu în paralel.
+    const uploadMany = async (list) => {
+        if (busy || !data) return;
+        const files = Array.from(list || []);
+        const images = files.filter(isImageFile);
+        const queue = images.slice(0, Math.max(data.max - photos.length, 0));
+        const problems = [];
+        if (images.length < files.length) problems.push(`${files.length - images.length} fișier(e) nu sunt imagini acceptate`);
+        if (queue.length < images.length) problems.push(`${images.length - queue.length} peste limita de ${data.max} fotografii`);
+        if (!queue.length) { if (problems.length) setError(`Nimic de trimis: ${problems.join('; ')}.`); return; }
+        setBusy(true); setError(null); setNotice(null);
+        let pending = false;
+        for (const [i, file] of queue.entries()) {
+            setProgress(`${i + 1}/${queue.length}`);
+            try {
+                const saved = await uploadPhoto(subject.id, await prepareImage(file));
+                if (saved?.status === 'PENDING') pending = true;
+            } catch (e) {
+                problems.push(`${file.name}: ${e.message}`);
+            }
+        }
+        setBusy(false); setProgress(null);
+        if (problems.length) setError(problems.join(' · '));
+        setNotice(pending ? 'Salvat. Va fi vizibil public după aprobarea unui administrator.' : null);
+        reload();
+    };
     const fromCamera = (camera) => run(async () => {
         const file = await pickWithCordovaCamera(camera);
         return file ? uploadPhoto(subject.id, file) : null;
@@ -94,6 +129,36 @@ export default function SubjectMediaSection({subject, canManage, media, viewer, 
         if (ids) run(() => reorderPhotos(subject.id, ids));
     };
     const canReorder = canManage && photos.length > 1;
+    const canDrop = canManage && !!data && !hasCordovaCamera() && photos.length < data.max;
+    // Listenerul de paste e pus o singură dată; citește mereu ultima versiune prin ref.
+    const pasteHandler = useRef(null);
+    pasteHandler.current = canDrop ? uploadMany : null;
+    useEffect(() => {
+        const onPaste = (e) => {
+            if (!pasteHandler.current || isTextTarget(e.target)) return;
+            const files = Array.from(e.clipboardData?.items || [])
+                .filter((it) => it.kind === 'file').map((it) => it.getAsFile()).filter((f) => f && isImageFile(f));
+            if (!files.length) return;
+            e.preventDefault();
+            pasteHandler.current(files.map(pastedFile));
+        };
+        // Un drop ratat în afara zonei nu trebuie să deschidă imaginea în tab.
+        const guard = (e) => { if (pasteHandler.current && e.dataTransfer?.types?.includes('Files')) e.preventDefault(); };
+        document.addEventListener('paste', onPaste);
+        document.addEventListener('dragover', guard);
+        document.addEventListener('drop', guard);
+        return () => {
+            document.removeEventListener('paste', onPaste);
+            document.removeEventListener('dragover', guard);
+            document.removeEventListener('drop', guard);
+        };
+    }, []);
+    const hasFiles = (e) => e.dataTransfer?.types?.includes('Files');
+    const dropProps = canDrop ? {
+        onDragOver: (e) => { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setDragOver(true); },
+        onDragLeave: (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false); },
+        onDrop: (e) => { if (!hasFiles(e)) return; e.preventDefault(); setDragOver(false); uploadMany(e.dataTransfer.files); },
+    } : {};
 
     if (!data && !listError) return null;
     if (data && !items.length && !canManage) {
@@ -144,20 +209,24 @@ export default function SubjectMediaSection({subject, canManage, media, viewer, 
             )}
 
             {canManage && data && (
-                <Stack spacing={1}>
+                <Stack spacing={1} {...dropProps} sx={canDrop ? {
+                    p: 1.5, borderRadius: 2, border: '2px dashed', transition: 'all .15s',
+                    borderColor: dragOver ? 'primary.main' : 'divider', bgcolor: dragOver ? 'action.hover' : 'transparent',
+                } : undefined}>
                     <Typography variant="caption" color="text.secondary">{PEOPLE_WARNING}</Typography>
                     <Stack direction="row" spacing={1} useFlexGap sx={{flexWrap: 'wrap', alignItems: 'center'}}>
                         {hasCordovaCamera() ? <>
                             <Button variant="outlined" size="small" startIcon={<PhotoCameraIcon/>} disabled={busy || photos.length >= data.max} onClick={() => fromCamera(true)}>Cameră</Button>
                             <Button variant="outlined" size="small" startIcon={<CollectionsIcon/>} disabled={busy || photos.length >= data.max} onClick={() => fromCamera(false)}>Galerie</Button>
                         </> : <>
-                            <input ref={fileInput} type="file" hidden accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
-                                   onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; upload(f); }}/>
+                            <input ref={fileInput} type="file" hidden multiple accept={ACCEPT}
+                                   onChange={(e) => { const fs = Array.from(e.target.files || []); e.target.value = ''; uploadMany(fs); }}/>
                             <Button variant="outlined" size="small" startIcon={<AddPhotoAlternateIcon/>} disabled={busy || photos.length >= data.max}
                                     onClick={() => fileInput.current?.click()}>Adaugă fotografie</Button>
                         </>}
-                        <Typography variant="caption" color="text.secondary">{busy ? 'Se trimite…' : `${photos.length}/${data.max} fotografii · JPEG, PNG, WebP, HEIC, max. 10 MB`}</Typography>
+                        <Typography variant="caption" color="text.secondary">{busy ? `Se trimite${progress ? ` ${progress}` : ''}…` : `${photos.length}/${data.max} fotografii · JPEG, PNG, WebP, HEIC, max. 10 MB`}</Typography>
                     </Stack>
+                    {canDrop && <Typography variant="caption" color="text.secondary">Poți și trage imaginile aici sau le poți lipi cu Ctrl+V.</Typography>}
                 </Stack>
             )}
 
