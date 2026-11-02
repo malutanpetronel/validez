@@ -47,7 +47,7 @@ test('Vezi tot deschide lista completă cu filtre și paginare', async () => {
     expect(await screen.findByText('Subiect 19')).toBeInTheDocument();
     expect(screen.getByLabelText('Tip')).toBeInTheDocument();
     expect(screen.getByLabelText('Stadiu')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('button', {name: /page 2/i})).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', {name: 'Următor →'})).toBeEnabled());
 });
 
 test('selectarea categoriei afișează automat lista paginată și păstrează contextul la revenire', async () => {
@@ -56,7 +56,7 @@ test('selectarea categoriei afișează automat lista paginată și păstrează c
     act(() => mockTree.onSelect([category.id], {node: mockTree.treeData[0]}));
     expect(await screen.findByText('Subiect 19')).toBeInTheDocument();
     expect(screen.getByLabelText('Tip')).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: /page 2/i})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Următor →'})).toBeEnabled();
     // getByText: getByRole calculeaza numele accesibil al tuturor linkurilor din lista (~1,6 s)
     fireEvent.click(screen.getByText('Subiect 0').closest('a'));
     expect(await screen.findByText('Descriere completă')).toBeInTheDocument();

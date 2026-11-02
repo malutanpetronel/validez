@@ -41,9 +41,26 @@ test('fara nod selectat: subiectele recente, fara filtru de nod', async () => {
 test('paginare: 45 subiecte -> 3 pagini; pagina 2 cere ?page=2', async () => {
     renderList({id: '01NODE', name: 'Drumuri'});
     await screen.findByText('Gropi pe DN1');
-    fireEvent.click(screen.getByRole('button', {name: 'Go to page 2'}));
+    expect(screen.getByText('Pagina 1 din 3')).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: '← Anterior'})).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', {name: 'Următor →'}));
     await waitFor(() => expect(listUrls().at(-1)).toMatch(/node=01NODE&page=2$/));
-    expect(screen.getByRole('button', {name: 'Go to page 3'})).toBeInTheDocument();
+    expect(await screen.findByText('Pagina 2 din 3')).toBeInTheDocument();
+});
+
+test('card: coperta (thumb-ul primei fotografii) cu tipul si stadiul dedesubt; fara fotografie, loc gol', async () => {
+    global.fetch = routedFetch([[(u) => u.includes('/civic_subjects'), () => res({
+        member: [subject({coverThumbUrl: '/api/media/01MEDIA/thumb'}), subject({id: '01S2', title: 'Fara poza'})], totalItems: 2,
+    })]]);
+    renderList(null);
+    await screen.findByText('Fara poza');
+    const covers = screen.getAllByTestId('subject-cover');
+    expect(covers).toHaveLength(1);
+    expect(covers[0].getAttribute('src')).toMatch(/\/api\/media\/01MEDIA\/thumb$/);
+    const card = screen.getByText('Gropi pe DN1').closest('a');
+    expect(within(card).getByText('Problemă')).toBeInTheDocument();
+    expect(within(card).getByText('Deschis')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', {name: 'Paginare'})).not.toBeInTheDocument();
 });
 
 test('utilizatorul creeaza un subiect in nodul selectat; lista se reincarca', async () => {

@@ -25,7 +25,7 @@ import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
-import {Link as RouterLink, useNavigate, useLocation} from 'react-router-dom';
+import {Link as RouterLink, useNavigate, useLocation, useSearchParams} from 'react-router-dom';
 import {createNode, fetchChildren, fetchNode, fetchNodeByPath, moveNode, renameNode} from '../api/tree';
 import {useAuth} from '../auth/AuthContext';
 import usePageMeta from '../seo/usePageMeta';
@@ -39,6 +39,8 @@ import {
 
 const DIALOG_TITLES = {root: 'Tematică nouă', child: 'Nod copil nou', rename: 'Redenumește nodul'};
 const VISUALLY_HIDDEN = {position: 'absolute', width: 1, height: 1, p: 0, m: '-1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0};
+/** Subiectele recente lângă arbore (pe `/`, fără selecție): câte 3, paginate. */
+const RECENT_PER_PAGE = 3;
 
 /**
  * Plan Step 1.5: creare rădăcină/copil, redenumire, expandare cu încărcare pe ramuri,
@@ -56,6 +58,11 @@ export default function TreePage() {
     const {isAdmin, user} = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
+    // Pagina subiectelor recente stă în adresă (`/?pagina=2`): „Înapoi” dintr-un subiect revine pe aceeași pagină,
+    // la aceeași poziție (useRestaurareScroll). Paginarea nu urcă la începutul paginii (state.pastreazaScroll).
+    const recentPage = Math.max(1, parseInt(searchParams.get('pagina'), 10) || 1);
+    const changeRecentPage = (p) => setSearchParams(p > 1 ? {pagina: String(p)} : {}, {state: {pastreazaScroll: true}});
     const [returnContext] = useState(() => location.state?.treeReturn);
     const [subjectBranches, setSubjectBranches] = useState({});
     const [selectedSubject, setSelectedSubject] = useState(null);
@@ -547,11 +554,10 @@ export default function TreePage() {
                         <SubjectList key={selected.key} node={{id: selected.key, name: selected.title}}
                             scope="direct" navigationState={navigationState()}/>
                     </Stack> :
-                    <Paper sx={{p: 3}}><Stack spacing={2}>
-                        <Typography variant="h6">Explorează subiectele</Typography>
-                        <Typography color="text.secondary">Selectează o categorie pentru a vedea toate subiectele ei.</Typography>
-                        <Button component={RouterLink} to="/subiecte" state={navigationState()}>Subiecte recente</Button>
-                    </Stack></Paper>}
+                    <SubjectList node={null} perPage={RECENT_PER_PAGE} page={recentPage} onPageChange={changeRecentPage}
+                        navigationState={navigationState()} footer={<Stack sx={{alignItems: 'center', mt: 1}}>
+                            <Button size="small" component={RouterLink} to="/subiecte" state={navigationState()}>Toate subiectele recente</Button>
+                        </Stack>}/>}
             </Box>
 
             {creatingSubject && selected && <SubjectForm node={{id: selected.key, name: selected.title}}

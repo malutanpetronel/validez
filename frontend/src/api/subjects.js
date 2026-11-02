@@ -23,8 +23,8 @@ async function request(url, options = {}) {
     return body;
 }
 
-/** Listă paginată: node = subarborele; scope=direct = doar categoria; fără node = cele mai noi. */
-export async function fetchSubjects({node = null, type = '', stage = '', page = 1, scope = '', visibility = ''} = {}) {
+/** Listă paginată: node = subarborele; scope=direct = doar categoria; fără node = cele mai noi; perPage ≤ 20. */
+export async function fetchSubjects({node = null, type = '', stage = '', page = 1, scope = '', visibility = '', perPage = PER_PAGE} = {}) {
     const q = new URLSearchParams();
     if (node) q.set('node', node);
     if (scope) q.set('scope', scope);
@@ -32,6 +32,7 @@ export async function fetchSubjects({node = null, type = '', stage = '', page = 
     if (type) q.set('type', type);
     if (stage) q.set('stage', stage);
     if (page > 1) q.set('page', String(page));
+    if (perPage !== PER_PAGE) q.set('perPage', String(perPage));
     const body = await request(q.toString() ? `${URL}?${q}` : URL);
     return {items: body?.member ?? body?.['hydra:member'] ?? [], total: body?.totalItems ?? body?.['hydra:totalItems'] ?? 0};
 }

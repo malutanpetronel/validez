@@ -8,9 +8,11 @@ import version from './version.json';
 import CookieNotice from './components/CookieNotice';
 import {useAuth} from './auth/AuthContext';
 import {hideSplash, waitsForData} from './splash';
+import useRestaurareScroll from './useRestaurareScroll';
 
 export default function Layout() {
     const {user, isAdmin, logout} = useAuth();
+    useRestaurareScroll();
     const [userMenuAnchor, setUserMenuAnchor] = useState(null);
     const closeUserMenu = () => setUserMenuAnchor(null);
     const {preference, chooseTheme, mode} = useAutomaticTheme();

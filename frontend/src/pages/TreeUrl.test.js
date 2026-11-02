@@ -69,7 +69,7 @@ test('click in arbore schimba adresa; Back revine la selectia anterioara; arbore
     await waitFor(() => expect(isSelected('Drumuri')).toBe(true));
     expect(router.state.location.pathname).toBe('/categorie/drumuri');
     await act(() => router.navigate(-1));
-    expect(await screen.findByText('Explorează subiectele')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', {name: 'Subiecte recente'})).toBeInTheDocument();
     expect(isSelected('Drumuri')).toBe(false);
 
     expect(fetched((u) => u.endsWith('/tree_nodes'))).toBe(1);
@@ -136,4 +136,23 @@ test('cai incomplete: /categorie/a/subiect duce la categorie, /categorie la pagi
     await waitFor(() => expect(router.state.location.pathname).toBe('/categorie/drumuri/cluj/calitate'));
     router = renderAt('/categorie');
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+});
+
+test('pe / subiectele recente stau langa arbore: cate 3, pagina in adresa (?pagina=), fara urcare la inceput', async () => {
+    const base = global.fetch;
+    global.fetch = jest.fn((u, o) => (u.includes('/civic_subjects') && u.includes('perPage=3')
+        ? res({member: [gropi, subject({id: '01S2', title: 'Trotuar spart', coverThumbUrl: '/api/media/01M/thumb'})], totalItems: 7})
+        : base(u, o)));
+    const router = renderAt('/?pagina=2');
+    expect(await screen.findByText('Trotuar spart')).toBeInTheDocument();
+    const recent = () => global.fetch.mock.calls.map(([u]) => u).filter((u) => u.includes('perPage=3'));
+    expect(recent()[0]).toMatch(/\/civic_subjects\?page=2&perPage=3$/);
+    expect(screen.getByText('Pagina 2 din 3')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', {name: 'Următor →'}));
+    await waitFor(() => expect(router.state.location.search).toBe('?pagina=3'));
+    expect(router.state.location.pathname).toBe('/');
+    expect(router.state.location.state).toEqual({pastreazaScroll: true});
+    await waitFor(() => expect(recent().at(-1)).toMatch(/page=3&perPage=3$/));
+    expect(screen.getByRole('link', {name: 'Toate subiectele recente'})).toHaveAttribute('href', '/subiecte');
 });

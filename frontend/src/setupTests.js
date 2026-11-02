@@ -16,3 +16,5 @@ jest.setTimeout(15000);
 if (!global.ResizeObserver) {
     global.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
 }
+// useRestaurareScroll (Layout): jsdom nu implementează window.scrollTo.
+window.scrollTo = jest.fn();
