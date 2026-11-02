@@ -11,6 +11,7 @@ use ApiPlatform\State\ProviderInterface;
 use App\Entity\CivicSubject;
 use App\Entity\User;
 use App\Repository\CivicSubjectRepository;
+use App\Repository\SubjectMediaRepository;
 use App\Repository\TreeNodeRepository;
 use App\Seo\SlugRegistry;
 use App\Subject\SubjectStage;
@@ -36,6 +37,7 @@ final class CivicSubjectProvider implements ProviderInterface
         private readonly TreeNodeRepository $nodes,
         private readonly Security $security,
         private readonly SlugRegistry $slugs,
+        private readonly SubjectMediaRepository $media,
     ) {
     }
 
@@ -59,6 +61,7 @@ final class CivicSubjectProvider implements ProviderInterface
             if ($subject->getVisibility() !== SubjectVisibility::PUBLISHED && !$isAdmin && !$subject->isAuthoredBy($viewer)) {
                 return null;
             }
+            $this->attachCovers([$subject]);
 
             return $subject;
         }
@@ -75,10 +78,27 @@ final class CivicSubjectProvider implements ProviderInterface
         $visibility = $this->enumFilter($f, 'visibility', SubjectVisibility::class);
         $stage = $this->enumFilter($f, 'stage', SubjectStage::class);
         $page = max(1, (int) ($f['page'] ?? 1));
+        // Arborele cere pagini mici (3 subiecte recente lângă arbore); implicit și maxim 20.
+        $perPage = isset($f['perPage']) && is_numeric($f['perPage']) ? min(self::PER_PAGE, max(1, (int) $f['perPage'])) : self::PER_PAGE;
 
-        [$items, $total] = $this->subjects->findVisiblePage($node, $type, $stage, $viewer, $isAdmin, $page, self::PER_PAGE, $visibility, ($f['scope'] ?? '') === 'direct');
+        [$items, $total] = $this->subjects->findVisiblePage($node, $type, $stage, $viewer, $isAdmin, $page, $perPage, $visibility, ($f['scope'] ?? '') === 'direct');
+        $this->attachCovers($items);
 
-        return new TraversablePaginator(new \ArrayIterator($items), $page, self::PER_PAGE, $total);
+        return new TraversablePaginator(new \ArrayIterator($items), $page, $perPage, $total);
+    }
+
+    /**
+     * Coperta = prima fotografie publicată (aceeași regulă ca og:image), deci o poză în așteptare nu apare în liste.
+     *
+     * @param list<CivicSubject> $subjects
+     */
+    private function attachCovers(array $subjects): void
+    {
+        $covers = $this->media->findFirstPublishedPhotos($subjects);
+        foreach ($subjects as $subject) {
+            $cover = $covers[$subject->getId()->toBase32()] ?? null;
+            $subject->attachCoverThumbUrl($cover === null ? null : '/api/media/'.$cover->getId()->toBase32().'/thumb');
+        }
     }
 
     /**

@@ -377,6 +377,35 @@ final class SubjectMediaTest extends WebTestCase
         self::assertSame('', $r->getContent());
     }
 
+    /** Listele (arbore, categorii, recente) arată coperta: thumb-ul primei fotografii publicate; perPage pentru pagini mici. */
+    public function testCopertaInListaDoarPrimaFotografiePublicata(): void
+    {
+        $first = $this->upload('vlad', 'vlad');
+        $this->upload('vlad', 'vlad', 'photo-gps.jpg', 'a-doua.jpg');
+        $pending = $this->upload('ion', 'ion');
+        self::assertSame('PENDING', $pending['status']);
+
+        $covers = array_column($this->getLd('')['member'], 'coverThumbUrl', 'title');
+        self::assertSame($first['thumbUrl'], $covers['Groapa vlad']);
+        self::assertNull($covers['Groapa ion']);
+        self::assertNull($covers['Groapa vlad-aprobat-1']);
+        self::assertSame($first['thumbUrl'], $this->getLd('/'.$this->s['vlad']->getId()->toBase32())['coverThumbUrl']);
+
+        // 5 subiecte publice (cel ascuns nu): perPage mic paginează, unul prea mare rămâne plafonat la 20.
+        self::assertCount(2, $this->getLd('?perPage=2&page=2')['member']);
+        self::assertCount(1, $this->getLd('?perPage=2&page=3')['member']);
+        self::assertCount(5, $this->getLd('?perPage=500')['member']);
+    }
+
+    /** /api/civic_subjects{$suffix} în JSON-LD (ca în FE), anonim. @return array<string, mixed> */
+    private function getLd(string $suffix): array
+    {
+        $this->client->request('GET', '/api/civic_subjects'.$suffix, server: ['HTTP_ACCEPT' => 'application/ld+json']);
+        self::assertSame(200, $this->code());
+
+        return json_decode((string) $this->client->getResponse()->getContent(), true);
+    }
+
     public function testSubiectAscunsNuIsiExpuneMedia(): void
     {
         $m = $this->upload('ascuns', 'vlad');

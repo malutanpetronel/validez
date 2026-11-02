@@ -211,6 +211,14 @@ class CivicSubject
         return '/categorie/'.$this->node->getSlugPath().'/subiect/'.$this->slug;
     }
 
+    /** Thumb-ul primei fotografii publicate (coperta); completat de CivicSubjectProvider, nu e coloană. */
+    private ?string $coverThumbUrl = null;
+
+    #[Groups(['subject:read'])]
+    public function getCoverThumbUrl(): ?string { return $this->coverThumbUrl; }
+
+    public function attachCoverThumbUrl(?string $url): void { $this->coverThumbUrl = $url; }
+
     public function getDescription(): string { return $this->description; }
     public function getVisibility(): SubjectVisibility { return $this->visibility; }
     public function getStage(): SubjectStage { return $this->stage; }

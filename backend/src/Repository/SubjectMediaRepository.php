@@ -99,4 +99,29 @@ final class SubjectMediaRepository extends ServiceEntityRepository
             ->setParameter('published', MediaStatus::PUBLISHED->value)
             ->orderBy('m.position', \SortDirection::Ascending)->setMaxResults(1)->getQuery()->getOneOrNullResult();
     }
+
+    /**
+     * Coperta (prima fotografie publicată) pentru o pagină de subiecte, într-o singură interogare.
+     *
+     * @param list<CivicSubject> $subjects
+     * @return array<string, SubjectMedia> cheie = id-ul subiectului (base32)
+     */
+    public function findFirstPublishedPhotos(array $subjects): array
+    {
+        if ($subjects === []) {
+            return [];
+        }
+        $media = $this->createQueryBuilder('m')
+            ->where('m.subject IN (:subjects)')->andWhere('m.removedAt IS NULL')->andWhere('m.kind = :photo')
+            ->andWhere('m.status = :published')
+            ->setParameter('subjects', array_map(static fn (CivicSubject $s) => $s->getId()->toRfc4122(), $subjects))
+            ->setParameter('photo', SubjectMedia::KIND_PHOTO)->setParameter('published', MediaStatus::PUBLISHED->value)
+            ->orderBy('m.position', \SortDirection::Ascending)->getQuery()->getResult();
+        $first = [];
+        foreach ($media as $m) {
+            $first[$m->getSubject()->getId()->toBase32()] ??= $m;
+        }
+
+        return $first;
+    }
 }
