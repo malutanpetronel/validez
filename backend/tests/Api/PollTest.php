@@ -208,7 +208,7 @@ final class PollTest extends WebTestCase
             $this->patch($id, $body);
             self::assertSame(409, $this->code(), json_encode($body));
         }
-        self::assertSame(['Dimineața', 'Seara', 'Noaptea', 'Nu contează'], $this->call('GET', "/api/civic_subjects/$id")['pollOptions']);
+        self::assertSame(['Dimineața', 'Seara', 'Noaptea', 'Nu contează'], $this->call('GET', "/api/civic_subjects/$id", null, null, 'application/ld+json')['pollOptions']);
 
         // Data de închidere și stadiul rămân editabile; nu creează revizie.
         $r = $this->patch($id, ['pollClosesAt' => $this->future('+30 days')]);
@@ -260,7 +260,7 @@ final class PollTest extends WebTestCase
         $choice = $this->choice($id, null);
         self::assertFalse($choice['result']['hidden']);
         self::assertSame(['1' => 1], (array) $choice['result']['counts']);
-        self::assertTrue($this->call('GET', "/api/civic_subjects/$id")['pollClosed']);
+        self::assertTrue($this->call('GET', "/api/civic_subjects/$id", null, null, 'application/ld+json')['pollClosed']);
         $r = $this->vote($id, 0, 'ion');
         self::assertSame([409, 'subject_frozen'], [$this->code(), $r['reason']]);
         $this->patch($id, ['pollClosesAt' => $this->future()]);

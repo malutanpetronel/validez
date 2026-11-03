@@ -260,8 +260,8 @@ Ordinea e cea a dependențelor. Specificația e în [ADR-0012](adr/0012-administ
 
 Decizii (03.11.2026): sondajele le creează doar adminii; un singur răspuns per utilizator; rezultatele se văd după vot; dată de închidere obligatorie.
 
-- [ ] **P.1** — BE schemă: `SubjectType::POLL` (doar admin), `poll_options` (listă JSON pe subiect și în revizie), `poll_closes_at` obligatoriu la POLL (CHECK în DB), rândul `CHOICE` (0–19) în `vote_type`, `DefaultVoteTypes` POLL → CHOICE; migrare.
-- [ ] **P.2** — BE reguli: validarea variantelor (2–20, ≤120, unice), întrebare/variante blocate la primul vot (409), POLL nu se transformă în alt tip și invers, vot refuzat după `closesAt`/CLOSED, rezultatele CHOICE ascunse până la vot sau închidere; teste pentru vizitator, utilizator fără vot, votant, admin, după închidere.
-- [ ] **P.3** — FE admin: tipul Sondaj în formular, editorul de variante (adăugare, ștergere, sus/jos), data de închidere; responsive.
-- [ ] **P.4** — FE vot: listă verticală de variante + „Votează”, bare cu procent după vot, „Se închide pe …”/„Închis pe …”; etichetele CHOICE din subiect.
+- [x] **P.1** — BE schemă: `SubjectType::POLL` (doar admin), `poll_options` (listă JSON pe subiect și în revizie), `poll_closes_at` obligatoriu la POLL (CHECK în DB), rândul `CHOICE` (0–19) în `vote_type`, `DefaultVoteTypes` POLL → CHOICE; migrare.
+- [x] **P.2** — BE reguli: validarea variantelor (2–20, ≤120, unice), întrebare/variante blocate la primul vot (409), POLL nu se transformă în alt tip și invers, vot refuzat după `closesAt`/CLOSED, rezultatele CHOICE ascunse până la vot sau închidere; teste pentru vizitator, utilizator fără vot, votant, admin, după închidere.
+- [x] **P.3** — FE admin: tipul Sondaj în formular, editorul de variante (adăugare, ștergere, sus/jos), data de închidere; responsive.
+- [x] **P.4** — FE vot: listă verticală de variante + „Votează”, bare cu procent după vot, „Se închide pe …”/„Închis pe …”; etichetele CHOICE din subiect.
 - [ ] **P.5** — deploy BE+FE (Deploy.md, secțiune nouă) și un sondaj de test pe producție.

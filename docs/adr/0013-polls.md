@@ -1,6 +1,6 @@
 # ADR-0013: Sondaje cu variante de răspuns definite pe subiect
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-11-03
 
 ## Context
