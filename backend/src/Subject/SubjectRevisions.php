@@ -43,7 +43,7 @@ final class SubjectRevisions
     {
         // ADR-0011 p.11: punctul de pe hartă e parte din sens; sursa și confirmarea nu.
         return ['type' => $subject->getType(), 'title' => $subject->getTitle(), 'description' => $subject->getDescription()]
-            + $subject->storedEstimate() + $subject->storedLocation();
+            + $subject->storedEstimate() + $subject->storedLocation() + ['pollOptions' => $subject->storedPollOptions()];
     }
 
     /** Tipul se blochează după primul vot înregistrat vreodată (ADR-0007 §3); fără excepție pentru admin. */

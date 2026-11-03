@@ -145,6 +145,10 @@ final class VoteService
             if (!$type->accepts($value)) {
                 throw VoteException::because(VoteException::VALUE_OUT_OF_RANGE);
             }
+            // ADR-0013 p.3: intervalul CHOICE e global (0–19); valoarea trebuie să fie una dintre variantele sondajului.
+            if ($type->getCode() === DefaultVoteTypes::CHOICE && $value >= \count($subject->getPollOptions() ?? [])) {
+                throw VoteException::because(VoteException::VALUE_OUT_OF_RANGE);
+            }
             $revision = $this->currentRevision($subject);
 
             $vote = $this->existingVote($user, $subject, $type);
@@ -302,7 +306,8 @@ final class VoteService
 
     public static function isFrozen(CivicSubject $subject): bool
     {
-        return \in_array($subject->getStage(), [SubjectStage::RESOLVED, SubjectStage::CLOSED], true);
+        // ADR-0013 p.5: un sondaj cu data de închidere trecută e înghețat la fel ca un subiect închis.
+        return \in_array($subject->getStage(), [SubjectStage::RESOLVED, SubjectStage::CLOSED], true) || $subject->isPollClosed();
     }
 
     private function lock(User $user, CivicSubject $subject): void

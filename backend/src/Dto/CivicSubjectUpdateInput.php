@@ -39,6 +39,10 @@ final class CivicSubjectUpdateInput
     /** Doar adminul; nu creează revizie. */
     public ?bool $locationConfirmed = null;
 
+    /** ADR-0013: lipsă = neschimbat. Variantele se blochează la primul vot; data se poate muta cât e deschis. */
+    public ?array $pollOptions;
+    public ?string $pollClosesAt;
+
     /** @return list<string> */
     public static function stages(): array
     {

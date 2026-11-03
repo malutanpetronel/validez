@@ -33,6 +33,10 @@ final class CivicSubjectCreateInput
     /** ADR-0011 p.9: {lat, lng, source?}; neinițializat = fără pin. Validat în SubjectLocation. */
     public ?array $location;
 
+    /** ADR-0013: doar la POLL, obligatorii acolo; listă de etichete și dată ISO 8601 cu fus orar. */
+    public ?array $pollOptions;
+    public ?string $pollClosesAt;
+
     /** @return list<string> */
     public static function types(): array
     {

@@ -27,7 +27,7 @@ test('admin: toate tipurile si stadiul/vizibilitatea la editare', () => {
     render(<AuthProvider><SubjectForm subject={subject()} onClose={() => {}} onSaved={() => {}}/></AuthProvider>);
     expect(within(screen.getByRole('dialog')).getAllByRole('combobox')).toHaveLength(3);
     openTypeMenu();
-    expect(within(screen.getByRole('listbox')).getAllByRole('option')).toHaveLength(7);
+    expect(within(screen.getByRole('listbox')).getAllByRole('option')).toHaveLength(8);
 });
 
 test('editare: trimite doar campurile schimbate (merge-patch)', async () => {

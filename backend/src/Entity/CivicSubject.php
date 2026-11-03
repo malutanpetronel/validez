@@ -147,6 +147,19 @@ class CivicSubject
     private ?\DateTimeImmutable $firstVotedAt = null;
 
     /**
+     * ADR-0013: variantele sondajului (doar POLL), în ordinea afișării; valoarea votului CHOICE = poziția.
+     * Fac parte din revizie (ca titlul) și se blochează la primul vot. CHECK în DB: POLL ⇔ variante + dată.
+     *
+     * @var list<string>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true, options: ['jsonb' => true])]
+    private ?array $pollOptions = null;
+
+    /** ADR-0013 p.5: după acest moment nu se mai votează; nu face parte din revizie. */
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $pollClosesAt = null;
+
+    /**
      * Încadrarea administrativă a pinului (ADR-0012 p.6, G.2) — partea „clasificare curentă” din p.7: calculată de
      * App\Geo\PinClassifier față de setul de limite activ, la punerea sau mutarea pinului. NULL = fără pin sau
      * fără set activ. Candidații: [{code, name, county, contains, distanceM}], în ordinea propunerii.
@@ -244,6 +257,35 @@ class CivicSubject
     {
         $this->firstVotedAt ??= new \DateTimeImmutable();
     }
+
+    public function isPoll(): bool { return $this->type === SubjectType::POLL; }
+
+    /** @return list<string>|null */
+    #[Groups(['subject:read'])]
+    public function getPollOptions(): ?array { return $this->isPoll() ? $this->pollOptions : null; }
+
+    #[Groups(['subject:read'])]
+    public function getPollClosesAt(): ?\DateTimeImmutable { return $this->isPoll() ? $this->pollClosesAt : null; }
+
+    /** Închis = data a trecut sau adminul a trecut sondajul în CLOSED/RESOLVED (ADR-0013 p.5). */
+    #[Groups(['subject:read'])]
+    public function isPollClosed(): bool
+    {
+        if (!$this->isPoll()) {
+            return false;
+        }
+
+        return \in_array($this->stage, [SubjectStage::RESOLVED, SubjectStage::CLOSED], true)
+            || ($this->pollClosesAt !== null && $this->pollClosesAt <= new \DateTimeImmutable());
+    }
+
+    /** @return list<string>|null instantaneul reviziei (brut, ca estimarea) */
+    public function storedPollOptions(): ?array { return $this->pollOptions; }
+
+    /** @param list<string> $options deja validate (PollDefinition) */
+    public function setPollOptions(array $options): void { $this->pollOptions = $options; }
+
+    public function setPollClosesAt(\DateTimeImmutable $closesAt): void { $this->pollClosesAt = $closesAt; }
 
     #[Groups(['subject:read'])]
     public function getNodeId(): string { return $this->node->getId()->toBase32(); }

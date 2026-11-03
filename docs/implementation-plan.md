@@ -255,3 +255,13 @@ Ordinea e cea a dependențelor. Specificația e în [ADR-0012](adr/0012-administ
   - Criterii: Florești nu întoarce subiecte județene sau naționale fără comutator; județul întoarce și subiectele `LOCAL` din UAT-urile lui; comutatorul le adaugă pe cele ale strămoșilor, într-o secțiune separată; un subiect cu mai multe UAT-uri în selecție se numără o singură dată în listă și în totalurile din arbore; `scope = NULL` nu apare sub niciun filtru; selectorul funcționează pe telefon și pe tastatură.
 - [ ] **G.6 — pagini de localitate** (ADR-0012 p.9, extinde ADR-0008) — **amânat explicit**, după G.5: `/localitate/{judet}/{uat}`, subiectele grupate pe teme.
   - Criterii: shell SEO și sitemap pentru paginile cu subiecte publicate; o pagină fără subiecte publicate are `noindex` și lipsește din sitemap; slug-urile de județ/UAT se rezolvă după codul SIRUTA, cu 301 la redenumire.
+
+## Step P — sondaje (ADR-0013)
+
+Decizii (03.11.2026): sondajele le creează doar adminii; un singur răspuns per utilizator; rezultatele se văd după vot; dată de închidere obligatorie.
+
+- [ ] **P.1** — BE schemă: `SubjectType::POLL` (doar admin), `poll_options` (listă JSON pe subiect și în revizie), `poll_closes_at` obligatoriu la POLL (CHECK în DB), rândul `CHOICE` (0–19) în `vote_type`, `DefaultVoteTypes` POLL → CHOICE; migrare.
+- [ ] **P.2** — BE reguli: validarea variantelor (2–20, ≤120, unice), întrebare/variante blocate la primul vot (409), POLL nu se transformă în alt tip și invers, vot refuzat după `closesAt`/CLOSED, rezultatele CHOICE ascunse până la vot sau închidere; teste pentru vizitator, utilizator fără vot, votant, admin, după închidere.
+- [ ] **P.3** — FE admin: tipul Sondaj în formular, editorul de variante (adăugare, ștergere, sus/jos), data de închidere; responsive.
+- [ ] **P.4** — FE vot: listă verticală de variante + „Votează”, bare cu procent după vot, „Se închide pe …”/„Închis pe …”; etichetele CHOICE din subiect.
+- [ ] **P.5** — deploy BE+FE (Deploy.md, secțiune nouă) și un sondaj de test pe producție.

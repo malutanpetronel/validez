@@ -1,16 +1,75 @@
 import {useCallback, useEffect, useState} from 'react';
 import {Link as RouterLink, useLocation} from 'react-router-dom';
-import {Alert, Box, Button, Chip, Divider, Rating, Stack, ToggleButton, ToggleButtonGroup, Typography} from '@mui/material';
+import {
+    Alert, Box, Button, Chip, Divider, FormControlLabel, LinearProgress, Radio, RadioGroup, Rating, Stack, ToggleButton, ToggleButtonGroup, Typography,
+} from '@mui/material';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import ThumbDownOutlinedIcon from '@mui/icons-material/ThumbDownOutlined';
 import {useAuth} from '../auth/AuthContext';
 import {castVote, fetchVotes, grantVoteConsent, withdrawVote} from '../api/votes';
-import {VOTE_TYPE_HINTS, VOTE_TYPE_LABELS, voteOptions, voteValueLabel} from '../subjects/labels';
+import {formatDate, VOTE_TYPE_HINTS, VOTE_TYPE_LABELS, voteOptions, voteValueLabel} from '../subjects/labels';
 import VoteConsentDialog from './VoteConsentDialog';
 import RevisionDiffDialog from './RevisionDiffDialog';
 
 const percent = (n, total) => (total > 0 ? Math.round((n / total) * 100) : 0);
+const participants = (n) => `${n} ${n === 1 ? 'participant' : 'participanți'}`;
+
+/** Rezultatele unui sondaj (ADR-0013 p.6): ascunse până la votul propriu sau închidere; totalul e public. */
+function PollResults({type}) {
+    const {counts, total, hidden} = type.result;
+    if (hidden) {
+        return <Typography variant="body2" color="text.secondary">
+            Rezultatele se văd după ce votezi sau după închiderea sondajului. Până acum: {participants(total)}.
+        </Typography>;
+    }
+    if (total === 0) return <Typography variant="body2" color="text.secondary">Niciun vot încă.</Typography>;
+    return (
+        <Stack spacing={1} aria-label="Rezultatele sondajului">
+            {voteOptions(type).map(([value, label]) => {
+                const n = counts[value] ?? 0;
+                const own = type.mine?.value === value;
+                return (
+                    <Box key={value} sx={{minWidth: 0}}>
+                        <Stack direction="row" spacing={1} sx={{justifyContent: 'space-between', alignItems: 'baseline', minWidth: 0}}>
+                            <Typography variant="body2" sx={{fontWeight: own ? 700 : 400, overflowWrap: 'anywhere', minWidth: 0}}>
+                                {label}{own && ' · votul tău'}
+                            </Typography>
+                            <Typography variant="body2" sx={{flexShrink: 0}}>{percent(n, total)}% ({n})</Typography>
+                        </Stack>
+                        <LinearProgress variant="determinate" value={percent(n, total)} aria-hidden
+                                        sx={{height: 8, borderRadius: 4, '& .MuiLinearProgress-bar': {borderRadius: 4, bgcolor: own ? 'primary.main' : 'text.secondary'}}}/>
+                    </Box>
+                );
+            })}
+            <Typography variant="caption" color="text.secondary">{participants(total)}</Typography>
+        </Stack>
+    );
+}
+
+/**
+ * Alegerea unei singure variante (ADR-0013 p.3), listă verticală pe toată lățimea, apoi „Votează”.
+ * Părintele o remontează (key) când se schimbă votul propriu; fără efect de sincronizare, care ar putea
+ * suprascrie o alegere făcută imediat după montare.
+ */
+function PollChoice({type, disabled, onVote}) {
+    const own = type.mine?.value ?? null;
+    const [selected, setSelected] = useState(own);
+    return (
+        <Box sx={{my: 0.75}}>
+            <RadioGroup aria-label="Variantele sondajului" value={selected === null ? '' : String(selected)}
+                        onChange={(e) => setSelected(Number(e.target.value))}>
+                {voteOptions(type).map(([value, label]) => (
+                    <FormControlLabel key={value} value={String(value)} control={<Radio/>} label={label} disabled={disabled}
+                                      sx={{mr: 0, minWidth: 0, alignItems: 'flex-start', '& .MuiFormControlLabel-label': {pt: 1.1, overflowWrap: 'anywhere'}}}/>
+                ))}
+            </RadioGroup>
+            <Button variant="contained" sx={{mt: 1}} disabled={disabled || selected === null || selected === own} onClick={() => onVote(selected)}>
+                {own === null ? 'Votează' : 'Schimbă votul'}
+            </Button>
+        </Box>
+    );
+}
 
 function Results({type}) {
     const {counts, total, staleTotal} = type.result;
@@ -136,8 +195,13 @@ export default function SubjectVotes({subjectId}) {
         <Stack spacing={1.5} component="section" aria-labelledby={`votes-${subjectId}`}>
             <Divider/>
             <Typography id={`votes-${subjectId}`} variant="h6" component="h2">Voturi</Typography>
+            {summary.pollClosesAt && <Typography variant="body2" color="text.secondary">
+                {summary.frozen ? 'Sondaj închis' : `Sondajul se închide pe ${formatDate(summary.pollClosesAt)}`}
+            </Typography>}
             {!summary.votingEnabled && <Alert severity="info">Votarea nu este încă activă. Poți vedea rezultatele și îți poți retrage oricând voturile existente.</Alert>}
-            {summary.votingEnabled && summary.frozen && <Alert severity="info">Subiectul este rezolvat sau închis: votarea s-a încheiat. Îți poți retrage votul.</Alert>}
+            {summary.votingEnabled && summary.frozen && <Alert severity="info">
+                {summary.pollClosesAt ? 'Sondajul s-a închis: rezultatele sunt publice. Îți poți retrage votul.' : 'Subiectul este rezolvat sau închis: votarea s-a încheiat. Îți poți retrage votul.'}
+            </Alert>}
             {summary.votingEnabled && !summary.frozen && !summary.votingOpen && <Alert severity="info">Votarea începe după publicarea subiectului.</Alert>}
             {!user && summary.votingOpen && (
                 <Alert severity="info" icon={false} action={(
@@ -157,7 +221,21 @@ export default function SubjectVotes({subjectId}) {
             )}
             {message && <Alert severity={message.severity} onClose={() => setMessage(null)}>{message.text}</Alert>}
             {/* LOCATION e inactiv cât subiectul nu are pin (ADR-0011 p.9): nu-l arătăm, dacă nu ai un vot de retras. */}
-            {summary.types.filter((type) => type.code !== 'LOCATION' || type.active || type.mine).map((type) => (
+            {summary.types.filter((type) => type.code !== 'LOCATION' || type.active || type.mine).map((type) => (type.code === 'CHOICE' ? (
+                <Box key={type.code} sx={{p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'background.paper', minWidth: 0}}>
+                    <Typography variant="subtitle2" component="h3">{VOTE_TYPE_LABELS.CHOICE}</Typography>
+                    {user && summary.votingEnabled && canExpress(type) && <PollChoice key={type.mine?.value ?? 'fara-vot'} type={type} disabled={busy}
+                                                                                      onVote={(value) => vote(type.code, value)}/>}
+                    <PollResults type={type}/>
+                    {type.mine && (
+                        <Typography variant="body2" sx={{mt: 0.5, overflowWrap: 'anywhere'}}>
+                            Votul tău: <strong>{voteValueLabel(type.code, type.mine.value, type.labels)}</strong>
+                            {' · '}
+                            <Button sx={{textTransform: 'none'}} size="small" disabled={busy} onClick={() => withdraw(type.code)}>Retrage votul</Button>
+                        </Typography>
+                    )}
+                </Box>
+            ) : (
                 <Box key={type.code} sx={{p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'background.paper'}}>
                     <Stack direction="row" spacing={1} useFlexGap sx={{alignItems: 'center', flexWrap: 'wrap'}}>
                         <Typography variant="subtitle2" component="h3">{VOTE_TYPE_LABELS[type.code] ?? type.code}</Typography>
@@ -195,7 +273,7 @@ export default function SubjectVotes({subjectId}) {
                         </Typography>
                     )}
                 </Box>
-            ))}
+            )))}
             {summary.revisionNumber > 1 && (
                 <div><Button size="small" onClick={() => setDiff({from: summary.revisionNumber - 1, to: summary.revisionNumber})}>
                     Istoricul modificărilor ({summary.revisionNumber} revizii)</Button></div>

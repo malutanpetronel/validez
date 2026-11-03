@@ -21,6 +21,8 @@ export default function TreeVoteSummary({subjectId}) {
     if (!Array.isArray(summary?.types)) return null;
     const importance = summary.types.find((t) => t.code === 'IMPORTANCE');
     const binary = summary.types.find((t) => t.code === 'VALIDITY' || t.code === 'YES_NO');
+    // ADR-0013: la sondaje, doar numărul participanților (rezultatele pot fi ascunse până la vot).
+    const choice = summary.types.find((t) => t.code === 'CHOICE');
     const positive = binary?.code === 'YES_NO' ? 'susțineri' : 'validări';
     const negative = binary?.code === 'YES_NO' ? 'voturi împotrivă' : 'invalidări';
     const average = importance?.result.total > 0
@@ -39,5 +41,8 @@ export default function TreeVoteSummary({subjectId}) {
                 <ThumbDownOutlinedIcon sx={{fontSize: 14, ml: 0.5}}/>{binary.result.counts[0] ?? 0}
             </Box>
         </Tooltip>}
+        {choice && <Typography component="span" variant="caption" color="text.secondary">
+            Sondaj · {choice.result.total} {choice.result.total === 1 ? 'participant' : 'participanți'}{summary.frozen ? ' · închis' : ''}
+        </Typography>}
     </Stack>;
 }

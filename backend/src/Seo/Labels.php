@@ -11,6 +11,7 @@ final class Labels
         'ISSUE' => 'Problemă',
         'PROPOSAL' => 'Propunere',
         'PETITION' => 'Petiție',
+        'POLL' => 'Sondaj',
         'PROJECT' => 'Proiect',
         'PROMISE' => 'Promisiune',
         'ELECTORAL_EVALUATION' => 'Evaluare aleși',

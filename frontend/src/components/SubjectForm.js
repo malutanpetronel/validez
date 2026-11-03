@@ -7,10 +7,12 @@ import {useTheme} from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import {useAuth} from '../auth/AuthContext';
 import {createSubject, fetchSubjectNote, saveSubjectNote, updateSubject} from '../api/subjects';
-import {allowedTypes, STAGE_LABELS, TYPE_LABELS, VISIBILITY_LABELS} from '../subjects/labels';
+import {allowedTypes, fromLocalInput, pollOptionsError, STAGE_LABELS, toLocalInput, TYPE_LABELS, VISIBILITY_LABELS} from '../subjects/labels';
 import LocationPicker from './LocationPicker';
+import PollOptionsEditor from './PollOptionsEditor';
 
 const samePoint = (a, b) => (!a && !b) || (!!a && !!b && a.lat.toFixed(6) === b.lat.toFixed(6) && a.lng.toFixed(6) === b.lng.toFixed(6));
+const cleanOptions = (options) => options.map((o) => o.replace(/\s+/g, ' ').trim());
 
 /**
  * Creare (node = {id, name}) sau editare (subject). Pe telefon: pe tot ecranul, Renunță/Salvează sus
@@ -34,6 +36,9 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
         costEstimate: subject?.costEstimate ?? '',
         costCurrency: subject?.costCurrency ?? '',
         costEstimateScope: subject?.costEstimateScope ?? '',
+        // ADR-0013: variantele și data de închidere, doar la sondaje.
+        pollOptions: subject?.pollOptions ?? ['', ''],
+        pollClosesAt: toLocalInput(subject?.pollClosesAt),
     });
     const savedSubject = useRef(subject ?? null);
     const ownNote = !editing || user?.id === subject.authorId;
@@ -63,6 +68,16 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
     const [error, setError] = useState(null);
     const set = (k) => (e) => setForm({...form, [k]: e.target.value});
     const proposal = form.type === 'PROPOSAL';
+    const poll = form.type === 'POLL';
+    // ADR-0013 p.4: după primul vot, întrebarea și variantele sondajului nu se mai schimbă; data, cât e deschis.
+    const pollLocked = editing && subject.type === 'POLL' && !!subject.typeLocked;
+    const pollClosed = editing && !!subject.pollClosed;
+    const closesAtIso = fromLocalInput(form.pollClosesAt);
+    const closesAtChanged = editing && closesAtIso !== null && toLocalInput(closesAtIso) !== toLocalInput(subject.pollClosesAt);
+    const pollError = !poll ? ''
+        : pollOptionsError(form.pollOptions)
+            || (!closesAtIso ? 'Alege data și ora de închidere a sondajului.'
+                : (!editing || closesAtChanged) && new Date(closesAtIso) <= new Date() ? 'Data de închidere trebuie să fie în viitor.' : '');
     const hasAmount = form.costEstimate !== '';
     const amountError = proposal && estimateDirty && hasAmount && !/^\d{1,10}(?:\.\d{1,2})?$/.test(form.costEstimate)
         ? 'Introdu doar suma, fără monedă: de exemplu 940 sau 940,50. Maximum 10 cifre întregi și două zecimale.' : '';
@@ -74,6 +89,7 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
     const validationMessage = form.title.trim().length < 3 ? 'Titlul trebuie să aibă minimum 3 caractere.'
         : !form.description.trim() ? 'Completează descrierea subiectului.'
             : amountError || scopeError || (proposal && estimateDirty && hasAmount && !form.costCurrency ? 'Alege moneda estimării.' : '')
+                || pollError
                 || (proposal && noteLoading ? 'Se încarcă nota personală…' : '')
                 || (proposal && noteError ? 'Nota personală nu a putut fi încărcată. Apasă „Reîncearcă” în secțiunea notelor.' : '');
     const valid = !validationMessage;
@@ -102,13 +118,16 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                 for (const k of ['title', 'description', 'type', ...(isAdmin ? ['stage', 'visibility'] : [])]) {
                     if (form[k] !== baseline[k]) changes[k] = form[k];
                 }
+                if (poll && JSON.stringify(cleanOptions(form.pollOptions)) !== JSON.stringify(baseline.pollOptions ?? [])) changes.pollOptions = cleanOptions(form.pollOptions);
+                if (poll && closesAtIso && toLocalInput(closesAtIso) !== toLocalInput(baseline.pollClosesAt)) changes.pollClosesAt = closesAtIso;
                 if (locationChanged) changes.location = location;
                 // Doar adminul; fără revizie. După mutarea pinului confirmarea veche oricum se anulează pe server.
                 if (isAdmin && location && locationConfirmed !== (baseline.location?.confirmedBy === 'ADMIN')) changes.locationConfirmed = locationConfirmed;
                 saved = Object.keys(changes).length ? await updateSubject(baseline.id, changes) : baseline;
             } else {
                 saved = await createSubject({node: node.id, type: form.type, title: form.title, description: form.description, ...estimate,
-                    ...(location ? {location} : {})});
+                    ...(location ? {location} : {}),
+                    ...(poll ? {pollOptions: cleanOptions(form.pollOptions), pollClosesAt: closesAtIso} : {})});
             }
             // Keep the saved ID if the separate note request fails: retries must not create duplicates.
             savedSubject.current = saved;
@@ -129,7 +148,7 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
         }
     };
 
-    const title = editing ? 'Editează subiectul' : 'Subiect nou';
+    const title = editing ? (poll ? 'Editează sondajul' : 'Editează subiectul') : (poll ? 'Sondaj nou' : 'Subiect nou');
 
     return (
         <Dialog open onClose={() => !saving && onClose()} fullScreen={fullScreen} fullWidth maxWidth="sm">
@@ -155,14 +174,25 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                     <FormControl fullWidth>
                         <InputLabel id="subject-type">Tip</InputLabel>
                         <Select labelId="subject-type" label="Tip" value={form.type} onChange={set('type')} disabled={editing && !!subject.typeLocked}>
-                            {typeOptions.map((t) => <MenuItem key={t} value={t} disabled={!types.includes(t)}>{TYPE_LABELS[t]}</MenuItem>)}
+                            {typeOptions.map((t) => <MenuItem key={t} value={t}
+                                // ADR-0013: un sondaj nu devine alt tip și nici invers (serverul refuză oricum).
+                                disabled={!types.includes(t) || (editing && (subject.type === 'POLL') !== (t === 'POLL'))}>{TYPE_LABELS[t]}</MenuItem>)}
                         </Select>
                         {editing && subject.typeLocked && <FormHelperText>Tipul nu se mai poate schimba după primul vot: ar schimba sensul voturilor.</FormHelperText>}
                     </FormControl>
-                    <TextField label="Titlu" required value={form.title} onChange={set('title')} inputProps={{maxLength: 200}}
-                               helperText="Minim 3 caractere"/>
-                    <TextField label="Descriere" required multiline minRows={4} value={form.description} onChange={set('description')}
-                               inputProps={{maxLength: 10000}}/>
+                    {pollLocked && <Alert severity="info">Sondajul are deja voturi: întrebarea și variantele nu se mai pot schimba. Dacă sunt greșite, închide sondajul și creează altul.</Alert>}
+                    <TextField label={poll ? 'Întrebarea' : 'Titlu'} required value={form.title} onChange={set('title')} inputProps={{maxLength: 200}}
+                               helperText="Minim 3 caractere" disabled={pollLocked}/>
+                    <TextField label="Descriere" required multiline minRows={poll ? 2 : 4} value={form.description} onChange={set('description')}
+                               inputProps={{maxLength: 10000}} disabled={pollLocked}/>
+                    {poll && <>
+                        <PollOptionsEditor options={form.pollOptions} disabled={pollLocked || saving}
+                                           onChange={(pollOptions) => setForm({...form, pollOptions})}/>
+                        <TextField label="Se închide la" type="datetime-local" required value={form.pollClosesAt} onChange={set('pollClosesAt')}
+                                   disabled={pollClosed || saving} InputLabelProps={{shrink: true}} fullWidth
+                                   helperText={pollClosed ? 'Sondajul este închis; data nu se mai poate schimba.'
+                                       : 'Ora ta locală. După această dată nu se mai votează, iar rezultatele devin publice pentru toți.'}/>
+                    </>}
                     {proposal && <>
                         <Typography variant="subtitle1" sx={{fontWeight: 600}}>Estimare publică (opțional)</Typography>
                         <Typography variant="body2" color="text.secondary">Suma și explicația sunt vizibile tuturor. Primul rând trebuie să precizeze pentru ce este suma: de exemplu, „Pentru un loc de parcare”.</Typography>

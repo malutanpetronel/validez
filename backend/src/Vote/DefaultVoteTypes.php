@@ -14,6 +14,8 @@ final class DefaultVoteTypes
     public const IMPORTANCE = 'IMPORTANCE';
     /** ADR-0011 p.9: „Locul e corect?” - atașat de SubjectLocation doar subiectelor cu pin. */
     public const LOCATION = 'LOCATION';
+    /** ADR-0013: un răspuns dintre variantele sondajului; valoarea = poziția variantei. */
+    public const CHOICE = 'CHOICE';
 
     /** @return list<string> */
     public static function forSubjectType(SubjectType $type): array
@@ -22,6 +24,7 @@ final class DefaultVoteTypes
             SubjectType::ISSUE => [self::VALIDITY, self::IMPORTANCE],
             SubjectType::PROPOSAL => [self::YES_NO, self::IMPORTANCE],
             SubjectType::PETITION => [self::YES_NO],
+            SubjectType::POLL => [self::CHOICE],
             default => [],
         };
     }

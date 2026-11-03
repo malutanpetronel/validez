@@ -8,6 +8,7 @@ export const TYPE_LABELS = {
     PROMISE: 'Promisiune',
     ELECTORAL_EVALUATION: 'Evaluare aleși',
     TOPIC_EVALUATION: 'Evaluare temă',
+    POLL: 'Sondaj',
 };
 
 // Decizie Step 2: utilizatorii creează doar aceste tipuri; restul doar adminii.
@@ -20,7 +21,7 @@ export const VISIBILITY_LABELS = {PUBLISHED: 'Publicat', HIDDEN: 'Ascuns', PENDI
 export const allowedTypes = (isAdmin) => (isAdmin ? Object.keys(TYPE_LABELS) : USER_TYPES);
 
 // Voturi (ADR-0007). Valorile sunt cele de pe server (VALIDITY/YES_NO 0–1, IMPORTANCE 1–5).
-export const VOTE_TYPE_LABELS = {VALIDITY: 'Validare', YES_NO: 'Susținere', IMPORTANCE: 'Importanță', LOCATION: 'Locul'};
+export const VOTE_TYPE_LABELS = {VALIDITY: 'Validare', YES_NO: 'Susținere', IMPORTANCE: 'Importanță', LOCATION: 'Locul', CHOICE: 'Sondaj'};
 export const VOTE_TYPE_HINTS = {
     VALIDITY: 'Ce se descrie aici este real și corect?',
     YES_NO: 'Susții această inițiativă?',
@@ -54,11 +55,55 @@ export const administrativeText = (location) => {
     return {determined: false, text: `Încadrare neclară, aproape de o limită administrativă: ${names}`};
 };
 
-/** Opțiunile unui tip de vot, ca [valoare, etichetă]; pentru tipuri noi, intervalul primit de la server. */
-export const voteOptions = (type) => BINARY_OPTIONS[type.code]
+/**
+ * Opțiunile unui tip de vot, ca [valoare, etichetă]. CHOICE (ADR-0013): etichetele variantelor vin de la server
+ * (`type.labels`); pentru tipuri noi, intervalul primit de la server.
+ */
+export const voteOptions = (type) => (Array.isArray(type.labels) ? type.labels.map((label, i) => [i, label]) : null)
+    ?? BINARY_OPTIONS[type.code]
     ?? Array.from({length: type.maxValue - type.minValue + 1}, (_, i) => [type.minValue + i, String(type.minValue + i)]);
 
-export const voteValueLabel = (code, value) => (BINARY_OPTIONS[code]?.find(([v]) => v === value)?.[1]) ?? String(value);
+/** `labels`: variantele sondajului, când sunt cunoscute; altfel „Varianta N” (de exemplu în exportul propriu). */
+export const voteValueLabel = (code, value, labels = null) => (code === 'CHOICE'
+    ? labels?.[value] ?? `Varianta ${value + 1}`
+    : (BINARY_OPTIONS[code]?.find(([v]) => v === value)?.[1]) ?? String(value));
+
+// ADR-0013: limitele variantelor de sondaj (aceleași ca pe server, care verifică oricum).
+export const POLL_MIN_OPTIONS = 2;
+export const POLL_MAX_OPTIONS = 20;
+export const POLL_MAX_LABEL = 120;
+
+/** Mesajul primei probleme din lista de variante, sau '' dacă e în regulă. */
+export const pollOptionsError = (options) => {
+    const clean = options.map((o) => o.replace(/\s+/g, ' ').trim());
+    if (clean.some((o) => o === '')) return 'Completează sau șterge variantele goale.';
+    if (clean.length < POLL_MIN_OPTIONS) return `Un sondaj are cel puțin ${POLL_MIN_OPTIONS} variante de răspuns.`;
+    if (clean.length > POLL_MAX_OPTIONS) return `Un sondaj are cel mult ${POLL_MAX_OPTIONS} variante de răspuns.`;
+    if (clean.some((o) => o.length > POLL_MAX_LABEL)) return `O variantă are cel mult ${POLL_MAX_LABEL} de caractere.`;
+    const seen = new Set();
+    for (const o of clean) {
+        const key = o.toLocaleLowerCase('ro-RO');
+        if (seen.has(key)) return `Varianta „${o}” apare de două ori.`;
+        seen.add(key);
+    }
+    return '';
+};
+
+/** ISO (server) → valoarea unui <input type="datetime-local"> în ora locală. */
+export const toLocalInput = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+/** Valoarea din <input type="datetime-local"> (ora locală) → ISO cu fus orar, cum o cere serverul. */
+export const fromLocalInput = (value) => {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+};
 
 /** Butonul de editare: adminul sau autorul (serverul verifică oricum). */
 export const canEditSubject = (user, subject) =>

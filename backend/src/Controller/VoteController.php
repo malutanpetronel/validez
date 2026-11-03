@@ -13,6 +13,7 @@ use App\Entity\UserVoteHistory;
 use App\Entity\Vote;
 use App\Entity\VoteResult;
 use App\Subject\SubjectVisibility;
+use App\Vote\DefaultVoteTypes;
 use App\Vote\IntegrityChain;
 use App\Vote\VoteException;
 use App\Vote\VoteService;
@@ -104,6 +105,7 @@ final class VoteController extends AbstractController
             'description' => $r->getDescription(),
             'estimate' => $r->publicEstimate(),
             'location' => $r->getLocation(),
+            'pollOptions' => $r->getPollOptions(),
             'byAuthor' => $r->getCreatedBy()->getId()->equals($subject->getAuthor()->getId()),
             'createdAt' => $r->getCreatedAt()->format(\DATE_ATOM),
         ], $revisions)], false);
@@ -235,13 +237,19 @@ final class VoteController extends AbstractController
             $type = $config->getVoteType();
             $result = $this->em->find(VoteResult::class, ['subject' => $subject->getId(), 'voteType' => $type->getCode()]);
             $own = $mine[$type->getCode()] ?? null;
+            $isChoice = $type->getCode() === DefaultVoteTypes::CHOICE;
+            // ADR-0013 p.6: la un sondaj deschis, numărătoarea pe variante o vede doar cine a votat (fără excepție
+            // pentru admin); totalul participanților rămâne public. După închidere, rezultatele sunt publice.
+            $hidden = $isChoice && !VoteService::isFrozen($subject) && $own === null;
             $types[] = [
                 'code' => $type->getCode(),
                 'minValue' => $type->getMinValue(),
-                'maxValue' => $type->getMaxValue(),
+                'maxValue' => $isChoice ? max(0, \count($subject->getPollOptions() ?? []) - 1) : $type->getMaxValue(),
+                'labels' => $isChoice ? $subject->getPollOptions() : null,
                 'active' => $config->isActive(),
                 'result' => [
-                    'counts' => (object) ($result?->getCurrentCounts() ?? []),
+                    'counts' => (object) ($hidden ? [] : ($result?->getCurrentCounts() ?? [])),
+                    'hidden' => $hidden,
                     'total' => $result?->getCurrentTotal() ?? 0,
                     'staleTotal' => $result?->getStaleTotal() ?? 0,
                 ],
@@ -257,6 +265,8 @@ final class VoteController extends AbstractController
             'subjectId' => $subject->getId()->toBase32(),
             'revisionNumber' => $subject->getRevisionNumber(),
             'frozen' => VoteService::isFrozen($subject),
+            // ADR-0013: data de închidere a sondajului (null la celelalte tipuri), afișată lângă vot.
+            'pollClosesAt' => $subject->getPollClosesAt()?->format(\DATE_ATOM),
             'votingEnabled' => $this->votes->isVotingEnabled(),
             'votingOpen' => $this->votes->isVotingEnabled() && $subject->getVisibility() === SubjectVisibility::PUBLISHED && !VoteService::isFrozen($subject),
             'types' => $types,

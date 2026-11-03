@@ -61,6 +61,10 @@ class SubjectRevision
     #[ORM\Column(length: 16, nullable: true, enumType: LocationSource::class)]
     private ?LocationSource $locationSource = null;
 
+    /** ADR-0013: variantele sondajului la această revizie. @var list<string>|null */
+    #[ORM\Column(type: Types::JSON, nullable: true, options: ['jsonb' => true])]
+    private ?array $pollOptions = null;
+
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: 'created_by', referencedColumnName: 'id', nullable: false, onDelete: 'RESTRICT')]
     private User $createdBy;
@@ -82,6 +86,7 @@ class SubjectRevision
         ['costEstimate' => $this->costEstimate, 'costCurrency' => $this->costCurrency, 'costEstimateScope' => $this->costEstimateScope] = $subject->storedEstimate();
         ['locationLat' => $this->locationLat, 'locationLng' => $this->locationLng] = $subject->storedLocation();
         $this->locationSource = $subject->getLocationSource();
+        $this->pollOptions = $subject->storedPollOptions();
         $this->createdBy = $createdBy;
         $this->createdAt = new \DateTimeImmutable();
     }
@@ -94,6 +99,9 @@ class SubjectRevision
     public function getDescription(): string { return $this->description; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
     public function getCreatedBy(): User { return $this->createdBy; }
+
+    /** @return list<string>|null */
+    public function getPollOptions(): ?array { return $this->type === SubjectType::POLL ? $this->pollOptions : null; }
 
     public function belongsTo(CivicSubject $subject): bool
     {

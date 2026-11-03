@@ -15,6 +15,7 @@ use App\Subject\PublishingPolicy;
 use App\Subject\SubjectRevisions;
 use App\Subject\SubjectVisibility;
 use App\Subject\CostEstimate;
+use App\Subject\PollDefinition;
 use App\Subject\SubjectLocation;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -59,6 +60,7 @@ final class CivicSubjectCreateProcessor implements ProcessorInterface
             $subject = new CivicSubject($node, $author, $type, $data->title, $data->description);
             if (!$this->policy->canPublish($author)) $subject->moderate(null, SubjectVisibility::PENDING);
             CostEstimate::apply($subject, get_object_vars($data), $type);
+            PollDefinition::applyOnCreate($subject, get_object_vars($data));
             $this->em->persist($subject);
             if (SubjectLocation::present($data) && $data->location !== null) {
                 // Înainte de initialize: revizia 1 e instantaneul subiectului, inclusiv pinul.

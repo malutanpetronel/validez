@@ -223,3 +223,37 @@ test('fără call to action când votarea nu e deschisă sau utilizatorul e aute
     await screen.findByRole('button', {name: 'Validez'});
     expect(screen.queryByText('Înregistrează-te pentru a vota și tu.')).not.toBeInTheDocument();
 });
+
+const choice = (over = {}) => type('CHOICE', {maxValue: 2, labels: ['Dimineața', 'La prânz', 'Seara'], ...over});
+
+test('sondaj: fără vot, rezultatele sunt ascunse; votul trimite varianta aleasă și arată barele', async () => {
+    setSession({token: ion()});
+    global.fetch = routedFetch([
+        [isVotes, () => res(summary({consent: consent(), pollClosesAt: '2030-05-01T18:30:00+00:00',
+            types: [choice({result: {counts: {}, hidden: true, total: 4, staleTotal: 0}})]}))],
+        [(u, o) => o.method === 'PUT' && u.endsWith('/votes/CHOICE'), () => res({action: 'VOTE', ...summary({consent: consent(), pollClosesAt: '2030-05-01T18:30:00+00:00',
+            types: [choice({result: {counts: {0: 1, 2: 4}, hidden: false, total: 5, staleTotal: 0}, mine: {value: 2, revisionNumber: 1, current: true}})]})})],
+    ]);
+    renderVotes();
+    expect(await screen.findByText(/Rezultatele se văd după ce votezi.*4 participanți/)).toBeInTheDocument();
+    expect(screen.getByText(/Sondajul se închide pe/)).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Votează'})).toBeDisabled();
+    fireEvent.click(screen.getByRole('radio', {name: 'Seara'}));
+    expect(screen.getByRole('radio', {name: 'Seara'})).toBeChecked();
+    fireEvent.click(screen.getByRole('button', {name: 'Votează'}));
+    expect(await screen.findByText('Seara · votul tău')).toBeInTheDocument();
+    expect(screen.getByText('80% (4)')).toBeInTheDocument();
+    expect(screen.getByText('20% (1)')).toBeInTheDocument();
+    const [[, opts]] = calls((u, o) => o.method === 'PUT');
+    expect(JSON.parse(opts.body)).toEqual({value: 2});
+    expect(screen.getByRole('button', {name: 'Schimbă votul'})).toBeDisabled();
+});
+
+test('sondaj închis: rezultate publice pentru vizitator, fără variante de ales', async () => {
+    global.fetch = routedFetch([[isVotes, () => res(summary({frozen: true, votingOpen: false, pollClosesAt: '2026-01-01T10:00:00+00:00',
+        types: [choice({result: {counts: {1: 3}, hidden: false, total: 3, staleTotal: 0}})]}))]]);
+    renderVotes();
+    expect(await screen.findByText('Sondaj închis')).toBeInTheDocument();
+    expect(screen.getByText('100% (3)')).toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+});

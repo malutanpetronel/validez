@@ -14,6 +14,8 @@ enum SubjectType: string
     case ELECTORAL_EVALUATION = 'ELECTORAL_EVALUATION';
     case PETITION = 'PETITION';
     case TOPIC_EVALUATION = 'TOPIC_EVALUATION';
+    /** ADR-0013: sondaj cu variante de răspuns definite pe subiect; doar adminii. */
+    case POLL = 'POLL';
 
     /** Decizie Step 2: utilizatorii creează doar ISSUE/PROPOSAL/PETITION; restul doar adminii. */
     public function isAdminOnly(): bool

@@ -13,6 +13,7 @@ use App\Repository\CivicSubjectRepository;
 use App\Subject\SubjectStage;
 use App\Subject\SubjectType;
 use App\Subject\CostEstimate;
+use App\Subject\PollDefinition;
 use App\Subject\SubjectLocation;
 use App\Subject\SubjectVisibility;
 use App\Subject\PublishingPolicy;
@@ -79,6 +80,7 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
             $before = SubjectRevisions::snapshot($subject);
             $wasPublished = $subject->getVisibility() === SubjectVisibility::PUBLISHED;
             SubjectRevisions::assertTypeChangeAllowed($subject, $type);
+            PollDefinition::applyOnUpdate($subject, get_object_vars($data), $type);
             if ($isAdmin && $data->visibility === SubjectVisibility::PUBLISHED->value && $subject->getVisibility() !== SubjectVisibility::PUBLISHED) {
                 $subject->markApprovedContribution();
             }
@@ -109,6 +111,7 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
                 $data->stage === null ? null : SubjectStage::from($data->stage),
                 $data->visibility === null ? null : SubjectVisibility::from($data->visibility),
             );
+            PollDefinition::assertUnlockedContent($subject, $before);
             $this->revisions->recordIfChanged($subject, $before, $user);
             $this->em->flush();
 

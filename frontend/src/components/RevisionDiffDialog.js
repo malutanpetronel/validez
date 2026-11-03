@@ -127,8 +127,11 @@ export default function RevisionDiffDialog({subjectId, from, to, onClose}) {
                                         <Typography><strong>Estimare:</strong> <del>{estimateText(a.estimate)}</del> → <ins>{estimateText(b.estimate)}</ins></Typography>
                                     )}
                                     <LocationDiff before={a.location} after={b.location}/>
+                                    {(a.pollOptions ?? []).join('\n') !== (b.pollOptions ?? []).join('\n') && (
+                                        <TextDiff label="Variantele sondajului" before={(a.pollOptions ?? []).join('\n')} after={(b.pollOptions ?? []).join('\n')} wide={!fullScreen}/>
+                                    )}
                                     {a.type === b.type && a.title === b.title && a.description === b.description && estimateText(a.estimate) === estimateText(b.estimate)
-                                        && sameLocation(a.location, b.location)
+                                        && sameLocation(a.location, b.location) && (a.pollOptions ?? []).join('\n') === (b.pollOptions ?? []).join('\n')
                                         && <Alert severity="info">Nicio diferență vizibilă între aceste revizii.</Alert>}
                                 </Stack>
                             )}
