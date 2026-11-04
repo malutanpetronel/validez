@@ -133,7 +133,7 @@ final class SeoShellTest extends WebTestCase
         $html = $this->get('/categorie/drumuri/cluj/calitate');
         self::assertSame(200, $this->code());
         self::assertStringContainsString('text/html', (string) $this->client->getResponse()->headers->get('Content-Type'));
-        self::assertStringContainsString('max-age=300', (string) $this->client->getResponse()->headers->get('Cache-Control'));
+        self::assertStringContainsString('no-store', (string) $this->client->getResponse()->headers->get('Cache-Control'));
 
         self::assertSame(1, substr_count($html, '<title>'), 'titlul din șablon e înlocuit, nu dublat');
         self::assertStringContainsString('<title>Calitate · Cluj — VALIDEZ</title>', $html);

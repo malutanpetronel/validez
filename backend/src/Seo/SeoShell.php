@@ -75,8 +75,9 @@ final class SeoShell
         $html = self::insertBefore($html, '</div>', $bodyHtml, '<div id="root">');
 
         $response = new Response($html, $status, ['Content-Type' => 'text/html; charset=UTF-8']);
-        $response->setPublic();
-        $response->setMaxAge($status === Response::HTTP_OK ? 300 : 60);
+        // no-store (nu max-age/no-cache): la restaurarea taburilor Chrome folosește HTML-ul din cache fără revalidare;
+        // după un deploy, HTML-ul vechi cere main.<hash-vechi>.js (404) și pagina rămâne pe ecranul de încărcare.
+        $response->headers->set('Cache-Control', 'no-store');
 
         return $response;
     }
