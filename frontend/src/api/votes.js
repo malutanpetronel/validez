@@ -1,5 +1,6 @@
 import {API_ENDPOINT} from '../config';
 import {apiFetch} from './http';
+import {SESSION_EVENT} from '../auth/session';
 
 /** Eroare de vot cu motivul serverului (`reason`), ca interfața să reacționeze diferit (consimțământ, limită etc.). */
 export class VoteApiError extends Error {
@@ -30,7 +31,34 @@ async function request(path, method = 'GET', body) {
 
 const subject = (id) => `/civic_subjects/${encodeURIComponent(id)}`;
 
-export const fetchVotes = (id) => request(`${subject(id)}/votes`);
+/*
+ * Sumarul voturilor e cerut de mai multe componente pentru același subiect (rândul din arbore, rândul de sub
+ * titlu, secțiunea Voturi): o singură cerere, partajată cât e în curs și refolosită scurt timp după.
+ * Actualizat din evenimentul `subject-votes-updated` (după vot/retragere), golit la login/logout (conține `mine`).
+ * `fresh: true` ocolește cache-ul (reîncărcări după erori sau revizie schimbată).
+ */
+const VOTES_TTL_MS = 15000;
+const votesCache = new Map();
+
+export function fetchVotes(id, {fresh = false} = {}) {
+    const hit = votesCache.get(id);
+    if (!fresh && hit && Date.now() - hit.at < VOTES_TTL_MS) return hit.promise;
+    const entry = {at: Date.now(), promise: request(`${subject(id)}/votes`)};
+    votesCache.set(id, entry);
+    entry.promise.catch(() => { if (votesCache.get(id) === entry) votesCache.delete(id); });
+    return entry.promise;
+}
+
+/** Fără argument golește tot; altfel doar subiectul dat (ex. după editarea subiectului: revizie nouă). */
+export const invalidateVotes = (id) => (id === undefined ? votesCache.clear() : votesCache.delete(id));
+
+if (typeof window !== 'undefined') {
+    window.addEventListener(SESSION_EVENT, () => votesCache.clear());
+    window.addEventListener('subject-votes-updated', ({detail}) => {
+        if (detail?.subjectId && detail.summary) votesCache.set(detail.subjectId, {at: Date.now(), promise: Promise.resolve(detail.summary)});
+    });
+}
+
 export const castVote = (id, type, value) => request(`${subject(id)}/votes/${encodeURIComponent(type)}`, 'PUT', {value});
 /** Răspunsul conține doar {withdrawn}; starea se reîncarcă separat (subiectul poate fi între timp invizibil). */
 export const withdrawVote = (id, type) => request(`${subject(id)}/votes/${encodeURIComponent(type)}`, 'DELETE');

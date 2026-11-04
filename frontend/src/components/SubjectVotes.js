@@ -116,7 +116,7 @@ export default function SubjectVotes({subjectId}) {
         if (summary) window.dispatchEvent(new CustomEvent('subject-votes-updated', {detail: {subjectId, summary}}));
     }, [subjectId, summary]);
 
-    const reload = useCallback(() => fetchVotes(subjectId).then((s) => { setSummary(s); return s; }), [subjectId]);
+    const reload = useCallback(() => fetchVotes(subjectId, {fresh: true}).then((s) => { setSummary(s); return s; }), [subjectId]);
 
     useEffect(() => {
         let active = true;
@@ -192,7 +192,8 @@ export default function SubjectVotes({subjectId}) {
     const from = `${location.pathname}${location.search}`;
 
     return (
-        <Stack spacing={1.5} component="section" aria-labelledby={`votes-${subjectId}`}>
+        <Stack spacing={1.5} component="section" aria-labelledby={`votes-${subjectId}`} id={`subject-votes-${subjectId}`}
+               tabIndex={-1} sx={{scrollMarginTop: 80, outline: 'none'}}>
             <Divider/>
             <Typography id={`votes-${subjectId}`} variant="h6" component="h2">Voturi</Typography>
             {summary.pollClosesAt && <Typography variant="body2" color="text.secondary">

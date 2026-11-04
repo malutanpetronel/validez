@@ -7,6 +7,7 @@ import PlaceIcon from '@mui/icons-material/Place';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import {useAuth} from '../auth/AuthContext';
 import {fetchSubject} from '../api/subjects';
+import {invalidateVotes} from '../api/votes';
 import {canEditSubject, formatDate, locationConfirmationText, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS} from '../subjects/labels';
 import SubjectForm from '../components/SubjectForm';
 import PinAdministrative from '../components/PinAdministrative';
@@ -14,6 +15,7 @@ import SubjectEstimate from '../components/SubjectEstimate';
 import AuthorPublishing from '../components/AuthorPublishing';
 import SubjectPrivateNote from '../components/SubjectPrivateNote';
 import SubjectVotes from '../components/SubjectVotes';
+import TreeVoteSummary from '../components/TreeVoteSummary';
 import SubjectMediaSection from '../components/SubjectMediaSection';
 import MediaImage from '../components/MediaImage';
 import useSubjectMedia, {isPublicPhoto} from '../media/useSubjectMedia';
@@ -127,6 +129,15 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
         ? {title: subject.title, description: excerpt(subject.description), path: subject.canonicalPath ?? null, noindex: subject.visibility !== 'PUBLISHED'}
         : {title: notFound ? 'Subiect negăsit' : null, noindex: notFound}, !embedded || meta);
 
+    /** Rândul de sub titlu duce la secțiunea Voturi (scrollIntoView, nu #ancoră: pe Cordova e HashRouter). */
+    const scrollToVotes = () => {
+        const section = subject && document.getElementById(`subject-votes-${subject.id}`);
+        if (!section) return;
+        const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+        section.scrollIntoView?.({behavior: reduce ? 'auto' : 'smooth', block: 'start'});
+        section.focus({preventScroll: true});
+    };
+
     return (
         <Stack spacing={2}>
             {!embedded && <div><Button component={RouterLink} to="/" state={location.state} startIcon={<ArrowBackIcon/>}>Înapoi la arbore</Button></div>}
@@ -145,6 +156,8 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
                         </Stack>
                         <Typography ref={titleRef} tabIndex={-1} variant="h5" component="h1"
                                     sx={{wordBreak: 'break-word', scrollMarginTop: 80, outline: 'none'}}>{subject.title}</Typography>
+                        <TreeVoteSummary key={`${subject.id}:${subject.revisionNumber ?? 1}:${subject.stage}:${subject.visibility}`}
+                                         subjectId={subject.id} variant="header" onVote={scrollToVotes}/>
                         <Typography variant="body2" color="text.secondary">
                             În <Box component="strong" sx={{color: 'primary.main'}}>{subject.nodeName}</Box>
                             {' · de '}<Box component="span" sx={{color: 'primary.main', fontStyle: 'italic'}}>{subject.authorName}</Box>
@@ -193,7 +206,7 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
                 </Paper>
             )}
             {editing && subject && (
-                <SubjectForm subject={subject} onClose={() => setEditing(false)} onSaved={(s) => { setNoteVersion((value) => value + 1); setSubject(s); setEditing(false); onUpdated?.(s); }}/>
+                <SubjectForm subject={subject} onClose={() => setEditing(false)} onSaved={(s) => { invalidateVotes(s.id); setNoteVersion((value) => value + 1); setSubject(s); setEditing(false); onUpdated?.(s); }}/>
             )}
         </Stack>
     );

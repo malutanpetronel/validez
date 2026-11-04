@@ -18,3 +18,5 @@ if (!global.ResizeObserver) {
 }
 // useRestaurareScroll (Layout): jsdom nu implementează window.scrollTo.
 window.scrollTo = jest.fn();
+// api/votes ține sumarele voturilor în cache ~15 s; între teste îl golim (evenimentul de sesiune îl curăță).
+beforeEach(() => window.dispatchEvent(new Event('validez-session-change')));
