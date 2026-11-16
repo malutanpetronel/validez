@@ -99,6 +99,22 @@ test('adresa directa a unui subiect: arbore expandat, subiect selectat, breadcru
         .toHaveAttribute('href', '/categorie/drumuri/cluj/calitate');
 });
 
+test('breadcrumb-ul subiectului selecteaza categoria si revine sus in pagina', async () => {
+    const originalScrollTo = window.scrollTo;
+    const scrollTo = jest.fn();
+    window.scrollTo = scrollTo;
+    try {
+        const router = renderAt(canonicalPath);
+        await waitFor(() => expect(isSelected('Gropi pe DN1')).toBe(true));
+        fireEvent.click(within(screen.getByRole('navigation', {name: 'Categorii'})).getByRole('link', {name: 'Drumuri'}));
+        await waitFor(() => expect(router.state.location.pathname).toBe('/categorie/drumuri'));
+        await waitFor(() => expect(isSelected('Drumuri')).toBe(true));
+        await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 0));
+    } finally {
+        window.scrollTo = originalScrollTo;
+    }
+});
+
 test('cale veche de categorie sau slug vechi: adresa devine cea canonica (replace)', async () => {
     let router = renderAt('/categorie/drumuri/cluj-vechi/calitate');
     await waitFor(() => expect(router.state.location.pathname).toBe('/categorie/drumuri/cluj/calitate'));

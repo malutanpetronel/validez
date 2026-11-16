@@ -90,6 +90,7 @@ export default function TreePage() {
     const [moveOpen, setMoveOpen] = useState(false);
     const [actionsAnchor, setActionsAnchor] = useState(null);
     const [helpOpen, setHelpOpen] = useState(false);
+    const pendingCategoryTop = useRef(null);
     const theme = useTheme();
     const mobile = useMediaQuery(theme.breakpoints.down('sm'));
     const scrollToSection = (id) => document.getElementById(id)?.scrollIntoView?.({behavior: 'smooth', block: 'start'});
@@ -298,6 +299,16 @@ export default function TreePage() {
 
     const selected = selectedKey ? findNode(treeData, selectedKey) : null;
     const home = !selected && !selectedSubject && !urlError;
+    useEffect(() => {
+        if (!selected || pendingCategoryTop.current !== selected.slugPath) return;
+        pendingCategoryTop.current = null;
+        window.scrollTo(0, 0);
+    }, [selected]);
+
+    const rememberCategoryClick = (category, event) => {
+        if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+        pendingCategoryTop.current = category.slugPath;
+    };
 
     const navigationState = (categoryKey = selectedKey) => {
         const expanded = new Set(expandedKeys);
@@ -426,7 +437,7 @@ export default function TreePage() {
     };
 
     return (
-        <Stack spacing={2}>
+        <Stack spacing={2} sx={{pt: selectedSubject ? 1 : 0}}>
             {home ? <Box component="section" sx={{pt: {xs: 3, sm: 5}, pb: {xs: 1, sm: 2}}}>
                 <Typography component="p" variant="overline" sx={{color: 'secondary.main', fontWeight: 800, letterSpacing: '0.14em'}}>
                     VEZI. VERIFICĂ. VALIDEAZĂ.
@@ -527,7 +538,8 @@ export default function TreePage() {
                                 draggable={isAdmin && !moving ? {icon: false, nodeDraggable: (node) => !node.kind} : false}
                                 onDrop={onDrop}
                                 allowDrop={({dropNode, dragNode}) => !dropNode.kind && !dragNode.kind}
-                                titleRender={(node) => <Stack component="span" direction="row" spacing={1} sx={{alignItems: 'center', minWidth: 0, '& .MuiSvgIcon-root': {flexShrink: 0}}}>
+                                titleRender={(node) => <Stack component="span" direction="row" spacing={1}
+                                    sx={{alignItems: 'center', minWidth: 0, '& .MuiSvgIcon-root': {flexShrink: 0}}}>
                                     {node.kind === 'subject' ? <DescriptionOutlinedIcon fontSize="small" color={node.subject.visibility === 'HIDDEN' ? 'error' : 'primary'} data-hidden={node.subject.visibility === 'HIDDEN' ? 'true' : undefined}/> : !node.kind ? <FolderOutlinedIcon fontSize="small" color="action"/> : node.kind === 'add' ? <AddIcon fontSize="small" color="primary"/> : <ListAltOutlinedIcon fontSize="small" color="primary"/>}
                                     <Box component="span" sx={{display: 'flex', flexDirection: 'column', gap: 0.25, minWidth: 0}}>
                                     <Typography component="span" variant="body2" sx={{fontWeight: !node.kind && !node.parentId ? 650 : 400,
@@ -551,7 +563,7 @@ export default function TreePage() {
                     selectedSubject ? <Box sx={{minWidth: 0}}>
                         {/* Breadcrumb-ul în card: cardul pornește la aceeași înălțime cu arborele. */}
                         <SubjectPage key={selectedSubject} subjectId={selectedSubject} embedded meta focusTitle={focusSubject}
-                                     header={<CategoryBreadcrumbs items={crumbs}/>} onUpdated={(subject) => {
+                                     header={<CategoryBreadcrumbs items={crumbs} onCategoryClick={rememberCategoryClick}/>} onUpdated={(subject) => {
                             loadBranch(subject.nodeId, true).catch(showError);
                             if (subject.canonicalPath) goTo(subject.canonicalPath, true);
                         }}/>
