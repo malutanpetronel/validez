@@ -1,6 +1,7 @@
 import {createBrowserRouter, createHashRouter} from 'react-router-dom';
 import Layout from './Layout';
 import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import TreePage from './pages/TreePage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import LoginPage from './pages/LoginPage';
@@ -27,6 +28,7 @@ export const routes = [
             {index: true, element: <TreePage/>},
             {path: 'help', element: <HelpPage/>},
             {path: 'privacy', element: <PrivacyPage/>},
+            {path: 'terms', element: <TermsPage/>},
             {path: 'categorii-propuse', element: <CategorySuggestionsPage/>},
             {path: 'moderare', element: <ModerationPage/>},
             {path: 'check-api', element: <CheckApiPage/>},

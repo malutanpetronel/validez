@@ -265,3 +265,13 @@ Decizii (03.11.2026): sondajele le creează doar adminii; un singur răspuns per
 - [x] **P.3** — FE admin: tipul Sondaj în formular, editorul de variante (adăugare, ștergere, sus/jos), data de închidere; responsive.
 - [x] **P.4** — FE vot: listă verticală de variante + „Votează”, bare cu procent după vot, „Se închide pe …”/„Închis pe …”; etichetele CHOICE din subiect.
 - [ ] **P.5** — deploy BE+FE (Deploy.md, secțiune nouă) și un sondaj de test pe producție.
+
+## Step L — documente legale înaintea codului nou (16.11.2026)
+
+Regulă: o funcționalitate nouă care atinge date personale, plăți sau tracking actualizează întâi confidențialitatea / termenii / consimțământul. Fără Google Analytics și fără AdSense deocamdată, deci consent-kit nu se aplică; `CookieNotice` rămâne.
+
+- [x] **L.1** (16.11.2026) — `PrivacyPage`: fotografii și linkuri (eliminarea metadatelor, scoatere, persoane terțe), localizare (pin explicit, locația dispozitivului doar cu permisiune, OpenStreetMap ca terț), ALTCHA pe server, copii de siguranță pentru fotografii, sondaje în secțiunea Voturi, pinul și aria în versiunea subiectului; data actualizării 16.11.2026. Versiunea acordului de vot rămâne 13.10.2026 (vezi L.3).
+- [x] **L.2** (16.11.2026) — `TermsPage` la `/terms` (link în subsol): vârstă minimă 16 ani, licență neexclusivă pe conținut, moderare, rezultate nereprezentative statistic, Validez nu e instituție și nu ține loc de petiție (OG 27/2002).
+- [ ] **L.2b** — bifa „Accept Termenii” la înregistrare, cu versiunea acceptată salvată (FE + BE), ca la acordul de vot.
+- [ ] **L.3** — decizie: versiune nouă a acordului de vot din cauza sondajelor (cere acordul din nou) sau doar completarea textului.
+- [ ] **L.4** — textele L.1/L.2 trimise la verificarea juridică de specialitate.

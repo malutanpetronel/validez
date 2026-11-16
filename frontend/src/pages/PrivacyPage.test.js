@@ -16,3 +16,12 @@ test('secțiunea despre voturi: versiunea curentă, termene concrete, fără pro
     expect(scroll).toHaveBeenCalledTimes(1);
     expect(scroll.mock.instances[0]).toBe(section);
 });
+
+test('acoperă fotografiile, localizarea cu OpenStreetMap și sondajele', () => {
+    render(<MemoryRouter><PrivacyPage/></MemoryRouter>);
+    expect(screen.getByRole('heading', {name: 'Fotografii și linkuri'})).toBeInTheDocument();
+    expect(screen.getByText(/se elimină toate metadatele/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Localizare'})).toBeInTheDocument();
+    expect(screen.getByText(/OpenStreetMap Foundation, care primesc adresa IP/)).toBeInTheDocument();
+    expect(screen.getByRole('region', {name: 'Voturi'})).toHaveTextContent('La un sondaj alegi o singură variantă');
+});

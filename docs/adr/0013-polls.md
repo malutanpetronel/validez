@@ -48,6 +48,7 @@ Decizii ale lui Petro (03.11.2026): sondajele le creează doar adminii; un singu
 - **Variante ca revizie, cu reconfirmare** (ca titlul la ADR-0007): respins; la sondaj reconfirmarea ar goli rezultatele la orice corectură.
 - **Câte un `VoteType` per sondaj**: respins; tabela `vote_type` ar crește cu fiecare sondaj, iar intervalul global e suficient cu verificarea din punctul 3.
 - **Rezultate mereu vizibile**: respins de Petro.
+- **Sondaje permanente, fără dată de închidere**: respins de Petro (16.11.2026). Cu rezultatele ascunse până la vot, un sondaj fără închidere nu și-ar publica niciodată rezultatele pentru cei care nu votează și n-ar avea un moment pentru verificarea publică a agregatelor (punctul 8).
 
 ## Security / Transparency implications
 

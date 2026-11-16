@@ -101,7 +101,10 @@ export default function Layout() {
                         <MenuItem value="dark">Temă: Nocturn</MenuItem>
                     </Select>
                 </Box>
-                <Box sx={{mb: 1}}><Button component={RouterLink} to="/privacy" size="small" sx={{color: 'text.secondary'}}>Confidențialitate</Button></Box>
+                <Box sx={{mb: 1, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1}}>
+                    <Button component={RouterLink} to="/privacy" size="small" sx={{color: 'text.secondary'}}>Confidențialitate</Button>
+                    <Button component={RouterLink} to="/terms" size="small" sx={{color: 'text.secondary'}}>Termeni</Button>
+                </Box>
                 VEZI. VERIFICĂ. VALIDEAZĂ. · v{version.version} · AGPL-3.0-or-later
             </Box>
         </Box>
