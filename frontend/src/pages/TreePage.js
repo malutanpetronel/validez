@@ -560,7 +560,7 @@ export default function TreePage() {
                     )}
                 </Paper>
                 {urlError ? <Alert severity="warning">{urlError}</Alert> :
-                    selectedSubject ? <Box sx={{minWidth: 0}}>
+                    selectedSubject ? <Box sx={{minWidth: 0, order: {md: 2}}}>
                         {/* Breadcrumb-ul în card: cardul pornește la aceeași înălțime cu arborele. */}
                         <SubjectPage key={selectedSubject} subjectId={selectedSubject} embedded meta focusTitle={focusSubject}
                                      header={<CategoryBreadcrumbs items={crumbs} onCategoryClick={rememberCategoryClick}/>} onUpdated={(subject) => {
