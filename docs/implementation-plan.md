@@ -275,3 +275,16 @@ Regulă: o funcționalitate nouă care atinge date personale, plăți sau tracki
 - [ ] **L.2b** — bifa „Accept Termenii” la înregistrare, cu versiunea acceptată salvată (FE + BE), ca la acordul de vot.
 - [ ] **L.3** — decizie: versiune nouă a acordului de vot din cauza sondajelor (cere acordul din nou) sau doar completarea textului.
 - [ ] **L.4** — textele L.1/L.2 trimise la verificarea juridică de specialitate.
+
+## Step T — filtru pe tipul subiectelor (16.11.2026)
+
+Decizii: dropdown pe rândul „Vezi subiectele / Alege o tematică” (Toate, Probleme, Propuneri, … Sondaje), în adresă ca `/?tip=POLL`; titlul listei devine „Sondaje recente” etc.; numărul „· N” din arbore respectă filtrul (BE); categoriile fără subiecte de tipul ales se estompează (nu se ascund); în categorie filtrul rămâne, cu chip „Doar sondaje ✕” deasupra arborelui; nu revenim automat la „Toate” — lista goală oferă „Arată toate subiectele categoriei”. Fără impact pe documentele legale (doar afișare).
+
+- [x] **T.1** (16.11.2026) — BE: `GET /api/tree_nodes?type=` → `subjectCount` doar pentru tipul dat (400 la tip necunoscut); `CivicSubjectTest::testNumarulDinArboreRespectaTipul`.
+- [x] **T.2** (16.11.2026) — FE: `TYPE_PLURALS`, `fetchChildren(parent, type)`, `SubjectList` cu tip controlat + titlu/mesaj gol după tip.
+- [x] **T.3** (16.11.2026) — FE `TreePage`: dropdown, `?tip=`, reîncărcarea ramurilor la schimbare, estompare, chip; tipul trece și în `treeReturn`.
+- [x] **T.4** (16.11.2026) — FE `/subiecte?tip=`: titlu și filtru sincronizate; „Vezi toate sondajele”.
+- [x] **T.5a** (16.11.2026) — eslint OK, FE 167/167 teste, BE CivicSubject + AuthAndPermissions 27/27.
+- [ ] **T.5b** — verificare vizuală (telefon + desktop) și deploy BE+FE.
+
+Tot pe 16.11.2026: margine sus unică pentru toate paginile — `Container main` din `Layout.js` are `pt: 1` (8px, valoarea folosită înainte doar la subiect); padding-ul local din `TreePage` scos, hero-ul de pe `/` cu padding redus, iar Stack-ul rădăcină cu `useFlexGap` (titlul ascuns „Tematici” nu mai adaugă 16px în categorie).

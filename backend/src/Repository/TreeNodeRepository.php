@@ -85,7 +85,7 @@ class TreeNodeRepository extends ServiceEntityRepository
      *
      * @return list<TreeNode>
      */
-    public function withChildrenFlags(array $nodes): array
+    public function withChildrenFlags(array $nodes, ?\App\Subject\SubjectType $type = null): array
     {
         if ($nodes === []) {
             return $nodes;
@@ -105,6 +105,11 @@ class TreeNodeRepository extends ServiceEntityRepository
                 $types[] = \Doctrine\DBAL\ParameterType::STRING;
             }
             $visibility .= ')';
+        }
+        if ($type !== null) {
+            $visibility .= ' AND s.type = ?';
+            $parameters[] = $type->value;
+            $types[] = \Doctrine\DBAL\ParameterType::STRING;
         }
 
         $rows = $this->getEntityManager()->getConnection()->executeQuery(

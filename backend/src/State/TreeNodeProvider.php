@@ -10,6 +10,7 @@ use ApiPlatform\State\ProviderInterface;
 use App\Entity\TreeNode;
 use App\Repository\TreeNodeRepository;
 use App\Seo\SlugRegistry;
+use App\Subject\SubjectType;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Ulid;
@@ -41,8 +42,17 @@ final class TreeNodeProvider implements ProviderInterface
                 $parent = $this->repository->find(Ulid::fromString($parentId))
                     ?? throw new NotFoundHttpException('Nodul parinte nu exista.');
             }
+            // Step T: ?type= -> subjectCount numara doar subiectele de tipul ales (filtrul din pagina principala).
+            $typeName = $context['filters']['type'] ?? null;
+            $type = null;
+            if ($typeName !== null && $typeName !== '') {
+                $type = \is_string($typeName) ? SubjectType::tryFrom($typeName) : null;
+                if ($type === null) {
+                    throw new BadRequestHttpException('Tip de subiect necunoscut.');
+                }
+            }
 
-            return $this->repository->withChildrenFlags($this->repository->findChildren($parent));
+            return $this->repository->withChildrenFlags($this->repository->findChildren($parent), $type);
         }
 
         if ($operation->getName() === 'tree_node_by_path') {

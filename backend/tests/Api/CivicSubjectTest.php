@@ -268,6 +268,22 @@ final class CivicSubjectTest extends WebTestCase
         self::assertSame(404, $this->code());
     }
 
+    /** Step T: numărul de subiecte din arbore respectă filtrul pe tip. */
+    public function testNumarulDinArboreRespectaTipul(): void
+    {
+        $this->create('admin', 'Calitate', 'PROPOSAL', 'Propunere');
+        $this->create('admin', 'Cluj', 'ISSUE', 'Problemă');
+        $this->create('admin', 'Sanatate', 'ISSUE', 'Altă problemă');
+
+        $counts = fn (string $q): array => array_column($this->call('GET', '/api/tree_nodes'.$q)['member'] ?? [], 'subjectCount', 'name');
+        self::assertSame(['Drumuri' => 2, 'Sanatate' => 1], $counts(''));
+        self::assertSame(['Drumuri' => 1, 'Sanatate' => 0], $counts('?type=PROPOSAL'));
+        self::assertSame(['Cluj' => 1], $counts('?parent='.$this->n['Drumuri']->getId()->toBase32().'&type=PROPOSAL'));
+
+        $this->call('GET', '/api/tree_nodes?type=NIMIC');
+        self::assertSame(400, $this->code());
+    }
+
     public function testPaginare(): void
     {
         for ($i = 1; $i <= 23; $i++) {

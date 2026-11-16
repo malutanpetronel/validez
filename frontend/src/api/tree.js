@@ -23,9 +23,12 @@ async function request(url, options = {}) {
     return body;
 }
 
-/** Un singur nivel: radacinile (parentId null) sau copiii nodului. ULID-urile raman string. */
-export async function fetchChildren(parentId = null) {
-    const url = parentId ? `${URL}?parent=${encodeURIComponent(parentId)}` : URL;
+/** Un singur nivel: radacinile (parentId null) sau copiii nodului. ULID-urile raman string. `type`: subjectCount doar pe tip (Step T). */
+export async function fetchChildren(parentId = null, type = '') {
+    const q = new URLSearchParams();
+    if (parentId) q.set('parent', parentId);
+    if (type) q.set('type', type);
+    const url = q.toString() ? `${URL}?${q}` : URL;
     const body = await request(url);
     return body?.member ?? body?.['hydra:member'] ?? [];
 }

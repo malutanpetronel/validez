@@ -2,8 +2,8 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import Tree from 'rc-tree';
 import 'rc-tree/assets/index.css';
 import {
-    Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
-    IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Paper, Snackbar, Stack, TextField, Tooltip, Typography,
+    Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel,
+    IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Paper, Select, Snackbar, Stack, TextField, Tooltip, Typography,
     useMediaQuery, useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -32,6 +32,7 @@ import usePageMeta from '../seo/usePageMeta';
 import {categoryPathOf, categoryUrl, parseTarget} from '../seo/paths';
 import CategoryBreadcrumbs from '../components/CategoryBreadcrumbs';
 import {hideSplash, isSubjectPath} from '../splash';
+import {TYPE_PLURALS, typeFromParam} from '../subjects/labels';
 import {
     ancestorsOf, appendChild, dropTarget, findBySlugPath, findNode, indexByKey, isNoopMove, rebaseSlugPaths, renameInTree,
     replaceLevel, setChildren, toTreeNode,
@@ -62,8 +63,46 @@ export default function TreePage() {
     // Pagina subiectelor recente stă în adresă (`/?pagina=2`): „Înapoi” dintr-un subiect revine pe aceeași pagină,
     // la aceeași poziție (useRestaurareScroll). Paginarea nu urcă la începutul paginii (state.pastreazaScroll).
     const recentPage = Math.max(1, parseInt(searchParams.get('pagina'), 10) || 1);
-    const changeRecentPage = (p) => setSearchParams(p > 1 ? {pagina: String(p)} : {}, {state: {pastreazaScroll: true}});
+    const changeRecentPage = (p) => setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (p > 1) next.set('pagina', String(p)); else next.delete('pagina');
+        return next;
+    }, {state: {pastreazaScroll: true}});
     const [returnContext] = useState(() => location.state?.treeReturn);
+    // Step T: filtrul pe tip. Pe `/` stă în adresă (`?tip=POLL`); în categorie/subiect rămâne activ (chip deasupra
+    // arborelui) și trece prin treeReturn la revenirea din alte pagini. Nu revine singur la „Toate”.
+    const atRoot = location.pathname === '/';
+    const tipParam = typeFromParam(searchParams.get('tip'));
+    const [typeFilter, setTypeFilter] = useState(() => tipParam || typeFromParam(returnContext?.typeFilter));
+    const typeRef = useRef(typeFilter);
+    typeRef.current = typeFilter;
+    const changeType = (type) => {
+        setTypeFilter(type);
+        if (atRoot) setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete('pagina');
+            if (type) next.set('tip', type); else next.delete('tip');
+            return next;
+        });
+    };
+    // Pe `/`: o adresă nouă (Back/Forward, link cu ?tip=) schimbă filtrul; altfel adresa urmează filtrul (replace).
+    const prevTip = useRef(tipParam);
+    useEffect(() => {
+        if (!atRoot || prevTip.current !== tipParam) {
+            const changed = prevTip.current !== tipParam;
+            prevTip.current = tipParam;
+            if (atRoot && changed) setTypeFilter(tipParam);
+            return;
+        }
+        if (typeFilter !== tipParam) {
+            setSearchParams((prev) => {
+                const next = new URLSearchParams(prev);
+                if (typeFilter) next.set('tip', typeFilter); else next.delete('tip');
+                return next;
+            }, {replace: true, state: location.state});
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [atRoot, tipParam, typeFilter]);
     const [subjectBranches, setSubjectBranches] = useState({});
     const [selectedSubject, setSelectedSubject] = useState(null);
     // Contor pentru SubjectPage.focusTitle: crește la fiecare selectare a unui subiect după încărcarea paginii
@@ -101,7 +140,8 @@ export default function TreePage() {
     useEffect(() => {
         let active = true;
         const restore = async () => {
-            let tree = (await fetchChildren()).map(toTreeNode);
+            const type = typeRef.current;
+            let tree = (await fetchChildren(null, type)).map(toTreeNode);
             const branches = {};
             const pending = new Set(returnContext?.expandedKeys ?? []);
             if (returnContext?.selectedKey) pending.add(returnContext.selectedKey);
@@ -111,7 +151,7 @@ export default function TreePage() {
                 if (!reachable.length) break;
                 const results = await Promise.all(reachable.map(async (key) => {
                     const [children, subjects] = await Promise.all([
-                        fetchChildren(key), fetchSubjects({node: key, scope: 'direct'}),
+                        fetchChildren(key, type), fetchSubjects({node: key, scope: 'direct', type}),
                     ]);
                     return {key, children, subjects};
                 }));
@@ -133,7 +173,8 @@ export default function TreePage() {
     }, [returnContext]);
 
     const loadBranch = useCallback(async (key, refreshCounts = false) => {
-        const [children, subjects] = await Promise.all([fetchChildren(key), fetchSubjects({node: key, scope: 'direct'})]);
+        const type = typeRef.current;
+        const [children, subjects] = await Promise.all([fetchChildren(key, type), fetchSubjects({node: key, scope: 'direct', type})]);
         setTreeData((t) => setChildren(t, key, children.map(toTreeNode)));
         setSubjectBranches((branches) => ({...branches, [key]: subjects}));
         if (refreshCounts) await reloadLevels([key], indexByKey(treeData));
@@ -152,7 +193,8 @@ export default function TreePage() {
 
     const goTo = (url, replace = false) => {
         lastSyncedUrl.current = url ?? location.pathname;
-        if (url && location.pathname !== url) navigate(url, {replace});
+        // Spre `/` filtrul pe tip rămâne în adresă.
+        if (url && location.pathname !== url) navigate(url === '/' && typeRef.current ? `/?tip=${encodeURIComponent(typeRef.current)}` : url, {replace});
     };
 
     /** Incarca, in ordine de la radacina, copiii si subiectele lipsa ale nodurilor date. */
@@ -166,7 +208,8 @@ export default function TreePage() {
             const needSubjects = !branchesRef.current[key];
             if (!needChildren && !needSubjects) continue;
             const [children, subjects] = await Promise.all([
-                needChildren ? fetchChildren(key) : null, needSubjects ? fetchSubjects({node: key, scope: 'direct'}) : null,
+                needChildren ? fetchChildren(key, typeRef.current) : null,
+                needSubjects ? fetchSubjects({node: key, scope: 'direct', type: typeRef.current}) : null,
             ]);
             if (children) tree = setChildren(tree, key, children.map(toTreeNode));
             if (subjects) branches[key] = subjects;
@@ -175,6 +218,27 @@ export default function TreePage() {
         setTreeData(tree);
         setSubjectBranches((b) => ({...b, ...branches}));
     };
+
+    // Step T: la schimbarea tipului se reîncarcă nivelurile deja deschise (numărul „· N”) și subiectele ramurilor.
+    // Comparăm cu valoarea anterioară: nu la montare și nici la a doua rulare din StrictMode.
+    const prevType = useRef(typeFilter);
+    useEffect(() => {
+        if (prevType.current === typeFilter) return undefined;
+        prevType.current = typeFilter;
+        let active = true;
+        const index = indexByKey(treeRef.current);
+        const parents = [null, ...[...index.values()].filter((n) => Array.isArray(n.children)).map((n) => n.key)];
+        const branchKeys = Object.keys(branchesRef.current);
+        Promise.all([
+            Promise.all(parents.map((k) => fetchChildren(k, typeFilter))),
+            Promise.all(branchKeys.map((k) => fetchSubjects({node: k, scope: 'direct', type: typeFilter}))),
+        ]).then(([levels, subjects]) => {
+            if (!active) return;
+            setTreeData((t) => parents.reduce((acc, k, i) => replaceLevel(acc, k, levels[i], index), t));
+            setSubjectBranches(Object.fromEntries(branchKeys.map((k, i) => [k, subjects[i]])));
+        }).catch((err) => { if (active) showError(err); });
+        return () => { active = false; };
+    }, [typeFilter]);
 
     const clearSelection = () => {
         setSelectedKey(null);
@@ -263,7 +327,7 @@ export default function TreePage() {
             }
         }
         const unique = [...new Set([...parentKeys, ...ancestors])];
-        const levels = await Promise.all(unique.map((k) => fetchChildren(k)));
+        const levels = await Promise.all(unique.map((k) => fetchChildren(k, typeRef.current)));
         setTreeData((t) => unique.reduce((acc, k, i) => replaceLevel(acc, k, levels[i], previous), t));
     };
 
@@ -318,7 +382,7 @@ export default function TreePage() {
             current = current.parentId ? findNode(treeData, current.parentId) : null;
         }
         return {treeReturn: {expandedKeys: [...expanded], selectedKey: categoryKey,
-            selectedSubject: categoryKey ? null : selectedSubject}};
+            selectedSubject: categoryKey ? null : selectedSubject, typeFilter}};
     };
     // Adresa urmeaza calea selectiei si dupa redenumirea/mutarea ei (sau a unui stramos).
     const selectedUrl = selectedSubject ? null : categoryUrl(selected?.slugPath);
@@ -437,8 +501,9 @@ export default function TreePage() {
     };
 
     return (
-        <Stack spacing={2} sx={{pt: selectedSubject ? 1 : 0}}>
-            {home ? <Box component="section" sx={{pt: {xs: 3, sm: 5}, pb: {xs: 1, sm: 2}}}>
+        // useFlexGap: titlul ascuns „Tematici” (position: absolute) nu mai adaugă spațiu deasupra arborelui.
+        <Stack spacing={2} useFlexGap>
+            {home ? <Box component="section" sx={{pt: {xs: 1, sm: 2}, pb: {xs: 1, sm: 2}}}>
                 <Typography component="p" variant="overline" sx={{color: 'secondary.main', fontWeight: 800, letterSpacing: '0.14em'}}>
                     VEZI. VERIFICĂ. VALIDEAZĂ.
                 </Typography>
@@ -449,9 +514,17 @@ export default function TreePage() {
                 <Typography color="text.secondary" sx={{fontSize: {xs: '1rem', sm: '1.1rem'}, maxWidth: 680, mt: 1.5}}>
                     Explorează probleme, propuneri și sondaje. Citește contextul, vezi opiniile celorlalți și participă.
                 </Typography>
-                <Stack direction="row" spacing={1} useFlexGap sx={{mt: 2.5, flexWrap: 'wrap'}}>
+                <Stack direction="row" spacing={1} useFlexGap sx={{mt: 2.5, flexWrap: 'wrap', alignItems: 'center'}}>
                     <Button variant="contained" onClick={() => scrollToSection('subiecte-recente')}>Vezi subiectele</Button>
                     <Button variant="outlined" onClick={() => scrollToSection('tematici')}>Alege o tematică</Button>
+                    <FormControl size="small" sx={{minWidth: 200, flex: {xs: '1 1 100%', sm: '0 0 auto'}}}>
+                        <InputLabel id="home-type" shrink>Tip subiecte</InputLabel>
+                        <Select labelId="home-type" label="Tip subiecte" notched displayEmpty value={typeFilter}
+                            onChange={(e) => changeType(e.target.value)}>
+                            <MenuItem value="">Toate subiectele</MenuItem>
+                            {Object.entries(TYPE_PLURALS).map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}
+                        </Select>
+                    </FormControl>
                 </Stack>
             </Box> : !selectedSubject && <Typography component="h1" sx={VISUALLY_HIDDEN}>Tematici</Typography>}
 
@@ -501,6 +574,8 @@ export default function TreePage() {
                         </Menu>
                     </Box>}
                     {loading && <Typography color="text.secondary">Se încarcă…</Typography>}
+                    {!home && typeFilter && <Chip size="small" color="primary" variant="outlined" sx={{mb: 1.5, maxWidth: '100%'}}
+                        label={`Doar ${TYPE_PLURALS[typeFilter].toLowerCase()}`} onDelete={() => changeType('')}/>}
                     {!loading && treeData.length === 0 && (
                         <Typography color="text.secondary">{isAdmin ? 'Nu există tematici. Creează prima tematică.' : 'Nu există tematici încă.'}</Typography>
                     )}
@@ -539,7 +614,9 @@ export default function TreePage() {
                                 onDrop={onDrop}
                                 allowDrop={({dropNode, dragNode}) => !dropNode.kind && !dragNode.kind}
                                 titleRender={(node) => <Stack component="span" direction="row" spacing={1}
-                                    sx={{alignItems: 'center', minWidth: 0, '& .MuiSvgIcon-root': {flexShrink: 0}}}>
+                                    sx={{alignItems: 'center', minWidth: 0, '& .MuiSvgIcon-root': {flexShrink: 0},
+                                        /* Step T: categoriile fără subiecte de tipul ales se estompează, nu se ascund. */
+                                        opacity: !node.kind && typeFilter && node.subjectCount === 0 ? 0.45 : 1}}>
                                     {node.kind === 'subject' ? <DescriptionOutlinedIcon fontSize="small" color={node.subject.visibility === 'HIDDEN' ? 'error' : 'primary'} data-hidden={node.subject.visibility === 'HIDDEN' ? 'true' : undefined}/> : !node.kind ? <FolderOutlinedIcon fontSize="small" color="action"/> : node.kind === 'add' ? <AddIcon fontSize="small" color="primary"/> : <ListAltOutlinedIcon fontSize="small" color="primary"/>}
                                     <Box component="span" sx={{display: 'flex', flexDirection: 'column', gap: 0.25, minWidth: 0}}>
                                     <Typography component="span" variant="body2" sx={{fontWeight: !node.kind && !node.parentId ? 650 : 400,
@@ -582,12 +659,15 @@ export default function TreePage() {
                             </Stack></Paper>
                         )}
                         <SubjectList key={selected.key} node={{id: selected.key, name: selected.title}}
-                            scope="direct" navigationState={navigationState()}/>
+                            scope="direct" navigationState={navigationState()} type={typeFilter} onTypeChange={changeType}/>
                     </Stack> :
                     <Box id="subiecte-recente" sx={{scrollMarginTop: 16, minWidth: 0, order: {xs: home ? 1 : 2, md: 2}}}>
                     <SubjectList node={null} perPage={RECENT_PER_PAGE} page={recentPage} onPageChange={changeRecentPage} showFilters={false}
+                        type={typeFilter} onTypeChange={changeType}
                         navigationState={navigationState()} footer={<Stack sx={{alignItems: 'center', mt: 1}}>
-                            <Button component={RouterLink} to="/subiecte" state={navigationState()}>Vezi toate subiectele</Button>
+                            <Button component={RouterLink} to={typeFilter ? `/subiecte?tip=${typeFilter}` : '/subiecte'} state={navigationState()}>
+                                Vezi toate {typeFilter ? TYPE_PLURALS[typeFilter].toLowerCase() : 'subiectele'}
+                            </Button>
                         </Stack>}/></Box>}
             </Box>
 

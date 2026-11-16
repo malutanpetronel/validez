@@ -82,7 +82,8 @@ export default function Layout() {
                     )}
                 </Toolbar>
             </AppBar>
-            <Container component="main" sx={{flex: 1, pb: 3}}>
+            {/* Margine sus unică pentru toate paginile (conținutul nu se lipește de bara de sus). */}
+            <Container component="main" sx={{flex: 1, pt: 1, pb: 3}}>
                 <Outlet/>
             </Container>
             <Box component="footer" sx={{py: 1.5, textAlign: 'center', color: 'text.secondary', fontSize: 13}}>

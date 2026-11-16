@@ -9,7 +9,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import {useAuth} from '../auth/AuthContext';
 import {fetchSubjects, PER_PAGE} from '../api/subjects';
-import {formatDate, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS} from '../subjects/labels';
+import {formatDate, recentTitle, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS, TYPE_PLURALS} from '../subjects/labels';
 import SubjectForm from './SubjectForm';
 import SubjectEstimate from './SubjectEstimate';
 import MediaImage from './MediaImage';
@@ -35,8 +35,10 @@ function SubjectCover({subject}) {
  * fără nod selectat: cele mai noi subiecte. Filtre tip/stadiu, paginare `perPage` (implicit 20) pe pagină.
  * Card: coperta în stânga, tipul, stadiul, titlul și rezumatul în dreapta. Cu `page` + `onPageChange` pagina stă în adresă
  * (lângă arbore: `?pagina=`); după schimbarea paginii lista derulează la titlul ei când vin datele noi.
+ * Cu `type` + `onTypeChange` tipul vine din afară (Step T: filtrul paginii principale / `?tip=`); fără, e local.
  */
-export default function SubjectList({node, scope = '', navigationState, perPage = PER_PAGE, page: controlledPage, onPageChange, footer, showFilters = true}) {
+export default function SubjectList({node, scope = '', navigationState, perPage = PER_PAGE, page: controlledPage, onPageChange, footer, showFilters = true,
+    type: controlledType, onTypeChange}) {
     const {user} = useAuth();
     const location = useLocation();
     const [filters, setFilters] = useState({type: '', stage: ''});
@@ -44,6 +46,8 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
     const controlled = typeof onPageChange === 'function';
     const page = controlled ? controlledPage ?? 1 : localPage;
     const setPage = useCallback((p) => (controlled ? onPageChange(p) : setLocalPage(p)), [controlled, onPageChange]);
+    const typeControlled = typeof onTypeChange === 'function';
+    const activeType = typeControlled ? controlledType ?? '' : filters.type;
     const [data, setData] = useState({items: [], total: 0, page: null});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -54,16 +58,16 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
     const load = useCallback(() => {
         setLoading(true);
         setError(null);
-        return fetchSubjects({node: node?.id ?? null, ...filters, page, scope, perPage})
+        return fetchSubjects({node: node?.id ?? null, type: activeType, stage: filters.stage, page, scope, perPage})
             .then((d) => setData({...d, page}))
             .catch((e) => setError(e.message))
             .finally(() => setLoading(false));
-    }, [node?.id, filters, page, scope, perPage]);
+    }, [node?.id, activeType, filters.stage, page, scope, perPage]);
 
     useEffect(() => { load(); }, [load]);
     // Filtrele/nodul schimbate pornesc de la prima pagină - nu și la montare (pagina din adresă rămâne), nici la
     // a doua rulare a efectului din StrictMode: comparăm cu valorile anterioare.
-    const listKey = JSON.stringify([node?.id ?? null, filters]);
+    const listKey = JSON.stringify([node?.id ?? null, activeType, filters.stage]);
     const previousKey = useRef(listKey);
     useEffect(() => {
         if (previousKey.current === listKey) return;
@@ -81,7 +85,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
         }
     }, [loading, data]);
 
-    const setFilter = (k) => (e) => setFilters({...filters, [k]: e.target.value});
+    const setFilter = (k) => (e) => (k === 'type' && typeControlled ? onTypeChange(e.target.value) : setFilters({...filters, [k]: e.target.value}));
     const pages = Math.max(1, Math.ceil(data.total / perPage));
 
     return (
@@ -90,7 +94,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                 <Box ref={headingRef} sx={{minWidth: 0, scrollMarginTop: 16}}>
                     {node && <Typography variant="overline" color="text.secondary">Subiectele categoriei</Typography>}
                     <Typography variant="h6" component="h2" sx={{fontWeight: 700, lineHeight: 1.35, overflowWrap: 'anywhere'}}>
-                        {node ? node.name : 'Subiecte recente'}
+                        {node ? node.name : recentTitle(activeType)}
                     </Typography>
                 </Box>
                 <Stack direction="row" spacing={1} sx={{alignItems: 'center', justifyContent: 'space-between'}}>
@@ -110,7 +114,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
             {showFilters && <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5} sx={{mb: 2}}>
                 <FormControl size="small" fullWidth>
                     <InputLabel id="flt-type">Tip</InputLabel>
-                    <Select labelId="flt-type" label="Tip" value={filters.type} onChange={setFilter('type')}>
+                    <Select labelId="flt-type" label="Tip" value={activeType} onChange={setFilter('type')}>
                         <MenuItem value="">Toate</MenuItem>
                         {Object.entries(TYPE_LABELS).map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}
                     </Select>
@@ -125,9 +129,16 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
             </Stack>}
 
             {error && <Alert severity="error">{error}</Alert>}
-            {!error && !loading && data.items.length === 0 && (
+            {!error && !loading && data.items.length === 0 && (activeType ? <Stack spacing={1} sx={{py: 2, alignItems: 'flex-start'}}>
+                <Typography color="text.secondary">
+                    Nu există {TYPE_PLURALS[activeType]?.toLowerCase()} {node ? 'în această categorie' : 'încă'}.
+                </Typography>
+                {typeControlled && <Button size="small" onClick={() => onTypeChange('')}>
+                    {node ? 'Arată toate subiectele categoriei' : 'Arată toate subiectele'}
+                </Button>}
+            </Stack> : (
                 <Typography color="text.secondary" sx={{py: 2}}>Niciun subiect{node ? ' aici încă' : ''}.</Typography>
-            )}
+            ))}
             {loading && data.items.length === 0 && <Stack spacing={1} aria-label="Se încarcă subiectele">
                 {[0, 1, 2].map((key) => <Skeleton key={key} variant="rounded" height={150}/>)}
             </Stack>}

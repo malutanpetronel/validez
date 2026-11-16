@@ -11,6 +11,22 @@ export const TYPE_LABELS = {
     POLL: 'Sondaj',
 };
 
+// Step T: pluralul tipului, pentru filtru și titluri („Sondaje recente”, „Doar sondaje”).
+export const TYPE_PLURALS = {
+    ISSUE: 'Probleme',
+    PROPOSAL: 'Propuneri',
+    PETITION: 'Petiții',
+    PROJECT: 'Proiecte',
+    PROMISE: 'Promisiuni',
+    ELECTORAL_EVALUATION: 'Evaluări aleși',
+    TOPIC_EVALUATION: 'Evaluări teme',
+    POLL: 'Sondaje',
+};
+/** Tipul din adresă (`?tip=`), doar dacă e unul cunoscut. */
+export const typeFromParam = (value) => (value && TYPE_PLURALS[value] ? value : '');
+/** „Subiecte recente” / „Sondaje recente”. */
+export const recentTitle = (type) => `${type ? TYPE_PLURALS[type] : 'Subiecte'} recente`;
+
 // Decizie Step 2: utilizatorii creează doar aceste tipuri; restul doar adminii.
 export const USER_TYPES = ['ISSUE', 'PROPOSAL', 'PETITION'];
 
