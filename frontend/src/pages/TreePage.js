@@ -92,6 +92,7 @@ export default function TreePage() {
     const [helpOpen, setHelpOpen] = useState(false);
     const theme = useTheme();
     const mobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const scrollToSection = (id) => document.getElementById(id)?.scrollIntoView?.({behavior: 'smooth', block: 'start'});
     const runMenuAction = (action) => { setActionsAnchor(null); action(); };
 
     const showError = (err) => setMessage({severity: 'error', text: err.message || 'Eroare necunoscută'});
@@ -296,6 +297,7 @@ export default function TreePage() {
     };
 
     const selected = selectedKey ? findNode(treeData, selectedKey) : null;
+    const home = !selected && !selectedSubject && !urlError;
 
     const navigationState = (categoryKey = selectedKey) => {
         const expanded = new Set(expandedKeys);
@@ -425,17 +427,30 @@ export default function TreePage() {
 
     return (
         <Stack spacing={2}>
-            {/* Fără titlu vizibil (spațiu); h1 doar pentru cititoarele de ecran, cât nu e deschis un subiect (titlul lui e h1). */}
-            {!selectedSubject && <Typography component="h1" sx={VISUALLY_HIDDEN}>Tematici</Typography>}
-
-            {!isAdmin && (
-                <Alert severity="info">
-                    Poți explora liber tematicile. Organizarea lor este gestionată de administratori.
-                </Alert>
-            )}
+            {home ? <Box component="section" sx={{pt: {xs: 3, sm: 5}, pb: {xs: 1, sm: 2}}}>
+                <Typography component="p" variant="overline" sx={{color: 'secondary.main', fontWeight: 800, letterSpacing: '0.14em'}}>
+                    VEZI. VERIFICĂ. VALIDEAZĂ.
+                </Typography>
+                <Typography component="h1" variant="h3" sx={{fontSize: {xs: '2rem', sm: '2.7rem'}, fontWeight: 800,
+                    lineHeight: 1.15, maxWidth: 760, mt: 0.5}}>
+                    Subiectele comunității, mai ușor de descoperit.
+                </Typography>
+                <Typography color="text.secondary" sx={{fontSize: {xs: '1rem', sm: '1.1rem'}, maxWidth: 680, mt: 1.5}}>
+                    Explorează probleme, propuneri și sondaje. Citește contextul, vezi opiniile celorlalți și participă.
+                </Typography>
+                <Stack direction="row" spacing={1} useFlexGap sx={{mt: 2.5, flexWrap: 'wrap'}}>
+                    <Button variant="contained" onClick={() => scrollToSection('subiecte-recente')}>Vezi subiectele</Button>
+                    <Button variant="outlined" onClick={() => scrollToSection('tematici')}>Alege o tematică</Button>
+                </Stack>
+            </Box> : !selectedSubject && <Typography component="h1" sx={VISUALLY_HIDDEN}>Tematici</Typography>}
 
             <Box sx={{display: 'grid', gap: 2, gridTemplateColumns: {xs: '1fr', md: 'minmax(0, 5fr) minmax(0, 7fr)'}, alignItems: 'start'}}>
-                <Paper sx={{p: 2, overflowX: 'auto'}}>
+                <Paper id="tematici" component="section" aria-label="Tematici" sx={{p: {xs: 2, sm: 2.5}, overflowX: 'auto',
+                    scrollMarginTop: 16, order: {xs: home ? 2 : 1, md: 1}}}>
+                    {home && <Box sx={{mb: 2, pb: 1.5, borderBottom: 1, borderColor: 'divider'}}>
+                        <Typography component="h2" variant="h6" sx={{fontWeight: 800}}>Explorează tematicile</Typography>
+                        <Typography variant="body2" color="text.secondary">Alege un domeniu pentru a vedea categoriile și subiectele sale.</Typography>
+                    </Box>}
                     {isAdmin && <Box sx={{mb: 2, pb: 1.5, borderBottom: 1, borderColor: 'divider'}}>
                         <Stack direction="row" spacing={0.5} useFlexGap sx={{alignItems: 'center', flexWrap: 'wrap'}}>
                             <Button size="small" startIcon={<AddIcon/>} aria-label="Tematică nouă" onClick={() => openDialog('root')}>Tematică</Button>
@@ -481,18 +496,18 @@ export default function TreePage() {
                     {treeData.length > 0 && (
                         <Box onKeyDown={isAdmin ? onTreeKeyDown : undefined}
                              sx={{
-                                 '& .rc-tree-treenode': {display: 'flex', alignItems: 'center', py: 0.25},
+                                 '& .rc-tree-treenode': {display: 'flex', alignItems: 'center', py: 0.4},
                                  '& .rc-tree-indent': {height: 'auto', flexShrink: 0},
                                  '& .rc-tree-indent-unit': {width: 24},
                                  '& .rc-tree .rc-tree-treenode .rc-tree-switcher': {
                                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                     width: 24, height: 36, flexShrink: 0, mr: 0,
+                                     width: 28, height: 42, flexShrink: 0, mr: 0,
                                      backgroundImage: 'none !important', color: 'text.secondary',
                                  },
                                  '& .rc-tree .rc-tree-treenode .rc-tree-node-content-wrapper': {
                                      display: 'flex', alignItems: 'center', flex: 1, minWidth: 0,
-                                     cursor: 'pointer', height: 'auto', minHeight: 36,
-                                     px: 1, borderRadius: 1, borderLeft: '3px solid transparent',
+                                     cursor: 'pointer', height: 'auto', minHeight: 42,
+                                     px: 1.25, borderRadius: 2, borderLeft: '3px solid transparent',
                                  },
                                  '& .rc-tree-node-content-wrapper:hover': {bgcolor: 'action.hover'},
                                  '& .rc-tree .rc-tree-treenode .rc-tree-node-content-wrapper.rc-tree-node-selected': {
@@ -515,7 +530,10 @@ export default function TreePage() {
                                 titleRender={(node) => <Stack component="span" direction="row" spacing={1} sx={{alignItems: 'center', minWidth: 0, '& .MuiSvgIcon-root': {flexShrink: 0}}}>
                                     {node.kind === 'subject' ? <DescriptionOutlinedIcon fontSize="small" color={node.subject.visibility === 'HIDDEN' ? 'error' : 'primary'} data-hidden={node.subject.visibility === 'HIDDEN' ? 'true' : undefined}/> : !node.kind ? <FolderOutlinedIcon fontSize="small" color="action"/> : node.kind === 'add' ? <AddIcon fontSize="small" color="primary"/> : <ListAltOutlinedIcon fontSize="small" color="primary"/>}
                                     <Box component="span" sx={{display: 'flex', flexDirection: 'column', gap: 0.25, minWidth: 0}}>
-                                    <Typography component="span" variant="body2" sx={{color: node.kind === 'all' || node.kind === 'add' ? 'primary.main' : 'inherit', whiteSpace: 'normal'}}>{node.title}{!node.kind && node.subjectCount > 0 && <Tooltip title="Total subiecte în această ramură, inclusiv subnivelurile"><span> ({node.subjectCount})</span></Tooltip>}</Typography>
+                                    <Typography component="span" variant="body2" sx={{fontWeight: !node.kind && !node.parentId ? 650 : 400,
+                                        color: node.kind === 'all' || node.kind === 'add' ? 'primary.main' : 'inherit', whiteSpace: 'normal'}}>
+                                        {node.title}{!node.kind && node.subjectCount > 0 && <Tooltip title="Total subiecte în această ramură, inclusiv subnivelurile"><Box component="span" sx={{ml: 0.75, color: 'text.secondary', fontWeight: 500}}>· {node.subjectCount}</Box></Tooltip>}
+                                    </Typography>
                                     {node.kind === 'subject' && <TreeVoteSummary subjectId={node.subject.id}/>}
                                     </Box>
                                 </Stack>}
@@ -554,10 +572,11 @@ export default function TreePage() {
                         <SubjectList key={selected.key} node={{id: selected.key, name: selected.title}}
                             scope="direct" navigationState={navigationState()}/>
                     </Stack> :
-                    <SubjectList node={null} perPage={RECENT_PER_PAGE} page={recentPage} onPageChange={changeRecentPage}
+                    <Box id="subiecte-recente" sx={{scrollMarginTop: 16, minWidth: 0, order: {xs: home ? 1 : 2, md: 2}}}>
+                    <SubjectList node={null} perPage={RECENT_PER_PAGE} page={recentPage} onPageChange={changeRecentPage} showFilters={false}
                         navigationState={navigationState()} footer={<Stack sx={{alignItems: 'center', mt: 1}}>
-                            <Button size="small" component={RouterLink} to="/subiecte" state={navigationState()}>Toate subiectele recente</Button>
-                        </Stack>}/>}
+                            <Button component={RouterLink} to="/subiecte" state={navigationState()}>Vezi toate subiectele</Button>
+                        </Stack>}/></Box>}
             </Box>
 
             {creatingSubject && selected && <SubjectForm node={{id: selected.key, name: selected.title}}

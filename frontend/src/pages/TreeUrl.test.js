@@ -154,5 +154,5 @@ test('pe / subiectele recente stau langa arbore: cate 3, pagina in adresa (?pagi
     expect(router.state.location.pathname).toBe('/');
     expect(router.state.location.state).toEqual({pastreazaScroll: true});
     await waitFor(() => expect(recent().at(-1)).toMatch(/page=3&perPage=3$/));
-    expect(screen.getByRole('link', {name: 'Toate subiectele recente'})).toHaveAttribute('href', '/subiecte');
+    expect(screen.getByRole('link', {name: 'Vezi toate subiectele'})).toHaveAttribute('href', '/subiecte');
 });

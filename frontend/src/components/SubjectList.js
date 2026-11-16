@@ -15,8 +15,8 @@ import SubjectEstimate from './SubjectEstimate';
 import MediaImage from './MediaImage';
 import Paginare from './Paginare';
 
-const COVER = {width: '100%', aspectRatio: '1 / 1', borderRadius: 1.5};
-const CHIP = {maxWidth: '100%', fontSize: '0.7rem', '& .MuiChip-label': {px: 0.75, overflow: 'hidden', textOverflow: 'ellipsis'}};
+const COVER = {width: '100%', aspectRatio: '1 / 1', borderRadius: 2};
+const CHIP = {maxWidth: '100%', fontSize: '0.72rem', '& .MuiChip-label': {px: 1, overflow: 'hidden', textOverflow: 'ellipsis'}};
 
 /** Coperta subiectului (prima fotografie publicată); fără fotografie, un loc discret cu iconița de subiect. */
 function SubjectCover({subject}) {
@@ -33,10 +33,10 @@ function SubjectCover({subject}) {
 /**
  * Subiectele nodului selectat și ale întregului subarbore (decizie Step 2), cu nodul fiecăruia afișat;
  * fără nod selectat: cele mai noi subiecte. Filtre tip/stadiu, paginare `perPage` (implicit 20) pe pagină.
- * Card: coperta cu tipul și stadiul dedesubt, titlul în dreapta. Cu `page` + `onPageChange` pagina stă în adresă
+ * Card: coperta în stânga, tipul, stadiul, titlul și rezumatul în dreapta. Cu `page` + `onPageChange` pagina stă în adresă
  * (lângă arbore: `?pagina=`); după schimbarea paginii lista derulează la titlul ei când vin datele noi.
  */
-export default function SubjectList({node, scope = '', navigationState, perPage = PER_PAGE, page: controlledPage, onPageChange, footer}) {
+export default function SubjectList({node, scope = '', navigationState, perPage = PER_PAGE, page: controlledPage, onPageChange, footer, showFilters = true}) {
     const {user} = useAuth();
     const location = useLocation();
     const [filters, setFilters] = useState({type: '', stage: ''});
@@ -85,7 +85,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
     const pages = Math.max(1, Math.ceil(data.total / perPage));
 
     return (
-        <Paper sx={{p: {xs: 2, sm: 2.5}, minWidth: 0}}>
+        <Paper elevation={0} sx={{p: 0, minWidth: 0, bgcolor: 'transparent'}}>
             <Stack spacing={1.5} sx={{mb: 2, pb: 2, borderBottom: 1, borderColor: 'divider'}}>
                 <Box ref={headingRef} sx={{minWidth: 0, scrollMarginTop: 16}}>
                     {node && <Typography variant="overline" color="text.secondary">Subiectele categoriei</Typography>}
@@ -102,12 +102,12 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                 </Stack>
             </Stack>
             {node && scope !== 'direct' && <Typography variant="body2" color="text.secondary" sx={{mb: 1.5}}>Include subiectele din toate subnodurile.</Typography>}
-            {!user && <Typography variant="body2" color="text.secondary" sx={{mb: 1.5}}>
+            {!user && showFilters && <Typography variant="body2" color="text.secondary" sx={{mb: 1.5}}>
                 <RouterLink to="/login" state={{from: '/'}}>Intră în cont</RouterLink> ca să adaugi un subiect.
             </Typography>}
             {user && !node && <Typography variant="body2" color="text.secondary" sx={{mb: 1.5}}>Selectează un nod din arbore ca să adaugi un subiect.</Typography>}
 
-            <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5} sx={{mb: 2}}>
+            {showFilters && <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5} sx={{mb: 2}}>
                 <FormControl size="small" fullWidth>
                     <InputLabel id="flt-type">Tip</InputLabel>
                     <Select labelId="flt-type" label="Tip" value={filters.type} onChange={setFilter('type')}>
@@ -122,7 +122,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                         {Object.entries(STAGE_LABELS).map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}
                     </Select>
                 </FormControl>
-            </Stack>
+            </Stack>}
 
             {error && <Alert severity="error">{error}</Alert>}
             {!error && !loading && data.items.length === 0 && (
@@ -136,23 +136,32 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                 {data.items.map((s) => (
                     <Box component="li" key={s.id} sx={{listStyle: 'none', minWidth: 0}}>
                         <ListItemButton component={RouterLink} to={s.canonicalPath ?? `/subiecte/${s.id}`} state={navigationState ?? location.state}
-                            sx={{p: {xs: 1.25, sm: 1.5}, alignItems: 'flex-start', gap: {xs: 1.25, sm: 1.5}, border: 1, borderColor: 'divider', borderRadius: 2,
-                                '&:hover': {borderColor: 'primary.main', bgcolor: 'action.hover'},
+                            sx={{p: {xs: 1.5, sm: 2}, alignItems: 'flex-start', gap: {xs: 1.5, sm: 2}, border: 1, borderColor: 'divider', borderRadius: 2.5,
+                                bgcolor: 'background.paper',
+                                transition: 'border-color 160ms, background-color 160ms, transform 160ms',
+                                '&:hover': {borderColor: 'primary.main', bgcolor: 'action.hover', transform: 'translateY(-2px)'},
                                 '&.Mui-focusVisible': {outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2}}}>
                             <Stack spacing={1} sx={{flex: 1, minWidth: 0}}>
-                                <Typography component="span" variant="subtitle1" sx={{fontWeight: 600, lineHeight: 1.4, overflowWrap: 'anywhere'}}>{s.title}</Typography>
+                                <Typography component="span" variant="subtitle1" sx={{fontWeight: 700, lineHeight: 1.35, overflowWrap: 'anywhere'}}>{s.title}</Typography>
+                                <Stack direction="row" spacing={0.75} useFlexGap sx={{flexWrap: 'wrap', order: -1}}>
+                                    <Chip size="small" label={TYPE_LABELS[s.type] ?? s.type} variant="outlined" sx={CHIP}/>
+                                    <Chip size="small" label={STAGE_LABELS[s.stage] ?? s.stage} color={STAGE_COLORS[s.stage] ?? 'default'} sx={CHIP}/>
+                                </Stack>
+                                {s.description && <Typography component="span" variant="body2" color="text.secondary"
+                                    sx={{overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflowWrap: 'anywhere'}}>
+                                    {s.description}
+                                </Typography>}
                                 {s.visibility === 'HIDDEN' && <Chip size="small" label="Ascuns" color="error" variant="outlined" sx={{alignSelf: 'flex-start', maxWidth: '100%'}}/>}
                                 {s.visibility === 'PENDING' && <Chip size="small" label="În așteptarea aprobării" color="warning" variant="outlined" sx={{alignSelf: 'flex-start', maxWidth: '100%'}}/>}
                                 <SubjectEstimate subject={s} compact/>
                                 <Typography component="span" variant="caption" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>
                                     {scope === 'direct' ? '' : `în ${s.nodeName} · `}{s.authorName} · {formatDate(s.createdAt)}
                                 </Typography>
+                                <Typography component="span" variant="body2" sx={{color: 'primary.main', fontWeight: 700, pt: 0.25}}>Vezi subiectul →</Typography>
                             </Stack>
-                            {/* În DOM după text (linkul se citește începând cu titlul), afișată în stânga prin `order`. */}
-                            <Stack spacing={0.75} sx={{order: -1, width: {xs: 84, sm: 104}, flexShrink: 0, alignItems: 'flex-start'}}>
+                            {/* Coperta rămâne decorativă pentru cititoarele de ecran; textul linkului conține informațiile utile. */}
+                            <Stack sx={{order: -1, width: {xs: 84, sm: 112}, flexShrink: 0}}>
                                 <SubjectCover subject={s}/>
-                                <Chip size="small" label={TYPE_LABELS[s.type] ?? s.type} variant="outlined" sx={CHIP}/>
-                                <Chip size="small" label={STAGE_LABELS[s.stage] ?? s.stage} color={STAGE_COLORS[s.stage] ?? 'default'} sx={CHIP}/>
                             </Stack>
                             <ChevronRightIcon fontSize="small" sx={{display: {xs: 'none', sm: 'block'}, mt: 0.25, color: 'text.secondary', flexShrink: 0}}/>
                         </ListItemButton>

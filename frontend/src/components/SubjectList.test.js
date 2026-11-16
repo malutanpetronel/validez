@@ -60,6 +60,7 @@ test('card: coperta (thumb-ul primei fotografii) cu tipul si stadiul dedesubt; f
     const card = screen.getByText('Gropi pe DN1').closest('a');
     expect(within(card).getByText('Problemă')).toBeInTheDocument();
     expect(within(card).getByText('Deschis')).toBeInTheDocument();
+    expect(within(card).getByText('Multe gropi.')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', {name: 'Paginare'})).not.toBeInTheDocument();
 });
 

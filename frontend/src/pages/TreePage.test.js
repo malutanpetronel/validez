@@ -28,8 +28,9 @@ test('vizitatorul vede arborele, fara actiuni de modificare', async () => {
     expect(await screen.findByText('Drumuri')).toBeInTheDocument();
     expect(screen.getByText('Sănătate')).toBeInTheDocument();
     expect(screen.queryByRole('button', {name: /Tematică nouă/})).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', {name: 'Tematici'})).toBeInTheDocument();
-    expect(screen.getByText('Poți explora liber tematicile. Organizarea lor este gestionată de administratori.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Subiectele comunității, mai ușor de descoperit.'})).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Explorează tematicile'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Vezi subiectele'})).toBeInTheDocument();
     expect(global.fetch.mock.calls[0][1].headers.Authorization).toBeUndefined();
 });
 

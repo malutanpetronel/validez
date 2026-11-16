@@ -47,10 +47,11 @@ export default function TreeVoteSummary({subjectId, variant = 'tree', onVote}) {
             cta,
         ].filter(Boolean).join(' · ');
         return <ButtonBase onClick={onVote} aria-label={label} data-testid="subject-vote-header"
-                           sx={{alignSelf: 'flex-start', maxWidth: '100%', justifyContent: 'flex-start', textAlign: 'left', borderRadius: 2,
-                               px: 0.5, mx: -0.5, py: 0.25, '&:hover .vote-cta': {textDecoration: 'underline'},
-                               '&.Mui-focusVisible': {outline: '2px solid', outlineColor: 'primary.main'}}}>
-            <Stack component="span" direction="row" spacing={1.5} useFlexGap sx={{flexWrap: 'wrap', alignItems: 'center'}}>
+                           sx={{alignSelf: 'stretch', width: '100%', justifyContent: 'flex-start', textAlign: 'left', borderRadius: 2,
+                               border: 1, borderColor: 'divider', bgcolor: 'action.hover', px: 1.5, py: 1.25,
+                               '&:hover': {borderColor: 'primary.main'},
+                               '&.Mui-focusVisible': {outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2}}}>
+            <Stack component="span" direction="row" spacing={1.5} useFlexGap sx={{width: '100%', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between'}}>
                 {importance && <Box component="span" sx={{display: 'inline-flex', alignItems: 'center', gap: 0.75}}>
                     <Rating readOnly value={average ?? 0} precision={0.1} icon={<StarRoundedIcon fontSize="inherit"/>} emptyIcon={<StarRoundedIcon fontSize="inherit"/>}
                             sx={{color: '#c58b12', '& .MuiRating-iconEmpty': {color: 'text.disabled'}}}/>
@@ -65,7 +66,8 @@ export default function TreeVoteSummary({subjectId, variant = 'tree', onVote}) {
                     Sondaj · {choice.result.total} {choice.result.total === 1 ? 'participant' : 'participanți'}{summary.frozen ? ' · închis' : ''}
                 </Typography>}
                 <Typography className="vote-cta" component="span" variant="body2"
-                            sx={{color: 'primary.main', fontWeight: 600, display: 'inline-flex', alignItems: 'center'}}>
+                            sx={{color: 'primary.contrastText', bgcolor: 'primary.main', px: 1.5, py: 0.75, borderRadius: 1.5,
+                                fontWeight: 700, display: 'inline-flex', alignItems: 'center'}}>
                     {cta}<ArrowDownwardIcon sx={{fontSize: 16, ml: 0.25}}/>
                 </Typography>
             </Stack>
