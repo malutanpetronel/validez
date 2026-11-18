@@ -300,6 +300,14 @@ Decizii: dropdown pe rândul „Vezi subiectele / Alege o tematică” (Toate, P
 
 Tot pe 16.11.2026: margine sus unică pentru toate paginile — `Container main` din `Layout.js` are `pt: 1` (8px, valoarea folosită înainte doar la subiect); padding-ul local din `TreePage` scos, hero-ul de pe `/` cu padding redus, iar Stack-ul rădăcină cu `useFlexGap` (titlul ascuns „Tematici” nu mai adaugă 16px în categorie).
 
+## Step V — viteză (audit 18.11.2026: 10 s pe telefon, pagină de 1,9 MB)
+
+Măsurat: `main.js` de 1,33 MB servit necomprimat (fără `Content-Encoding`), tot codul într-un singur fișier — MUI 271 KB, Leaflet 146 KB, react-dom 127 KB, ALTCHA 120 KB, react-router 100 KB, exifr 74 KB.
+
+- [x] **V.1** (18.11.2026) — `gzip` în `frontend/nginx.prod.conf` (js, css, json, svg, xml) și în `backend/nginx/default.conf` (JSON, HTML, XML); `nginx -t` OK, pe dev API-ul răspunde cu `Content-Encoding: gzip`.
+- [x] **V.2** (18.11.2026) — încărcare la cerere: harta (`LazyMap`), ALTCHA (import dinamic în `AltchaVerification`), exifr (în `readPhotoMeta`), `SubjectForm` (`LazySubjectForm`), `PhotoViewer`, paginile Ajutor, Confidențialitate, Termeni, Propuneri de categorii, Moderare, Setări AI, Ștergerea contului, Verificare API, Voturile mele. `distanceMeters`/`formatDistance` mutate în `map/geo.js` (fără Leaflet); `TERMS_VERSION` în `legal/versions.js`. Rezultat: pachetul principal 844 KB / 257 KB comprimat (de la 1,33 MB / 409 KB); prima vizită pe site, cu gzip: ~257 KB în loc de 1,33 MB. FE 184/184, ESLint OK.
+- [ ] **V.3** — deploy (`Deploy.md` S), verificarea pe telefon/Android și reluarea auditului.
+
 ## Step AI — subiect de tip Problemă propus de AI din fotografie (ADR-0014)
 
 Decizii (18.11.2026): doar adminii au acces deocamdată; setările celor 2 furnizori (Anthropic, OpenAI) și promptul de recunoaștere se editează din admin, ca la ArtaNFT; cheile doar în env; modelele fixe (`claude-haiku-5-5`, `gpt-6-luna`); furnizor implicit Anthropic; plafoane inițiale 30 de cereri / admin / zi, 30 de cereri și 1 USD / zi global, 10 USD / lună; locul vine din EXIF citit în browser, nu din AI.

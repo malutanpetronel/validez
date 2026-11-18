@@ -5,7 +5,7 @@ import AltchaVerification from '../components/AltchaVerification';
 import {confirmRegistration, register, resendRegistrationCode} from '../api/registration';
 import {useAuth} from '../auth/AuthContext';
 import usePageMeta from '../seo/usePageMeta';
-import {TERMS_VERSION} from './TermsPage';
+import {TERMS_VERSION} from '../legal/versions';
 
 export default function RegisterPage() {
     usePageMeta({title: 'Creează un cont', noindex: true});

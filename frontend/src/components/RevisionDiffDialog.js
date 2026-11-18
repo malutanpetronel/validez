@@ -8,8 +8,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import {fetchRevisions} from '../api/votes';
 import {formatDate, TYPE_LABELS} from '../subjects/labels';
 import {diffWords, onlyWhitespaceChanged} from '../subjects/wordDiff';
-import {LocationDiffMap} from './SubjectMap';
-import {distanceMeters, formatDistance} from '../map/leafletSetup';
+import {LocationDiffMap} from './LazyMap';
+import {distanceMeters, formatDistance} from '../map/geo';
 import {areaKey, areaText} from '../subjects/area';
 
 const estimateText = (e) => (e ? `${e.costEstimate} ${e.costCurrency} — ${e.costEstimateScope}` : 'fără estimare');

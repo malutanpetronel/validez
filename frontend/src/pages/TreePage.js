@@ -18,7 +18,7 @@ import MoveDialog from '../components/MoveDialog';
 import SubjectPage from './SubjectPage';
 import TreeVoteSummary from '../components/TreeVoteSummary';
 import SubjectList from '../components/SubjectList';
-import SubjectForm from '../components/SubjectForm';
+import SubjectForm from '../components/LazySubjectForm';
 import {fetchSubjectBySlug, fetchSubjects} from '../api/subjects';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';

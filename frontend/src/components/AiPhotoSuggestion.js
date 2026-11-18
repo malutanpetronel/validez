@@ -3,7 +3,6 @@ import {Alert, Box, Button, Chip, LinearProgress, Paper, Stack, Typography} from
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
-import exifr from 'exifr';
 import {suggestSubjectFromPhoto} from '../api/ai';
 import {hasCordovaCamera, pickWithCordovaCamera, prepareImage} from '../media/prepareImage';
 
@@ -20,6 +19,8 @@ const SEVERITY_LABELS = {LOW: 'gravitate scăzută', MEDIUM: 'gravitate medie', 
  */
 export async function readPhotoMeta(file) {
     try {
+        // Viteză: exifr (~74 KB) doar când un admin chiar alege o fotografie.
+        const {default: exifr} = await import('exifr');
         const meta = await exifr.parse(file, {gps: true, pick: ['DateTimeOriginal', 'CreateDate', 'latitude', 'longitude', 'GPSLatitude', 'GPSLongitude', 'GPSLatitudeRef', 'GPSLongitudeRef']});
         const lat = meta?.latitude;
         const lng = meta?.longitude;

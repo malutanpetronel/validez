@@ -3,9 +3,9 @@ import {Link as RouterLink} from 'react-router-dom';
 import {Button, Link, Paper, Stack, Typography} from '@mui/material';
 
 // Step L.2 (16.11.2026). Ciornă de lucru; poate fi completată după verificarea juridică de specialitate.
-// L.2b: versiunea acceptată la înregistrare; trebuie să fie egală cu TERMS_VERSION din backend (services.yaml).
-// O schimbare importantă a textului = dată nouă aici și în backend.
-export const TERMS_VERSION = '2026-11-16';
+// L.2b: versiunea acceptată la înregistrare e în ../legal/versions.js (TERMS_VERSION); o schimbare importantă a
+// textului = dată nouă acolo și în backend.
+export {TERMS_VERSION} from '../legal/versions';
 
 const sections = [
     ['Ce este Validez', 'Validez este o platformă de participare civică pentru sesizări, propuneri, sondaje și alte subiecte ale comunității. Validez nu este o instituție publică și nu acționează în numele vreunei instituții. Publicarea unui subiect pe Validez nu ține loc de petiție sau sesizare depusă la o autoritate în condițiile legii (OG 27/2002). Trimiterea sesizărilor către instituții nu este activă în versiunea actuală.'],

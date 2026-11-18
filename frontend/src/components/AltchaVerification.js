@@ -1,12 +1,16 @@
 import {useEffect, useRef} from 'react';
 import {Box} from '@mui/material';
-import 'altcha';
-import 'altcha/i18n/ro';
 import {API_ENDPOINT} from '../config';
+
+// Viteză (audit 18.11.2026): widgetul ALTCHA (~120 KB) se descarcă doar pe paginile care îl afișează.
+// <altcha-widget> e un custom element: se activează singur când definiția ajunge (ascultătorii rămân atașați).
+let widgetLoading = null;
+const loadWidget = () => (widgetLoading ??= import('altcha').then(() => import('altcha/i18n/ro')));
 
 /** The payload is sent unchanged to the server, which consumes it once. */
 export default function AltchaVerification({onVerified}) {
     const ref = useRef(null);
+    useEffect(() => { loadWidget(); }, []);
     useEffect(() => {
         const widget = ref.current;
         if (!widget) return;

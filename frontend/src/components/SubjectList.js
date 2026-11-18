@@ -12,7 +12,7 @@ import {useAuth} from '../auth/AuthContext';
 import {fetchSubjects, PER_PAGE} from '../api/subjects';
 import {formatDate, recentTitle, STAGE_COLORS, STAGE_LABELS, TYPE_COLORS, TYPE_LABELS, TYPE_PLURALS} from '../subjects/labels';
 import {areaShort} from '../subjects/area';
-import SubjectForm from './SubjectForm';
+import SubjectForm from './LazySubjectForm';
 import SubjectEstimate from './SubjectEstimate';
 import SubjectStats from './SubjectStats';
 import MediaImage from './MediaImage';

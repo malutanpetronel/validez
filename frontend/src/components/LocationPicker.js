@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {Alert, Button, Stack, Typography} from '@mui/material';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import WrongLocationIcon from '@mui/icons-material/WrongLocation';
-import {PickerMap} from './SubjectMap';
+import {PickerMap} from './LazyMap';
 
 const GEO_ERRORS = {
     1: 'Permisiunea pentru locație a fost refuzată. Poți pune pinul direct pe hartă sau poți permite locația din setările browserului/telefonului.',

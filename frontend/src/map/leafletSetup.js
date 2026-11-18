@@ -14,15 +14,6 @@ export const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/c
 export const ROMANIA = {center: [45.94, 24.97], zoom: 6};
 export const PIN_ZOOM = 16;
 
-/** Distanța în metri între două puncte {lat, lng} (haversine). */
-export function distanceMeters(a, b) {
-    const rad = (d) => (d * Math.PI) / 180;
-    const dLat = rad(b.lat - a.lat);
-    const dLng = rad(b.lng - a.lng);
-    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
-    return 2 * 6371000 * Math.asin(Math.sqrt(h));
-}
-
-export const formatDistance = (m) => (m < 1000 ? `~${Math.max(1, Math.round(m))} m` : `~${(m / 1000).toFixed(1).replace('.', ',')} km`);
+export {distanceMeters, formatDistance} from './geo';
 
 export default L;

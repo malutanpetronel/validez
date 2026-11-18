@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {lazy, Suspense, useEffect, useRef, useState} from 'react';
 import {
     Alert, Box, Button, Chip, Collapse, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Link, Stack,
     TextField, Typography,
@@ -20,7 +20,8 @@ import {movePhoto} from '../media/photoOrder';
 import {isPublicPhoto} from '../media/useSubjectMedia';
 import {formatDate} from '../subjects/labels';
 import MediaImage from './MediaImage';
-import PhotoViewer from './PhotoViewer';
+
+const PhotoViewer = lazy(() => import('./PhotoViewer'));
 
 const PEOPLE_WARNING = 'Nu include fețe sau numere de înmatriculare care nu sunt necesare. Metadatele (inclusiv locul unde a fost făcută poza) se elimină automat.';
 const VIDEO_HOSTS = /(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/i;
@@ -268,11 +269,14 @@ export default function SubjectMediaSection({subject, canManage, media, viewer, 
                 <Collapse in={showHistory} unmountOnExit><History subjectId={subject.id} version={version}/></Collapse>
             </Box>
 
+            {/* Viteză: vizualizatorul (zoom/pan) se descarcă abia la deschiderea unei fotografii. */}
+            {viewer !== null && viewer !== undefined && <Suspense fallback={null}>
             <PhotoViewer photos={photos} index={viewer} onIndex={onViewer} onClose={() => onViewer(null)} isPublic={isPublicImage}
                          title={subject.title} actions={canManage ? (photo) => (
                              // Vizualizatorul stă peste dialogurile MUI: îl închidem înainte de confirmare.
                              <Button color="error" startIcon={<DeleteOutlineIcon/>} disabled={busy} onClick={() => { onViewer(null); setConfirm(photo); }}>Scoate fotografia</Button>
                          ) : undefined}/>
+            </Suspense>}
 
             <Dialog open={!!confirm} onClose={() => setConfirm(null)}>
                 <DialogTitle>{confirm?.kind === 'PHOTO' ? 'Scoți fotografia?' : 'Scoți linkul?'}</DialogTitle>
