@@ -1,6 +1,7 @@
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import SubjectList from './SubjectList';
+import {countLabel} from '../subjects/labels';
 import {AuthProvider} from '../auth/AuthContext';
 import {setSession} from '../auth/session';
 import {fakeJwt} from '../testUtils/fakeJwt';
@@ -48,19 +49,25 @@ test('paginare: 45 subiecte -> 3 pagini; pagina 2 cere ?page=2', async () => {
     expect(await screen.findByText('Pagina 2 din 3')).toBeInTheDocument();
 });
 
-test('card: coperta (thumb-ul primei fotografii) cu tipul si stadiul dedesubt; fara fotografie, loc gol', async () => {
+test('card: coperta pe toata latimea (srcset thumb/afisare), tipul si stadiul dedesubt; fara fotografie, nicio coperta', async () => {
     global.fetch = routedFetch([[(u) => u.includes('/civic_subjects'), () => res({
-        member: [subject({coverThumbUrl: '/api/media/01MEDIA/thumb'}), subject({id: '01S2', title: 'Fara poza'})], totalItems: 2,
+        member: [subject({coverThumbUrl: '/api/media/01MEDIA/thumb', coverDisplayUrl: '/api/media/01MEDIA/display', voterCount: 24, linkCount: 3, photoCount: 1}),
+            subject({id: '01S2', title: 'Fara poza'})], totalItems: 2,
     })]]);
     renderList(null);
     await screen.findByText('Fara poza');
     const covers = screen.getAllByTestId('subject-cover');
     expect(covers).toHaveLength(1);
     expect(covers[0].getAttribute('src')).toMatch(/\/api\/media\/01MEDIA\/thumb$/);
+    expect(covers[0].getAttribute('srcset')).toMatch(/01MEDIA\/thumb 400w, .*01MEDIA\/display 1600w$/);
     const card = screen.getByText('Gropi pe DN1').closest('a');
     expect(within(card).getByText('Problemă')).toBeInTheDocument();
     expect(within(card).getByText('Deschis')).toBeInTheDocument();
     expect(within(card).getByText('Multe gropi.')).toBeInTheDocument();
+    expect(within(card).getByText('24 de persoane au votat')).toBeInTheDocument();
+    expect(within(card).getByText('3 linkuri')).toBeInTheDocument();
+    expect(within(card).getByText('1 fotografie')).toBeInTheDocument();
+    expect(screen.getAllByText(/au votat/)).toHaveLength(1);
     expect(screen.queryByRole('navigation', {name: 'Paginare'})).not.toBeInTheDocument();
 });
 
@@ -81,4 +88,10 @@ test('utilizatorul creeaza un subiect in nodul selectat; lista se reincarca', as
     const post = global.fetch.mock.calls.find(([, o]) => o?.method === 'POST');
     expect(JSON.parse(post[1].body)).toEqual({node: '01NODE', type: 'ISSUE', title: 'Trotuar spart', description: 'Lângă școală.'});
     await waitFor(() => expect(listUrls().length).toBeGreaterThan(inainte));
+});
+
+test('pluralul romanesc din randul de indicatori', () => {
+    expect([1, 3, 19, 20, 100, 101, 119, 120].map((n) => countLabel(n, 'link', 'linkuri'))).toEqual([
+        '1 link', '3 linkuri', '19 linkuri', '20 de linkuri', '100 de linkuri', '101 linkuri', '119 linkuri', '120 de linkuri',
+    ]);
 });

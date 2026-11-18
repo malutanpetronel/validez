@@ -27,6 +27,10 @@ export const typeFromParam = (value) => (value && TYPE_PLURALS[value] ? value : 
 /** „Subiecte recente” / „Sondaje recente”. */
 export const recentTitle = (type) => `${type ? TYPE_PLURALS[type] : 'Subiecte'} recente`;
 
+/** Plural românesc: „1 link”, „3 linkuri”, „20 de linkuri”, „101 linkuri”, „120 de linkuri”. */
+export const countLabel = (n, one, many) => (n === 1 ? `1 ${one}`
+    : `${n}${n >= 20 && (n % 100 === 0 || n % 100 >= 20) ? ' de' : ''} ${many}`);
+
 // Decizie Step 2: utilizatorii creează doar aceste tipuri; restul doar adminii.
 export const USER_TYPES = ['ISSUE', 'PROPOSAL', 'PETITION'];
 

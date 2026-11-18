@@ -5,35 +5,41 @@ import {
     Paper, Select, Skeleton, Stack, Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import {alpha} from '@mui/material/styles';
+import {BRAND} from '../theme';
 import {useAuth} from '../auth/AuthContext';
 import {fetchSubjects, PER_PAGE} from '../api/subjects';
 import {formatDate, recentTitle, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS, TYPE_PLURALS} from '../subjects/labels';
 import SubjectForm from './SubjectForm';
 import SubjectEstimate from './SubjectEstimate';
+import SubjectStats from './SubjectStats';
 import MediaImage from './MediaImage';
 import Paginare from './Paginare';
 
-const COVER = {width: '100%', aspectRatio: '1 / 1', borderRadius: 2};
+// Format 1.91:1 ca previzualizările Facebook / og:image; pe mobil fără colțuri (poza merge până la marginea ecranului).
+const COVER = {width: '100%', aspectRatio: '1.91 / 1', borderRadius: {xs: 0, sm: 2}};
+// Pe mobil cardul iese peste marginea Container-ului din Layout (16 px = spacing 2), ca feed-ul Facebook.
+const BLEED = {xs: -2, sm: 0};
+// ... iar textul revine la alinierea paginii.
+const TEXT_PX = {xs: 2, sm: 0};
+// Chenar neutru: gri pe luminos, albastrul brandului atenuat pe întunecat.
+const CARD_BORDER = (t) => (t.palette.mode === 'dark' ? alpha(BRAND.albastru, 0.45) : t.palette.grey[300]);
 const CHIP = {maxWidth: '100%', fontSize: '0.72rem', '& .MuiChip-label': {px: 1, overflow: 'hidden', textOverflow: 'ellipsis'}};
 
-/** Coperta subiectului (prima fotografie publicată); fără fotografie, un loc discret cu iconița de subiect. */
+/** Coperta subiectului (prima fotografie publicată), pe toată lățimea; fără fotografie nu se afișează nimic. */
 function SubjectCover({subject}) {
-    if (!subject.coverThumbUrl) {
-        return <Box aria-hidden="true" sx={{...COVER, display: 'grid', placeItems: 'center', bgcolor: 'action.hover', color: 'text.disabled'}}>
-            <DescriptionOutlinedIcon/>
-        </Box>;
-    }
+    if (!subject.coverThumbUrl) return null;
     // Subiect ascuns / în așteptare (îl văd doar autorul și adminii): thumb-ul cere autorizare.
-    return <MediaImage item={{thumbUrl: subject.coverThumbUrl}} isPublic={subject.visibility === 'PUBLISHED'} alt=""
-        data-testid="subject-cover" sx={COVER}/>;
+    return <MediaImage item={{thumbUrl: subject.coverThumbUrl, displayUrl: subject.coverDisplayUrl}} isPublic={subject.visibility === 'PUBLISHED'} alt=""
+        sizes="(min-width: 600px) 700px, 100vw" data-testid="subject-cover" sx={COVER}/>;
 }
 
 /**
  * Subiectele nodului selectat și ale întregului subarbore (decizie Step 2), cu nodul fiecăruia afișat;
  * fără nod selectat: cele mai noi subiecte. Filtre tip/stadiu, paginare `perPage` (implicit 20) pe pagină.
- * Card: coperta în stânga, tipul, stadiul, titlul și rezumatul în dreapta. Cu `page` + `onPageChange` pagina stă în adresă
+ * Card ca în feed-ul Facebook: titlul + categoria/autorul/data, poza pe toată lățimea, tipul și stadiul, rezumatul, linkul.
+ * Pe mobil fără chenar, până la marginea ecranului, separate de o bandă; pe desktop card rotunjit, aceeași ordine.
+ * Cu `page` + `onPageChange` pagina stă în adresă
  * (lângă arbore: `?pagina=`); după schimbarea paginii lista derulează la titlul ei când vin datele noi.
  * Cu `type` + `onTypeChange` tipul vine din afară (Step T: filtrul paginii principale / `?tip=`); fără, e local.
  */
@@ -143,38 +149,40 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                 {[0, 1, 2].map((key) => <Skeleton key={key} variant="rounded" height={150}/>)}
             </Stack>}
             <List disablePadding aria-label="Lista subiectelor" aria-busy={loading}
-                sx={{display: 'grid', gap: 1.25, opacity: loading ? 0.6 : 1}}>
+                sx={{display: 'grid', gap: {xs: 1, sm: 1.25}, opacity: loading ? 0.6 : 1}}>
                 {data.items.map((s) => (
-                    <Box component="li" key={s.id} sx={{listStyle: 'none', minWidth: 0}}>
+                    <Box component="li" key={s.id} sx={{listStyle: 'none', minWidth: 0, mx: BLEED}}>
                         <ListItemButton component={RouterLink} to={s.canonicalPath ?? `/subiecte/${s.id}`} state={navigationState ?? location.state}
-                            sx={{p: {xs: 1.5, sm: 2}, alignItems: 'flex-start', gap: {xs: 1.5, sm: 2}, border: 1, borderColor: 'divider', borderRadius: 2.5,
+                            sx={{flexDirection: 'column', alignItems: 'stretch', gap: 1.25, px: {xs: 0, sm: 2}, py: {xs: 1.5, sm: 2},
+                                // Grosime separată de culoare: `border` responsiv (shorthand) ar reseta culoarea la cea a textului.
+                                borderStyle: 'solid', borderWidth: {xs: 0, sm: 1}, borderColor: CARD_BORDER, borderRadius: {xs: 0, sm: 2.5},
                                 bgcolor: 'background.paper',
                                 transition: 'border-color 160ms, background-color 160ms, transform 160ms',
-                                '&:hover': {borderColor: 'primary.main', bgcolor: 'action.hover', transform: 'translateY(-2px)'},
+                                '&:hover': {borderColor: 'primary.main', bgcolor: 'action.hover', transform: {xs: 'none', sm: 'translateY(-2px)'}},
                                 '&.Mui-focusVisible': {outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2}}}>
-                            <Stack spacing={1} sx={{flex: 1, minWidth: 0}}>
+                            <Stack spacing={0.25} sx={{px: TEXT_PX, minWidth: 0}}>
                                 <Typography component="span" variant="subtitle1" sx={{fontWeight: 700, lineHeight: 1.35, overflowWrap: 'anywhere'}}>{s.title}</Typography>
-                                <Stack direction="row" spacing={0.75} useFlexGap sx={{flexWrap: 'wrap', order: -1}}>
-                                    <Chip size="small" label={TYPE_LABELS[s.type] ?? s.type} variant="outlined" sx={CHIP}/>
-                                    <Chip size="small" label={STAGE_LABELS[s.stage] ?? s.stage} color={STAGE_COLORS[s.stage] ?? 'default'} sx={CHIP}/>
-                                </Stack>
-                                {s.description && <Typography component="span" variant="body2" color="text.secondary"
-                                    sx={{overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflowWrap: 'anywhere'}}>
-                                    {s.description}
-                                </Typography>}
-                                {s.visibility === 'HIDDEN' && <Chip size="small" label="Ascuns" color="error" variant="outlined" sx={{alignSelf: 'flex-start', maxWidth: '100%'}}/>}
-                                {s.visibility === 'PENDING' && <Chip size="small" label="În așteptarea aprobării" color="warning" variant="outlined" sx={{alignSelf: 'flex-start', maxWidth: '100%'}}/>}
-                                <SubjectEstimate subject={s} compact/>
                                 <Typography component="span" variant="caption" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>
                                     {scope === 'direct' ? '' : `în ${s.nodeName} · `}{s.authorName} · {formatDate(s.createdAt)}
                                 </Typography>
-                                <Typography component="span" variant="body2" sx={{color: 'primary.main', fontWeight: 700, pt: 0.25}}>Vezi subiectul →</Typography>
                             </Stack>
                             {/* Coperta rămâne decorativă pentru cititoarele de ecran; textul linkului conține informațiile utile. */}
-                            <Stack sx={{order: -1, width: {xs: 84, sm: 112}, flexShrink: 0}}>
-                                <SubjectCover subject={s}/>
+                            <SubjectCover subject={s}/>
+                            <Stack spacing={1} sx={{px: TEXT_PX, minWidth: 0}}>
+                                <Stack direction="row" spacing={0.75} useFlexGap sx={{flexWrap: 'wrap'}}>
+                                    <Chip size="small" label={TYPE_LABELS[s.type] ?? s.type} variant="outlined" sx={CHIP}/>
+                                    <Chip size="small" label={STAGE_LABELS[s.stage] ?? s.stage} color={STAGE_COLORS[s.stage] ?? 'default'} sx={CHIP}/>
+                                    {s.visibility === 'HIDDEN' && <Chip size="small" label="Ascuns" color="error" variant="outlined" sx={CHIP}/>}
+                                    {s.visibility === 'PENDING' && <Chip size="small" label="În așteptarea aprobării" color="warning" variant="outlined" sx={CHIP}/>}
+                                </Stack>
+                                {s.description && <Typography component="span" variant="body2" color="text.secondary"
+                                    sx={{overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflowWrap: 'anywhere'}}>
+                                    {s.description}
+                                </Typography>}
+                                <SubjectEstimate subject={s} compact/>
+                                <SubjectStats subject={s}/>
+                                <Typography component="span" variant="body2" sx={{color: 'primary.main', fontWeight: 700, pt: 0.25}}>Vezi subiectul →</Typography>
                             </Stack>
-                            <ChevronRightIcon fontSize="small" sx={{display: {xs: 'none', sm: 'block'}, mt: 0.25, color: 'text.secondary', flexShrink: 0}}/>
                         </ListItemButton>
                     </Box>
                 ))}

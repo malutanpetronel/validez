@@ -514,7 +514,7 @@ export default function TreePage() {
                 <Typography color="text.secondary" sx={{fontSize: {xs: '1rem', sm: '1.1rem'}, maxWidth: 680, mt: 1.5}}>
                     Explorează probleme, propuneri și sondaje. Citește contextul, vezi opiniile celorlalți și participă.
                 </Typography>
-                <Stack direction="row" spacing={1} useFlexGap sx={{mt: 2.5, flexWrap: 'wrap', alignItems: 'center'}}>
+                <Stack direction="row" spacing={1} useFlexGap sx={{mt: 2.5, flexWrap: 'wrap', alignItems: 'center', rowGap: 2}}>
                     <Button variant="contained" onClick={() => scrollToSection('subiecte-recente')}>Vezi subiectele</Button>
                     <Button variant="outlined" onClick={() => scrollToSection('tematici')}>Alege o tematică</Button>
                     <FormControl size="small" sx={{minWidth: 200, flex: {xs: '1 1 100%', sm: '0 0 auto'}}}>
