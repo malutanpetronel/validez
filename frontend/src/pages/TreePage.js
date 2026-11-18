@@ -33,6 +33,7 @@ import {categoryPathOf, categoryUrl, parseTarget} from '../seo/paths';
 import CategoryBreadcrumbs from '../components/CategoryBreadcrumbs';
 import {hideSplash, isSubjectPath} from '../splash';
 import {TYPE_PLURALS, typeFromParam} from '../subjects/labels';
+import {TypeDot} from '../components/ColorDot';
 import {
     ancestorsOf, appendChild, dropTarget, findBySlugPath, findNode, indexByKey, isNoopMove, rebaseSlugPaths, renameInTree,
     replaceLevel, setChildren, toTreeNode,
@@ -522,7 +523,7 @@ export default function TreePage() {
                         <Select labelId="home-type" label="Tip subiecte" notched displayEmpty value={typeFilter}
                             onChange={(e) => changeType(e.target.value)}>
                             <MenuItem value="">Toate subiectele</MenuItem>
-                            {Object.entries(TYPE_PLURALS).map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}
+                            {Object.entries(TYPE_PLURALS).map(([k, l]) => <MenuItem key={k} value={k}><TypeDot type={k}/>{l}</MenuItem>)}
                         </Select>
                     </FormControl>
                 </Stack>

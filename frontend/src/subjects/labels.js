@@ -22,6 +22,17 @@ export const TYPE_PLURALS = {
     TOPIC_EVALUATION: 'Evaluări teme',
     POLL: 'Sondaje',
 };
+// Culoarea fiecărui tip: chip-ul tipului și fundalul discret al cardului din listă.
+export const TYPE_COLORS = {
+    ISSUE: '#e53935',
+    PROPOSAL: '#1e88e5',
+    PETITION: '#d81b60',
+    PROJECT: '#43a047',
+    PROMISE: '#fb8c00',
+    ELECTORAL_EVALUATION: '#7e57c2',
+    TOPIC_EVALUATION: '#00acc1',
+    POLL: '#fdd835',
+};
 /** Tipul din adresă (`?tip=`), doar dacă e unul cunoscut. */
 export const typeFromParam = (value) => (value && TYPE_PLURALS[value] ? value : '');
 /** „Subiecte recente” / „Sondaje recente”. */

@@ -6,16 +6,17 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ScheduleIcon from '@mui/icons-material/Schedule';
-import {alpha} from '@mui/material/styles';
+import {alpha, useTheme} from '@mui/material/styles';
 import {BRAND} from '../theme';
 import {useAuth} from '../auth/AuthContext';
 import {fetchSubjects, PER_PAGE} from '../api/subjects';
-import {formatDate, recentTitle, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS, TYPE_PLURALS} from '../subjects/labels';
+import {formatDate, recentTitle, STAGE_COLORS, STAGE_LABELS, TYPE_COLORS, TYPE_LABELS, TYPE_PLURALS} from '../subjects/labels';
 import SubjectForm from './SubjectForm';
 import SubjectEstimate from './SubjectEstimate';
 import SubjectStats from './SubjectStats';
 import MediaImage from './MediaImage';
 import Paginare from './Paginare';
+import {StageDot, TypeDot} from './ColorDot';
 
 // Format 1.91:1 ca previzualizările Facebook / og:image; pe mobil fără colțuri (poza merge până la marginea ecranului).
 const COVER = {width: '100%', aspectRatio: '1.91 / 1', borderRadius: {xs: 0, sm: 2}};
@@ -26,6 +27,17 @@ const TEXT_PX = {xs: 2, sm: 0};
 // Chenar neutru: gri pe luminos, albastrul brandului atenuat pe întunecat.
 const CARD_BORDER = (t) => (t.palette.mode === 'dark' ? alpha(BRAND.albastru, 0.45) : t.palette.grey[300]);
 const CHIP = {maxWidth: '100%', fontSize: '0.72rem', '& .MuiChip-label': {px: 1, overflow: 'hidden', textOverflow: 'ellipsis'}};
+// Tipul dă culoarea: fundal transparent peste background.paper (gradient, ca să rămână și hover-ul) + chenar atenuat.
+const typeTint = (type) => (t) => {
+    const c = TYPE_COLORS[type];
+    if (!c) return {};
+    const a = alpha(c, t.palette.mode === 'dark' ? 0.1 : 0.07);
+    return {backgroundImage: `linear-gradient(${a}, ${a})`, borderColor: alpha(c, t.palette.mode === 'dark' ? 0.5 : 0.45)};
+};
+const typeChip = (type) => (t) => {
+    const c = TYPE_COLORS[type];
+    return c ? {...CHIP, borderColor: c, bgcolor: alpha(c, t.palette.mode === 'dark' ? 0.18 : 0.12)} : CHIP;
+};
 
 /** Coperta subiectului (prima fotografie publicată), pe toată lățimea; fără fotografie nu se afișează nimic. */
 function SubjectCover({subject}) {
@@ -47,6 +59,7 @@ function SubjectCover({subject}) {
 export default function SubjectList({node, scope = '', navigationState, perPage = PER_PAGE, page: controlledPage, onPageChange, footer, showFilters = true,
     type: controlledType, onTypeChange, showHeading = true}) {
     const {user} = useAuth();
+    const theme = useTheme();
     const location = useLocation();
     const [filters, setFilters] = useState({type: '', stage: ''});
     const [localPage, setLocalPage] = useState(1);
@@ -123,14 +136,14 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                     <InputLabel id="flt-type">Tip</InputLabel>
                     <Select labelId="flt-type" label="Tip" value={activeType} onChange={setFilter('type')}>
                         <MenuItem value="">Toate</MenuItem>
-                        {Object.entries(TYPE_LABELS).map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}
+                        {Object.entries(TYPE_LABELS).map(([k, l]) => <MenuItem key={k} value={k}><TypeDot type={k}/>{l}</MenuItem>)}
                     </Select>
                 </FormControl>
                 <FormControl size="small" fullWidth>
                     <InputLabel id="flt-stage">Stadiu</InputLabel>
                     <Select labelId="flt-stage" label="Stadiu" value={filters.stage} onChange={setFilter('stage')}>
                         <MenuItem value="">Toate</MenuItem>
-                        {Object.entries(STAGE_LABELS).map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}
+                        {Object.entries(STAGE_LABELS).map(([k, l]) => <MenuItem key={k} value={k}><StageDot stage={k}/>{l}</MenuItem>)}
                     </Select>
                 </FormControl>
             </Stack>}
@@ -158,6 +171,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                                 // Grosime separată de culoare: `border` responsiv (shorthand) ar reseta culoarea la cea a textului.
                                 borderStyle: 'solid', borderWidth: {xs: 0, sm: 1}, borderColor: CARD_BORDER, borderRadius: {xs: 0, sm: 2.5},
                                 bgcolor: 'background.paper',
+                                ...typeTint(s.type)(theme),
                                 transition: 'border-color 160ms, background-color 160ms, transform 160ms',
                                 '&:hover': {borderColor: 'primary.main', bgcolor: 'action.hover', transform: {xs: 'none', sm: 'translateY(-2px)'}},
                                 '&.Mui-focusVisible': {outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2}}}>
@@ -167,7 +181,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                                     {scope === 'direct' ? '' : `în ${s.nodeName} · `}{s.authorName} · {formatDate(s.createdAt)}
                                 </Typography>
                                 <Stack direction="row" spacing={0.75} useFlexGap sx={{flexWrap: 'wrap', pt: 0.75}}>
-                                    <Chip size="small" label={TYPE_LABELS[s.type] ?? s.type} variant="outlined" sx={CHIP}/>
+                                    <Chip size="small" label={TYPE_LABELS[s.type] ?? s.type} variant="outlined" sx={typeChip(s.type)}/>
                                     <Chip size="small" label={STAGE_LABELS[s.stage] ?? s.stage} color={STAGE_COLORS[s.stage] ?? 'default'} sx={CHIP}/>
                                     {s.visibility === 'HIDDEN' && <Chip size="small" label="Ascuns" color="error" variant="outlined" sx={CHIP}/>}
                                     {s.visibility === 'PENDING' && <Chip size="small" label="În așteptarea aprobării" color="warning" variant="outlined" sx={CHIP}/>}

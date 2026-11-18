@@ -9,6 +9,7 @@ import {useAuth} from '../auth/AuthContext';
 import {createSubject, fetchSubjectNote, saveSubjectNote, updateSubject} from '../api/subjects';
 import {uploadPhoto} from '../api/media';
 import {allowedTypes, fromLocalInput, pollOptionsError, STAGE_LABELS, toLocalInput, TYPE_LABELS, VISIBILITY_LABELS} from '../subjects/labels';
+import {StageDot, TypeDot} from './ColorDot';
 import LocationPicker from './LocationPicker';
 import PollOptionsEditor from './PollOptionsEditor';
 import AiPhotoSuggestion from './AiPhotoSuggestion';
@@ -210,7 +211,7 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                         <Select labelId="subject-type" label="Tip" value={form.type} onChange={set('type')} disabled={editing && !!subject.typeLocked}>
                             {typeOptions.map((t) => <MenuItem key={t} value={t}
                                 // ADR-0013: un sondaj nu devine alt tip și nici invers (serverul refuză oricum).
-                                disabled={!types.includes(t) || (editing && (subject.type === 'POLL') !== (t === 'POLL'))}>{TYPE_LABELS[t]}</MenuItem>)}
+                                disabled={!types.includes(t) || (editing && (subject.type === 'POLL') !== (t === 'POLL'))}><TypeDot type={t}/>{TYPE_LABELS[t]}</MenuItem>)}
                         </Select>
                         {editing && subject.typeLocked && <FormHelperText>Tipul nu se mai poate schimba după primul vot: ar schimba sensul voturilor.</FormHelperText>}
                     </FormControl>
@@ -269,7 +270,7 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                             <FormControl fullWidth>
                                 <InputLabel id="subject-stage">Stadiu</InputLabel>
                                 <Select labelId="subject-stage" label="Stadiu" value={form.stage} onChange={set('stage')}>
-                                    {Object.entries(STAGE_LABELS).map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}
+                                    {Object.entries(STAGE_LABELS).map(([k, l]) => <MenuItem key={k} value={k}><StageDot stage={k}/>{l}</MenuItem>)}
                                 </Select>
                             </FormControl>
                             <FormControl fullWidth>
