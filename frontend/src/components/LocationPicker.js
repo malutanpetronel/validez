@@ -45,7 +45,7 @@ export default function LocationPicker({value, onChange, disabled}) {
                 {value && <Button size="small" color="error" startIcon={<WrongLocationIcon/>} onClick={() => onChange(null)} disabled={disabled}>Scoate pinul</Button>}
             </Stack>
             {value && <Typography variant="caption" color="text.secondary">
-                {value.lat.toFixed(6)}, {value.lng.toFixed(6)} · {value.source === 'DEVICE' ? 'din locația dispozitivului' : 'pus pe hartă'}
+                {value.lat.toFixed(6)}, {value.lng.toFixed(6)} · {value.source === 'DEVICE' ? 'din locația dispozitivului' : value.source === 'PHOTO' ? 'din fotografie' : 'pus pe hartă'}
             </Typography>}
         </Stack>
     );

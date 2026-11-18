@@ -6,6 +6,7 @@ import {
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import ThumbDownOutlinedIcon from '@mui/icons-material/ThumbDownOutlined';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import {useAuth} from '../auth/AuthContext';
 import {castVote, fetchVotes, grantVoteConsent, withdrawVote} from '../api/votes';
 import {formatDate, VOTE_TYPE_HINTS, VOTE_TYPE_LABELS, voteOptions, voteValueLabel} from '../subjects/labels';
@@ -68,6 +69,20 @@ function PollChoice({type, disabled, onVote}) {
                 {own === null ? 'Votează' : 'Schimbă votul'}
             </Button>
         </Box>
+    );
+}
+
+// Variantele unui sondaj pentru cine nu poate vota acum (vizitator, votare închisă): doar de citit.
+function PollOptionsList({type}) {
+    return (
+        <Stack component="ul" spacing={0.75} aria-label="Variantele sondajului" sx={{listStyle: 'none', p: 0, m: 0, my: 0.75, minWidth: 0}}>
+            {voteOptions(type).map(([value, label]) => (
+                <Stack component="li" key={value} direction="row" spacing={1} sx={{alignItems: 'flex-start', minWidth: 0}}>
+                    <RadioButtonUncheckedIcon fontSize="small" aria-hidden sx={{color: 'text.disabled', mt: 0.25, flexShrink: 0}}/>
+                    <Typography variant="body2" sx={{overflowWrap: 'anywhere', minWidth: 0}}>{label}</Typography>
+                </Stack>
+            ))}
+        </Stack>
     );
 }
 
@@ -225,8 +240,9 @@ export default function SubjectVotes({subjectId}) {
             {summary.types.filter((type) => type.code !== 'LOCATION' || type.active || type.mine).map((type) => (type.code === 'CHOICE' ? (
                 <Box key={type.code} sx={{p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'background.paper', minWidth: 0}}>
                     <Typography variant="subtitle2" component="h3">{VOTE_TYPE_LABELS.CHOICE}</Typography>
-                    {user && summary.votingEnabled && canExpress(type) && <PollChoice key={type.mine?.value ?? 'fara-vot'} type={type} disabled={busy}
-                                                                                      onVote={(value) => vote(type.code, value)}/>}
+                    {user && summary.votingEnabled && canExpress(type)
+                        ? <PollChoice key={type.mine?.value ?? 'fara-vot'} type={type} disabled={busy} onVote={(value) => vote(type.code, value)}/>
+                        : (type.result.hidden || type.result.total === 0) && <PollOptionsList type={type}/>}
                     <PollResults type={type}/>
                     {type.mine && (
                         <Typography variant="body2" sx={{mt: 0.5, overflowWrap: 'anywhere'}}>

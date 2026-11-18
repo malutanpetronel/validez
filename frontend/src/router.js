@@ -11,6 +11,7 @@ import SubjectsPage from './pages/SubjectsPage';
 import HelpPage from './pages/HelpPage';
 import CategorySuggestionsPage from './pages/CategorySuggestionsPage';
 import ModerationPage from './pages/ModerationPage';
+import AiSettingsPage from './pages/AiSettingsPage';
 import CheckApiPage from './pages/CheckApiPage';
 import MyVotesPage from './pages/MyVotesPage';
 import LegacyCategoryRedirect from './pages/LegacyCategoryRedirect';
@@ -31,6 +32,7 @@ export const routes = [
             {path: 'terms', element: <TermsPage/>},
             {path: 'categorii-propuse', element: <CategorySuggestionsPage/>},
             {path: 'moderare', element: <ModerationPage/>},
+            {path: 'setari-ai', element: <AiSettingsPage/>},
             {path: 'check-api', element: <CheckApiPage/>},
             {path: 'am-uitat-parola', element: <ForgotPasswordPage/>},
             {path: 'login', element: <LoginPage/>},

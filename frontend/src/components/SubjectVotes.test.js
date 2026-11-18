@@ -257,3 +257,14 @@ test('sondaj închis: rezultate publice pentru vizitator, fără variante de ale
     expect(screen.getByText('100% (3)')).toBeInTheDocument();
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
 });
+
+test('sondaj deschis: vizitatorul vede variantele, fără butonul Votează', async () => {
+    global.fetch = routedFetch([[isVotes, () => res(summary({pollClosesAt: '2030-05-01T18:30:00+00:00',
+        types: [choice({result: {counts: {}, hidden: true, total: 2, staleTotal: 0}})]}))]]);
+    renderVotes();
+    const list = await screen.findByRole('list', {name: 'Variantele sondajului'});
+    expect(within(list).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Dimineața', 'La prânz', 'Seara']);
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Votează'})).not.toBeInTheDocument();
+    expect(screen.getByText('Înregistrează-te pentru a vota și tu.')).toBeInTheDocument();
+});

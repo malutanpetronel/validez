@@ -7,9 +7,11 @@ import {useTheme} from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import {useAuth} from '../auth/AuthContext';
 import {createSubject, fetchSubjectNote, saveSubjectNote, updateSubject} from '../api/subjects';
+import {uploadPhoto} from '../api/media';
 import {allowedTypes, fromLocalInput, pollOptionsError, STAGE_LABELS, toLocalInput, TYPE_LABELS, VISIBILITY_LABELS} from '../subjects/labels';
 import LocationPicker from './LocationPicker';
 import PollOptionsEditor from './PollOptionsEditor';
+import AiPhotoSuggestion from './AiPhotoSuggestion';
 
 const samePoint = (a, b) => (!a && !b) || (!!a && !!b && a.lat.toFixed(6) === b.lat.toFixed(6) && a.lng.toFixed(6) === b.lng.toFixed(6));
 const cleanOptions = (options) => options.map((o) => o.replace(/\s+/g, ' ').trim());
@@ -53,6 +55,12 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
     const [location, setLocation] = useState(initialLocation);
     const [locationConfirmed, setLocationConfirmed] = useState(subject?.location?.confirmedBy === 'ADMIN');
     const locationChanged = !samePoint(location, initialLocation) || (location && initialLocation && location.source !== initialLocation.source);
+    // ADR-0014: sesizare din fotografie (doar admin, la creare) — fotografia se încarcă după salvare, categoria propusă
+    // se aplică doar la cerere.
+    const [aiPhoto, setAiPhoto] = useState(null);
+    const photoUploaded = useRef(false);
+    const [aiCategory, setAiCategory] = useState(null);
+    const [targetNode, setTargetNode] = useState(node ?? null);
     useEffect(() => {
         if (!ownNote || subject?.type !== 'PROPOSAL') return;
         let active = true;
@@ -125,13 +133,21 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                 if (isAdmin && location && locationConfirmed !== (baseline.location?.confirmedBy === 'ADMIN')) changes.locationConfirmed = locationConfirmed;
                 saved = Object.keys(changes).length ? await updateSubject(baseline.id, changes) : baseline;
             } else {
-                saved = await createSubject({node: node.id, type: form.type, title: form.title, description: form.description, ...estimate,
+                saved = await createSubject({node: targetNode.id, type: form.type, title: form.title, description: form.description, ...estimate,
                     ...(location ? {location} : {}),
                     ...(poll ? {pollOptions: cleanOptions(form.pollOptions), pollClosesAt: closesAtIso} : {})});
             }
             // Keep the saved ID if the separate note request fails: retries must not create duplicates.
             savedSubject.current = saved;
             setEstimateDirty(false);
+            if (aiPhoto && !photoUploaded.current) {
+                try {
+                    await uploadPhoto(saved.id, aiPhoto);
+                    photoUploaded.current = true;
+                } catch (err) {
+                    throw new Error(`Subiectul a fost salvat, dar fotografia nu: ${err.message} Reîncearcă salvarea.`);
+                }
+            }
             if (proposal && ownNote && technicalNotes !== originalNote.current) {
                 try {
                     const note = await saveSubjectNote(saved.id, technicalNotes);
@@ -170,7 +186,25 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                 <Stack spacing={2} sx={{pt: 1}}>
                     {error && <Alert severity="error">{error}</Alert>}
                     {!isAdmin && <Alert severity="info">Primele trei contribuții necesită aprobarea unui administrator. După trei aprobări poți publica direct, dacă acest drept nu a fost retras. Modificările subiectelor publicate pot necesita din nou aprobare.</Alert>}
-                    {!editing && <Typography variant="body2" color="text.secondary">În: <strong>{node.name}</strong></Typography>}
+                    {!editing && <Typography variant="body2" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>În: <strong>{targetNode.name}</strong>
+                        {targetNode.id !== node.id && <Button size="small" sx={{ml: 1}} onClick={() => setTargetNode(node)} disabled={saving}>Înapoi la {node.name}</Button>}
+                    </Typography>}
+                    {isAdmin && !editing && <AiPhotoSuggestion nodeId={node.id} disabled={saving}
+                        onPhoto={(file) => { setAiPhoto(file); photoUploaded.current = false; if (!file) setAiCategory(null); }}
+                        onPoint={(p) => { if (!location || location.source === 'PHOTO') { setLocationConfirmed(false); setLocation({...p, source: 'PHOTO'}); } }}
+                        onSuggestion={(s) => {
+                            setAiCategory(s.categoryId ? {id: s.categoryId, name: s.categoryPath} : null);
+                            if (!s.isPublicProblem) return;
+                            setForm((f) => ({...f, type: types.includes('ISSUE') && f.type !== 'POLL' ? 'ISSUE' : f.type,
+                                title: f.title.trim() ? f.title : s.title, description: f.description.trim() ? f.description : s.description}));
+                        }}
+                        onApplyText={(s) => setForm((f) => ({...f, title: s.title, description: s.description}))}/>}
+                    {!editing && aiCategory && aiCategory.id !== targetNode.id && (
+                        <Alert severity="info" action={<Button color="inherit" size="small" onClick={() => setTargetNode(aiCategory)} disabled={saving}>Mută aici</Button>}
+                               sx={{overflowWrap: 'anywhere'}}>
+                            Categoria propusă: <strong>{aiCategory.name}</strong>
+                        </Alert>
+                    )}
                     <FormControl fullWidth>
                         <InputLabel id="subject-type">Tip</InputLabel>
                         <Select labelId="subject-type" label="Tip" value={form.type} onChange={set('type')} disabled={editing && !!subject.typeLocked}>

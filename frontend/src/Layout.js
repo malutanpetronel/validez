@@ -71,6 +71,7 @@ export default function Layout() {
                                 <MenuItem component={RouterLink} to="/categorii-propuse" onClick={closeUserMenu}>{isAdmin ? 'Propuneri de categorii' : 'Propune o categorie'}</MenuItem>
                                 <MenuItem component={RouterLink} to="/voturile-mele" onClick={closeUserMenu}>Voturile mele</MenuItem>
                                 {isAdmin && <MenuItem component={RouterLink} to="/moderare" onClick={closeUserMenu}>Moderare subiecte</MenuItem>}
+                                {isAdmin && <MenuItem component={RouterLink} to="/setari-ai" onClick={closeUserMenu}>Setări AI</MenuItem>}
                                 {isAdmin && <MenuItem component={RouterLink} to="/check-api" onClick={closeUserMenu}>Check API</MenuItem>}
                                 <MenuItem onClick={() => { closeUserMenu(); logout(); }}>Ieși</MenuItem>
                             </Menu>
