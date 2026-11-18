@@ -21,9 +21,11 @@ final class ErasureRegistry
 {
     public const CONSENT_WITHDRAWN = 'consent_withdrawn';
     public const MEDIA_REMOVED = 'media_removed';
+    /** L.5b: contul golit („Cont șters”) — după o restaurare se golește din nou. */
+    public const ACCOUNT_ERASED = 'account_erased';
 
     /** Acțiune => cheia id-ului în linie (liniile existente, cu `user`, rămân valide). */
-    private const ID_KEYS = [self::CONSENT_WITHDRAWN => 'user', self::MEDIA_REMOVED => 'media'];
+    private const ID_KEYS = [self::CONSENT_WITHDRAWN => 'user', self::MEDIA_REMOVED => 'media', self::ACCOUNT_ERASED => 'user'];
 
     private const FORMAT = 1;
     private const FILE = 'registry.jsonl';

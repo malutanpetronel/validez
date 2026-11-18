@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Auth\AccountErasureService;
 use App\Entity\User;
 use App\Entity\SubjectMedia;
 use App\Media\MediaStorage;
@@ -19,9 +20,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Uid\Ulid;
 
 /**
- * După restaurarea unei copii a bazei (ADR-0009): reaplică retragerile de consimțământ și scoaterile de media
- * (ADR-0011 p.10) notate în registrul de ștergeri, înainte de redeschiderea traficului. La media scoase șterge și
- * fișierele readuse de copia de media. Idempotentă. Afișează doar totaluri, fără identificatori.
+ * După restaurarea unei copii a bazei (ADR-0009): reaplică retragerile de consimțământ, scoaterile de media
+ * (ADR-0011 p.10) și conturile șterse (L.5b) notate în registrul de ștergeri, înainte de redeschiderea traficului.
+ * La media scoase șterge și fișierele readuse de copia de media. Idempotentă. Afișează doar totaluri, fără identificatori.
  * Ordinea pe server: restaurare → această comandă → app:votes:verify → pornirea nginx (Deploy.md, secțiunea E2).
  */
 #[AsCommand(name: 'app:votes:reapply-erasures', description: 'Reaplică retragerile de consimțământ și scoaterile de media din registrul de ștergeri, după o restaurare.')]
@@ -32,6 +33,7 @@ final class ReapplyErasuresCommand extends Command
         private readonly VoteService $votes,
         private readonly EntityManagerInterface $em,
         private readonly MediaStorage $storage,
+        private readonly AccountErasureService $accounts,
     ) {
         parent::__construct();
     }
@@ -48,8 +50,19 @@ final class ReapplyErasuresCommand extends Command
         $entries = $this->registry->entries();
         $applied = $votes = $regranted = $missing = 0;
         $mediaRemoved = $mediaMissing = $filesDeleted = 0;
+        $accountsErased = 0;
 
         foreach ($entries as $entry) {
+            if ($entry['action'] === ErasureRegistry::ACCOUNT_ERASED) {
+                $user = $this->em->find(User::class, Ulid::fromString($entry['user']));
+                if ($user === null) {
+                    ++$missing;
+                } elseif ($this->accounts->reapply($user, $entry['at'], $dryRun)) {
+                    ++$accountsErased;
+                }
+                $this->em->clear();
+                continue;
+            }
             if ($entry['action'] === ErasureRegistry::MEDIA_REMOVED) {
                 $item = $this->em->find(SubjectMedia::class, Ulid::fromString($entry['media']));
                 if ($item === null) {
@@ -101,6 +114,7 @@ final class ReapplyErasuresCommand extends Command
             [($dryRun ? 'Media de scos' : 'Media scoase') => (string) $mediaRemoved],
             [($dryRun ? 'Fișiere media de șters' : 'Fișiere media șterse') => (string) $filesDeleted],
             ['Media inexistente în copia restaurată' => (string) $mediaMissing],
+            [($dryRun ? 'Conturi de golit („Cont șters”)' : 'Conturi golite („Cont șters”)') => (string) $accountsErased],
         );
         $io->success($dryRun ? 'Simulare: baza nu a fost modificată.' : 'Retragerile din registru sunt aplicate.');
 

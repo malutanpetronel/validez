@@ -24,3 +24,12 @@ framework:
             policy: sliding_window
             limit: 15
             interval: '1 hour'
+        # L.5b: „Șterge-mi contul” — cererea linkului (per cont) și confirmarea (per IP).
+        account_deletion:
+            policy: sliding_window
+            limit: 3
+            interval: '1 hour'
+        account_deletion_confirm:
+            policy: sliding_window
+            limit: 15
+            interval: '1 hour'

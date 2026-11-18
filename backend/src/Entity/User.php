@@ -84,6 +84,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(options: ['default' => 0])]
     private int $credentialVersion = 0;
 
+    /** L.5b: linkul de ștergere a contului (hash HMAC al tokenului din email), valabil o oră. */
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $accountDeletionTokenHash = null;
+
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $accountDeletionRequestedAt = null;
+
+    /** L.5b: contul șters rămâne ca rând golit („Cont șters”), pentru că subiectele și reviziile îl referă. */
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $deletedAt = null;
+
+    public const DELETED_NAME = 'Cont șters';
+
     public function getCredentialVersion(): int { return $this->credentialVersion; }
     public function getPasswordResetCodeHash(): ?string { return $this->passwordResetCodeHash; }
     public function getPasswordResetRequestedAt(): ?\DateTimeImmutable { return $this->passwordResetRequestedAt; }
@@ -107,6 +120,40 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->passwordResetCodeHash = null;
         $this->passwordResetRequestedAt = null;
         $this->passwordResetAttempts = 0;
+    }
+
+    public function getAccountDeletionTokenHash(): ?string { return $this->accountDeletionTokenHash; }
+    public function getAccountDeletionRequestedAt(): ?\DateTimeImmutable { return $this->accountDeletionRequestedAt; }
+    public function getDeletedAt(): ?\DateTimeImmutable { return $this->deletedAt; }
+    public function isDeleted(): bool { return $this->deletedAt !== null; }
+
+    public function issueAccountDeletionToken(string $hash): void
+    {
+        $this->accountDeletionTokenHash = $hash;
+        $this->accountDeletionRequestedAt = new \DateTimeImmutable();
+    }
+
+    /**
+     * Golește contul: email de neutilizat (adresa reală se eliberează), nume „Cont șters”, parolă imposibilă, fără
+     * roluri; credentialVersion crește, deci tokenurile JWT emise se invalidează.
+     */
+    public function anonymize(string $unusablePasswordHash, \DateTimeImmutable $at): void
+    {
+        $this->email = 'sters-'.strtolower($this->id->toBase32()).'@cont-sters.invalid';
+        $this->displayName = self::DELETED_NAME;
+        $this->roles = [];
+        $this->password = $unusablePasswordHash;
+        $this->emailVerified = false;
+        ++$this->credentialVersion;
+        $this->confirmationCodeHash = null;
+        $this->codeRequestedAt = null;
+        $this->codeAttempts = 0;
+        $this->passwordResetCodeHash = null;
+        $this->passwordResetRequestedAt = null;
+        $this->passwordResetAttempts = 0;
+        $this->accountDeletionTokenHash = null;
+        $this->accountDeletionRequestedAt = null;
+        $this->deletedAt = $at;
     }
 
     /** @param list<string> $roles */
