@@ -16,6 +16,7 @@ use App\Subject\SubjectRevisions;
 use App\Subject\SubjectVisibility;
 use App\Subject\CostEstimate;
 use App\Subject\PollDefinition;
+use App\Subject\SubjectArea;
 use App\Subject\SubjectLocation;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -37,6 +38,7 @@ final class CivicSubjectCreateProcessor implements ProcessorInterface
         private readonly PublishingPolicy $policy,
         private readonly SubjectRevisions $revisions,
         private readonly SubjectLocation $location,
+        private readonly SubjectArea $area,
     ) {
     }
 
@@ -66,6 +68,8 @@ final class CivicSubjectCreateProcessor implements ProcessorInterface
                 // Înainte de initialize: revizia 1 e instantaneul subiectului, inclusiv pinul.
                 $this->location->apply($subject, $data->location);
             }
+            // G.3: după pin (aria efectivă LOCAL include UAT-ul pinului), înaintea reviziei 1.
+            $this->area->apply($subject, get_object_vars($data), true);
             $this->revisions->initialize($subject, $author);
             $this->em->flush();
 

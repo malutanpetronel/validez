@@ -85,7 +85,7 @@ final class CivicSubjectTest extends WebTestCase
 
     private function create(string $who, string $node, string $type = 'ISSUE', string $title = 'Gropi pe DN1'): array
     {
-        return $this->call('POST', '/api/civic_subjects', ['node' => $this->n[$node]->getId()->toBase32(), 'type' => $type, 'title' => $title, 'description' => 'Descriere'], $who);
+        return $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->n[$node]->getId()->toBase32(), 'type' => $type, 'title' => $title, 'description' => 'Descriere'], $who);
     }
 
     private function patch(string $id, array $body, ?string $who): array
@@ -156,7 +156,7 @@ final class CivicSubjectTest extends WebTestCase
 
     public function testCreationCannotForgePublicationOrApproval(): void
     {
-        $r = $this->call('POST', '/api/civic_subjects', ['node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Contribuție nouă', 'description' => 'Descriere', 'visibility' => 'PUBLISHED', 'approvedContribution' => true, 'author' => 'admin'], 'ion');
+        $r = $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Contribuție nouă', 'description' => 'Descriere', 'visibility' => 'PUBLISHED', 'approvedContribution' => true, 'author' => 'admin'], 'ion');
         self::assertSame(201, $this->code());
         self::assertSame('PENDING', $r['visibility']);
         self::assertSame(0, $this->call('GET', '/api/me/publishing', null, 'ion')['approvedCount']);
@@ -242,7 +242,7 @@ final class CivicSubjectTest extends WebTestCase
     {
         $id = $this->create('ion', 'Cluj')['id'];
         $this->patch($id, ['visibility' => 'PUBLISHED'], 'admin');
-        $this->call('POST', '/api/civic_subjects', ['node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'X X X', 'description' => 'd']);
+        $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'X X X', 'description' => 'd']);
         self::assertSame(401, $this->code());
         self::assertSame(['Gropi pe DN1'], $this->titles());
         $this->call('GET', '/api/civic_subjects/'.$id);
@@ -378,7 +378,7 @@ final class CivicSubjectTest extends WebTestCase
 
     public function testEstimateCreationAndOnlyProposal(): void
     {
-        $payload = ['node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'PROPOSAL', 'title' => 'Parcare inteligenta', 'description' => 'Descriere',
+        $payload = ['scope' => 'NATIONAL', 'node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'PROPOSAL', 'title' => 'Parcare inteligenta', 'description' => 'Descriere',
             'costEstimate' => '9999999999.99', 'costCurrency' => 'RON', 'costEstimateScope' => 'Pentru un loc'];
         $r = $this->call('POST', '/api/civic_subjects', $payload, 'ion');
         self::assertSame(201, $this->code());
@@ -478,13 +478,13 @@ final class CivicSubjectTest extends WebTestCase
 
     public function testValidare(): void
     {
-        $this->call('POST', '/api/civic_subjects', ['node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'ISSUE', 'title' => '  ', 'description' => 'd'], 'ion');
+        $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'ISSUE', 'title' => '  ', 'description' => 'd'], 'ion');
         self::assertSame(422, $this->code());
-        $this->call('POST', '/api/civic_subjects', ['node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'NIMIC', 'title' => 'Titlu', 'description' => 'd'], 'ion');
+        $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'NIMIC', 'title' => 'Titlu', 'description' => 'd'], 'ion');
         self::assertSame(422, $this->code());
-        $this->call('POST', '/api/civic_subjects', ['node' => '01JZZZZZZZZZZZZZZZZZZZZZZZ', 'type' => 'ISSUE', 'title' => 'Titlu', 'description' => 'd'], 'ion');
+        $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => '01JZZZZZZZZZZZZZZZZZZZZZZZ', 'type' => 'ISSUE', 'title' => 'Titlu', 'description' => 'd'], 'ion');
         self::assertSame(422, $this->code());
-        $this->call('POST', '/api/civic_subjects', ['node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Titlu', 'description' => 'd', 'author' => 'altcineva'], 'ion');
+        $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->n['Cluj']->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Titlu', 'description' => 'd', 'author' => 'altcineva'], 'ion');
         self::assertSame(201, $this->code());
     }
 }

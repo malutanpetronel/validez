@@ -87,6 +87,7 @@ final class PollTest extends WebTestCase
     private function create(array $extra = [], string $who = 'admin'): array
     {
         return $this->call('POST', '/api/civic_subjects', $extra + [
+            'scope' => 'NATIONAL',
             'node' => $this->node->getId()->toBase32(),
             'type' => 'POLL',
             'title' => 'Când e bine să se ridice gunoiul?',
@@ -147,7 +148,7 @@ final class PollTest extends WebTestCase
         self::assertSame(self::OPTIONS, $revision['pollOptions']);
 
         // Celelalte tipuri nu au câmpurile de sondaj.
-        $issue = $this->call('POST', '/api/civic_subjects', ['node' => $this->node->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Groapă', 'description' => 'DN1'], 'admin', 'application/ld+json');
+        $issue = $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->node->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Groapă', 'description' => 'DN1'], 'admin', 'application/ld+json');
         self::assertNull($issue['pollOptions']);
         self::assertNull($issue['pollClosesAt']);
     }
@@ -178,7 +179,7 @@ final class PollTest extends WebTestCase
         $this->create(['pollClosesAt' => (new \DateTimeImmutable('+1 day'))->format('Y-m-d\TH:i:s.v\Z')]);
         self::assertSame(201, $this->code(), 'formatul toISOString din browser');
 
-        $this->call('POST', '/api/civic_subjects', ['node' => $this->node->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Groapă', 'description' => 'DN1', 'pollOptions' => ['A', 'B']], 'admin', 'application/ld+json');
+        $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->node->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Groapă', 'description' => 'DN1', 'pollOptions' => ['A', 'B']], 'admin', 'application/ld+json');
         self::assertSame(422, $this->code(), 'variantele există doar la sondaje');
     }
 
@@ -188,7 +189,7 @@ final class PollTest extends WebTestCase
         $this->patch($id, ['type' => 'ISSUE']);
         self::assertSame(422, $this->code());
 
-        $issue = $this->call('POST', '/api/civic_subjects', ['node' => $this->node->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Groapă', 'description' => 'DN1'], 'admin', 'application/ld+json');
+        $issue = $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->node->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Groapă', 'description' => 'DN1'], 'admin', 'application/ld+json');
         $this->patch($issue['id'], ['type' => 'POLL', 'pollOptions' => ['A', 'B'], 'pollClosesAt' => $this->future()]);
         self::assertSame(422, $this->code());
     }

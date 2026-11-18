@@ -13,6 +13,7 @@ import {StageDot, TypeDot} from './ColorDot';
 import LocationPicker from './LocationPicker';
 import PollOptionsEditor from './PollOptionsEditor';
 import AiPhotoSuggestion from './AiPhotoSuggestion';
+import AreaPicker from './AreaPicker';
 
 const samePoint = (a, b) => (!a && !b) || (!!a && !!b && a.lat.toFixed(6) === b.lat.toFixed(6) && a.lng.toFixed(6) === b.lng.toFixed(6));
 const cleanOptions = (options) => options.map((o) => o.replace(/\s+/g, ' ').trim());
@@ -56,6 +57,16 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
     const [location, setLocation] = useState(initialLocation);
     const [locationConfirmed, setLocationConfirmed] = useState(subject?.location?.confirmedBy === 'ADMIN');
     const locationChanged = !samePoint(location, initialLocation) || (location && initialLocation && location.source !== initialLocation.source);
+    // G.3 (ADR-0012 p.5): aria declarată; face parte din revizie, se trimite doar dacă s-a schimbat.
+    const [area, setArea] = useState({scope: subject?.area?.scope ?? null, units: subject?.area?.units ?? []});
+    const areaCodes = (a) => a.units.map((u) => u.code).sort().join(',');
+    const differsFrom = (saved) => (area.scope ?? null) !== (saved?.area?.scope ?? null) || areaCodes(area) !== areaCodes({units: saved?.area?.units ?? []});
+    const areaChanged = differsFrom(subject);
+    const pinAdmin = subject?.location?.administrative;
+    const pinUnit = !locationChanged && ['RESOLVED', 'RESOLVED_MANUALLY'].includes(pinAdmin?.state) ? pinAdmin.unit : null;
+    const areaError = !editing && !area.scope ? 'Alege aria subiectului: Local, Județean sau Național.'
+        : area.scope === 'COUNTY' && !area.units.length ? 'Alege cel puțin un județ pentru aria județeană.'
+            : area.scope === 'LOCAL' && !area.units.length && !location ? 'Adaugă cel puțin o localitate în aria subiectului sau pune pinul pe hartă.' : '';
     // ADR-0014: sesizare din fotografie (doar admin, la creare) — fotografia se încarcă după salvare, categoria propusă
     // se aplică doar la cerere.
     const [aiPhoto, setAiPhoto] = useState(null);
@@ -97,7 +108,7 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
         : '';
     const validationMessage = form.title.trim().length < 3 ? 'Titlul trebuie să aibă minimum 3 caractere.'
         : !form.description.trim() ? 'Completează descrierea subiectului.'
-            : amountError || scopeError || (proposal && estimateDirty && hasAmount && !form.costCurrency ? 'Alege moneda estimării.' : '')
+            : areaError || amountError || scopeError || (proposal && estimateDirty && hasAmount && !form.costCurrency ? 'Alege moneda estimării.' : '')
                 || pollError
                 || (proposal && noteLoading ? 'Se încarcă nota personală…' : '')
                 || (proposal && noteError ? 'Nota personală nu a putut fi încărcată. Apasă „Reîncearcă” în secțiunea notelor.' : '');
@@ -130,12 +141,15 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                 if (poll && JSON.stringify(cleanOptions(form.pollOptions)) !== JSON.stringify(baseline.pollOptions ?? [])) changes.pollOptions = cleanOptions(form.pollOptions);
                 if (poll && closesAtIso && toLocalInput(closesAtIso) !== toLocalInput(baseline.pollClosesAt)) changes.pollClosesAt = closesAtIso;
                 if (locationChanged) changes.location = location;
+                // Față de ultima salvare (la reîncercarea după o notă eșuată, subiectul nou are deja aria).
+                if (area.scope && differsFrom(baseline)) { changes.scope = area.scope; changes.areaUnits = area.units.map((u) => u.code); }
                 // Doar adminul; fără revizie. După mutarea pinului confirmarea veche oricum se anulează pe server.
                 if (isAdmin && location && locationConfirmed !== (baseline.location?.confirmedBy === 'ADMIN')) changes.locationConfirmed = locationConfirmed;
                 saved = Object.keys(changes).length ? await updateSubject(baseline.id, changes) : baseline;
             } else {
                 saved = await createSubject({node: targetNode.id, type: form.type, title: form.title, description: form.description, ...estimate,
                     ...(location ? {location} : {}),
+                    scope: area.scope, areaUnits: area.units.map((u) => u.code),
                     ...(poll ? {pollOptions: cleanOptions(form.pollOptions), pollClosesAt: closesAtIso} : {})});
             }
             // Keep the saved ID if the separate note request fails: retries must not create duplicates.
@@ -264,6 +278,10 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                     {isAdmin && editing && location && (
                         <FormControlLabel control={<Checkbox checked={locationConfirmed} onChange={(e) => setLocationConfirmed(e.target.checked)}/>}
                                           label="Loc confirmat de administrator (nu creează revizie)"/>
+                    )}
+                    <AreaPicker value={area} onChange={setArea} pinUnit={pinUnit} disabled={saving} legacy={editing && !subject.area}/>
+                    {editing && areaChanged && subject.typeLocked && (
+                        <Alert severity="warning">Schimbarea ariei creează o revizie nouă: cei care au votat vor fi rugați să-și reconfirme votul.</Alert>
                     )}
                     {isAdmin && editing && (
                         <Stack direction={{xs: 'column', sm: 'row'}} spacing={2}>

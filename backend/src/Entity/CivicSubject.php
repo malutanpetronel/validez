@@ -17,9 +17,12 @@ use App\State\CivicSubjectCreateProcessor;
 use App\State\CivicSubjectProvider;
 use App\State\CivicSubjectUpdateProcessor;
 use App\Subject\LocationSource;
+use App\Subject\SubjectScope;
 use App\Subject\SubjectStage;
 use App\Subject\SubjectType;
 use App\Subject\SubjectVisibility;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Types\UlidType;
@@ -189,6 +192,21 @@ class CivicSubject
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $pinAdminResolvedAt = null;
 
+    /** ADR-0012 p.4–5 (G.3): aria declarată. NULL = arie nespecificată (subiecte create înainte de G.3). */
+    #[ORM\Column(length: 16, nullable: true, enumType: SubjectScope::class)]
+    private ?SubjectScope $scope = null;
+
+    /**
+     * Unitățile declarate de autor/admin (UAT-uri la LOCAL, județe la COUNTY). UAT-ul pinului NU se scrie aici.
+     *
+     * @var Collection<int, AdministrativeUnit>
+     */
+    #[ORM\ManyToMany(targetEntity: AdministrativeUnit::class)]
+    #[ORM\JoinTable(name: 'subject_administrative_unit')]
+    #[ORM\JoinColumn(name: 'subject_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\InverseJoinColumn(name: 'unit_id', referencedColumnName: 'id', onDelete: 'RESTRICT')]
+    private Collection $areaUnits;
+
     public function __construct(TreeNode $node, User $author, SubjectType $type, string $title, string $description)
     {
         $this->id = new Ulid();
@@ -199,6 +217,7 @@ class CivicSubject
         $this->description = trim($description);
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = $this->createdAt;
+        $this->areaUnits = new ArrayCollection();
     }
 
     #[ORM\PreUpdate]
@@ -462,6 +481,76 @@ class CivicSubject
     /** @return list<array<string, mixed>> */
     public function getPinAdminCandidates(): array { return $this->pinAdminCandidates ?? []; }
     public function getPinAdminBoundarySet(): ?BoundarySet { return $this->pinAdminBoundarySet; }
+
+    public function getScope(): ?SubjectScope { return $this->scope; }
+
+    /** @return list<AdministrativeUnit> unitățile declarate, ordonate după cod (instantaneu stabil) */
+    public function getAreaUnits(): array
+    {
+        $units = $this->areaUnits->toArray();
+        usort($units, static fn (AdministrativeUnit $a, AdministrativeUnit $b): int => strcmp($a->getCode(), $b->getCode()));
+
+        return $units;
+    }
+
+    /** Doar prin App\Subject\SubjectArea (validarea contractului din ADR-0012 p.5). @param list<AdministrativeUnit> $units */
+    public function setArea(SubjectScope $scope, array $units): void
+    {
+        $this->scope = $scope;
+        $this->areaUnits->clear();
+        foreach ($units as $unit) {
+            $this->areaUnits->add($unit);
+        }
+    }
+
+    /** Partea de arie din instantaneul reviziei (comparat pe valori). @return array{scope: ?string, areaUnits: list<string>} */
+    public function storedArea(): array
+    {
+        return ['scope' => $this->scope?->value, 'areaUnits' => array_map(static fn (AdministrativeUnit $u) => $u->getCode(), $this->getAreaUnits())];
+    }
+
+    /**
+     * ADR-0012 p.4: aria efectivă, calculată (nu stocată). LOCAL = declarate ∪ UAT-ul pinului (doar încadrare
+     * determinată); COUNTY = județele declarate; NATIONAL = țara (fără entitate: codul RO). NULL scope → [].
+     *
+     * @return list<array{code: string, name: string, level: string, county: ?string, fromPin: bool}>
+     */
+    public function effectiveArea(): array
+    {
+        $row = static fn (AdministrativeUnit $u, bool $fromPin): array => ['code' => $u->getCode(), 'name' => $u->getDisplayName(),
+            'level' => $u->getLevel()->value, 'county' => $u->getLevel() === \App\Geo\AdministrativeLevel::UAT ? $u->getParent()?->getDisplayName() : null, 'fromPin' => $fromPin];
+
+        return match ($this->scope) {
+            null => [],
+            SubjectScope::NATIONAL => [['code' => AdministrativeUnit::COUNTRY_CODE, 'name' => 'România', 'level' => 'COUNTRY', 'county' => null, 'fromPin' => false]],
+            SubjectScope::COUNTY => array_map(static fn (AdministrativeUnit $u) => $row($u, false), $this->getAreaUnits()),
+            SubjectScope::LOCAL => (function () use ($row): array {
+                $rows = array_map(static fn (AdministrativeUnit $u) => $row($u, false), $this->getAreaUnits());
+                $pin = $this->pinAdminState?->isDetermined() ? $this->pinAdminUnit : null;
+                if ($pin !== null && !\in_array($pin->getCode(), array_column($rows, 'code'), true)) {
+                    $rows[] = $row($pin, true);
+                }
+
+                return $rows;
+            })(),
+        };
+    }
+
+    /**
+     * Aria pentru afișare: `units` = cele declarate (formular), `effective` = aria efectivă (cu UAT-ul pinului marcat).
+     *
+     * @return array{scope: string, units: list<array<string, mixed>>, effective: list<array<string, mixed>>}|null
+     */
+    #[Groups(['subject:read'])]
+    public function getArea(): ?array
+    {
+        if ($this->scope === null) {
+            return null;
+        }
+        $effective = $this->effectiveArea();
+
+        return ['scope' => $this->scope->value, 'units' => array_values(array_filter($effective, static fn (array $u) => !$u['fromPin'] && $u['level'] !== 'COUNTRY')), 'effective' => $effective];
+    }
 
     /**
      * Încadrarea administrativă a pinului, pentru afișare (ADR-0012 p.6). Candidații apar doar la stările

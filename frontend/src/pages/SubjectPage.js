@@ -11,6 +11,7 @@ import {invalidateVotes} from '../api/votes';
 import {canEditSubject, formatDate, locationConfirmationText, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS} from '../subjects/labels';
 import SubjectForm from '../components/SubjectForm';
 import PinAdministrative from '../components/PinAdministrative';
+import {areaText} from '../subjects/area';
 import SubjectEstimate from '../components/SubjectEstimate';
 import AuthorPublishing from '../components/AuthorPublishing';
 import SubjectPrivateNote from '../components/SubjectPrivateNote';
@@ -181,6 +182,11 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
                             );
                         })()}
                         <Typography sx={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{subject.description}</Typography>
+                        {subject.area && (
+                            <Typography variant="body2" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>
+                                Arie: <Box component="span" sx={{color: 'primary.main'}}>{areaText(subject.area)}</Box>
+                            </Typography>
+                        )}
                         {subject.location && (
                             <Stack spacing={0.75}>
                                 <Stack direction="row" spacing={1} sx={{alignItems: 'center', flexWrap: 'wrap'}} useFlexGap>

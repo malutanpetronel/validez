@@ -33,3 +33,8 @@ export const resolvePinClassification = (subjectId, code) => request(
 
 /** {items: [{subjectId, subjectTitle, subjectPath, visibility, location, administrative}]} — doar administratori. */
 export const fetchPendingPinClassifications = () => request(`${API_ENDPOINT}/moderation/pin-classifications`);
+
+/** G.3: căutarea localităților (UAT) sau a județelor pentru „Aria subiectului”; {items: [{code, name, level, county}]}. */
+export const searchAdministrativeUnits = (q, level) => request(
+    `${API_ENDPOINT}/administrative_units?level=${encodeURIComponent(level)}&q=${encodeURIComponent(q)}`,
+).then((body) => body.items);

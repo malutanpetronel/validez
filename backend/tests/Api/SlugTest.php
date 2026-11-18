@@ -99,7 +99,7 @@ final class SlugTest extends WebTestCase
 
     private function subject(string $who, array $node, string $title): array
     {
-        $r = $this->call('POST', '/api/civic_subjects', ['node' => $node['id'], 'type' => 'ISSUE', 'title' => $title, 'description' => 'Descriere'], $who);
+        $r = $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $node['id'], 'type' => 'ISSUE', 'title' => $title, 'description' => 'Descriere'], $who);
         self::assertSame(201, $this->code(), json_encode($r));
 
         return $r;

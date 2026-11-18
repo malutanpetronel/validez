@@ -41,9 +41,9 @@ final class SubjectRevisions
     /** @return array<string, mixed> */
     public static function snapshot(CivicSubject $subject): array
     {
-        // ADR-0011 p.11: punctul de pe hartă e parte din sens; sursa și confirmarea nu.
+        // ADR-0011 p.11: punctul de pe hartă e parte din sens; sursa și confirmarea nu. G.3: aria declarată, la fel.
         return ['type' => $subject->getType(), 'title' => $subject->getTitle(), 'description' => $subject->getDescription()]
-            + $subject->storedEstimate() + $subject->storedLocation() + ['pollOptions' => $subject->storedPollOptions()];
+            + $subject->storedEstimate() + $subject->storedLocation() + ['pollOptions' => $subject->storedPollOptions()] + $subject->storedArea();
     }
 
     /** Tipul se blochează după primul vot înregistrat vreodată (ADR-0007 §3); fără excepție pentru admin. */

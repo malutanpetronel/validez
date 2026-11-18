@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Subject\LocationSource;
+use App\Subject\SubjectScope;
 use App\Subject\SubjectType;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -65,6 +66,25 @@ class SubjectRevision
     #[ORM\Column(type: Types::JSON, nullable: true, options: ['jsonb' => true])]
     private ?array $pollOptions = null;
 
+    /**
+     * ADR-0012 p.7 (G.3): instantaneul geografic, imuabil — aria declarată, încadrarea pinului la momentul reviziei
+     * și aria efectivă rezultată. Un import nou de limite nu îl modifică (schimbă doar clasificarea curentă, G.4).
+     */
+    #[ORM\Column(length: 16, nullable: true, enumType: SubjectScope::class)]
+    private ?SubjectScope $scope = null;
+
+    /** @var list<array{code: string, name: string, level: string, county: ?string}>|null */
+    #[ORM\Column(type: Types::JSON, nullable: true, options: ['jsonb' => true])]
+    private ?array $areaUnits = null;
+
+    /** @var array<string, mixed>|null {state, unit: {code, name}|null, candidates, boundarySetId, manual} */
+    #[ORM\Column(type: Types::JSON, nullable: true, options: ['jsonb' => true])]
+    private ?array $pinAdmin = null;
+
+    /** @var list<array<string, mixed>>|null */
+    #[ORM\Column(type: Types::JSON, nullable: true, options: ['jsonb' => true])]
+    private ?array $effectiveArea = null;
+
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: 'created_by', referencedColumnName: 'id', nullable: false, onDelete: 'RESTRICT')]
     private User $createdBy;
@@ -87,6 +107,22 @@ class SubjectRevision
         ['locationLat' => $this->locationLat, 'locationLng' => $this->locationLng] = $subject->storedLocation();
         $this->locationSource = $subject->getLocationSource();
         $this->pollOptions = $subject->storedPollOptions();
+        $this->scope = $subject->getScope();
+        if ($this->scope !== null) {
+            $this->areaUnits = array_map(static fn (AdministrativeUnit $u): array => ['code' => $u->getCode(), 'name' => $u->getDisplayName(),
+                'level' => $u->getLevel()->value, 'county' => $u->getParent()?->getLevel() === \App\Geo\AdministrativeLevel::COUNTY ? $u->getParent()->getDisplayName() : null], $subject->getAreaUnits());
+            $this->effectiveArea = $subject->effectiveArea();
+        }
+        if ($subject->getPinAdminState() !== null) {
+            $unit = $subject->getPinAdminUnit();
+            $this->pinAdmin = [
+                'state' => $subject->getPinAdminState()->value,
+                'unit' => $unit === null ? null : ['code' => $unit->getCode(), 'name' => $unit->getDisplayName()],
+                'candidates' => $subject->getPinAdminCandidates(),
+                'boundarySetId' => $subject->getPinAdminBoundarySet()?->getId()->toBase32(),
+                'manual' => $subject->getPinAdminResolvedAt() !== null,
+            ];
+        }
         $this->createdBy = $createdBy;
         $this->createdAt = new \DateTimeImmutable();
     }
@@ -102,6 +138,15 @@ class SubjectRevision
 
     /** @return list<string>|null */
     public function getPollOptions(): ?array { return $this->type === SubjectType::POLL ? $this->pollOptions : null; }
+
+    /** Aria la această revizie (pentru istoric și diferență). NULL = arie nespecificată. @return array<string, mixed>|null */
+    public function getArea(): ?array
+    {
+        return $this->scope === null ? null : ['scope' => $this->scope->value, 'units' => $this->areaUnits ?? [], 'effective' => $this->effectiveArea ?? []];
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getPinAdmin(): ?array { return $this->pinAdmin; }
 
     public function belongsTo(CivicSubject $subject): bool
     {

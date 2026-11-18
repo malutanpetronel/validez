@@ -90,7 +90,7 @@ final class SubjectLocationTest extends WebTestCase
     /** @return array<string, mixed> subiectul creat */
     private function create(string $who, ?array $location = null): array
     {
-        $body = ['node' => $this->node->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Groapă', 'description' => 'Pe DN1'];
+        $body = ['scope' => 'NATIONAL', 'node' => $this->node->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Groapă', 'description' => 'Pe DN1'];
         if ($location !== null) {
             $body['location'] = $location;
         }
@@ -233,7 +233,7 @@ final class SubjectLocationTest extends WebTestCase
             ['lng' => 23],
             ['lat' => 46, 'lng' => 23, 'source' => 'GPS'],
         ] as $location) {
-            $this->call('POST', '/api/civic_subjects', ['node' => $this->node->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Groapă', 'description' => 'd', 'location' => $location], 'admin', 'application/ld+json');
+            $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->node->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Groapă', 'description' => 'd', 'location' => $location], 'admin', 'application/ld+json');
             self::assertSame(422, $this->code(), json_encode($location));
         }
         self::assertSame(0, (int) $this->db->fetchOne('SELECT count(*) FROM civic_subject'));

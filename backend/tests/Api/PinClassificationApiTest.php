@@ -107,7 +107,7 @@ final class PinClassificationApiTest extends WebTestCase
     /** @return array<string, mixed> */
     private function create(string $who, array $location): array
     {
-        $r = $this->call('POST', '/api/civic_subjects', ['node' => $this->node->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Groapă', 'description' => 'd', 'location' => $location], $who, 'application/ld+json');
+        $r = $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->node->getId()->toBase32(), 'type' => 'ISSUE', 'title' => 'Groapă', 'description' => 'd', 'location' => $location], $who, 'application/ld+json');
         self::assertSame(201, $this->code(), json_encode($r));
 
         return $r;

@@ -55,6 +55,7 @@ test('admin: fotografia completează textul, pinul din EXIF, categoria la cerere
 
     fireEvent.click(screen.getByRole('button', {name: 'Mută aici'}));
     expect(screen.getByText('Drumuri > Gropi', {selector: 'strong'})).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', {name: 'Local'}));
     fireEvent.click(screen.getByRole('button', {name: 'Salvează'}));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
 

@@ -14,6 +14,7 @@ use App\Subject\SubjectStage;
 use App\Subject\SubjectType;
 use App\Subject\CostEstimate;
 use App\Subject\PollDefinition;
+use App\Subject\SubjectArea;
 use App\Subject\SubjectLocation;
 use App\Subject\SubjectVisibility;
 use App\Subject\PublishingPolicy;
@@ -43,6 +44,7 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
         private readonly SubjectRevisions $revisions,
         private readonly SlugRegistry $slugs,
         private readonly SubjectLocation $location,
+        private readonly SubjectArea $area,
     ) {
     }
 
@@ -87,7 +89,8 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
             // An author under moderation cannot replace already approved public content unchecked.
             $contentChanged = $data->title !== null || $data->description !== null || $data->type !== null
                 || array_intersect(['costEstimate', 'costCurrency', 'costEstimateScope'], array_keys(get_object_vars($data))) !== []
-                || SubjectLocation::present($data); // ADR-0011 p.12: mutarea pinului e editare de revizie
+                || SubjectLocation::present($data) // ADR-0011 p.12: mutarea pinului e editare de revizie
+                || array_intersect(['scope', 'areaUnits'], array_keys(get_object_vars($data))) !== []; // G.3: aria, la fel
             if ($contentChanged && !$isAdmin && !$this->policy->canPublish($subject->getAuthor()) && $subject->getVisibility() === SubjectVisibility::PUBLISHED) {
                 $subject->moderate(null, SubjectVisibility::PENDING);
             }
@@ -95,6 +98,8 @@ final class CivicSubjectUpdateProcessor implements ProcessorInterface
             if (SubjectLocation::present($data)) {
                 $this->location->apply($subject, $data->location);
             }
+            // G.3: după pin; validează contractul și când doar pinul a fost scos.
+            $this->area->apply($subject, get_object_vars($data), false);
             if ($data->locationConfirmed !== null) {
                 if (!$subject->hasLocation()) {
                     throw new UnprocessableEntityHttpException('Subiectul nu are localizare de confirmat.');

@@ -89,7 +89,7 @@ final class VoteApiTest extends WebTestCase
 
     private function subject(string $type = 'ISSUE'): string
     {
-        $r = $this->call('POST', '/api/civic_subjects', ['node' => $this->node->getId()->toBase32(), 'type' => $type, 'title' => 'Groapă', 'description' => 'Pe DN1'], 'admin', 'application/ld+json');
+        $r = $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->node->getId()->toBase32(), 'type' => $type, 'title' => 'Groapă', 'description' => 'Pe DN1'], 'admin', 'application/ld+json');
         self::assertSame(201, $this->code());
 
         return $r['id'];

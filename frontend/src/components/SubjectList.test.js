@@ -81,12 +81,13 @@ test('utilizatorul creeaza un subiect in nodul selectat; lista se reincarca', as
     expect(within(dialog).getByText('Drumuri')).toBeInTheDocument();
     fireEvent.change(within(dialog).getByLabelText(/Titlu/), {target: {value: 'Trotuar spart'}});
     fireEvent.change(within(dialog).getByLabelText(/Descriere/), {target: {value: 'Lângă școală.'}});
+    fireEvent.click(within(dialog).getByRole('radio', {name: 'Național'}));
     const inainte = listUrls().length;
     fireEvent.click(within(dialog).getByRole('button', {name: 'Salvează'}));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     const post = global.fetch.mock.calls.find(([, o]) => o?.method === 'POST');
-    expect(JSON.parse(post[1].body)).toEqual({node: '01NODE', type: 'ISSUE', title: 'Trotuar spart', description: 'Lângă școală.'});
+    expect(JSON.parse(post[1].body)).toEqual({node: '01NODE', type: 'ISSUE', title: 'Trotuar spart', description: 'Lângă școală.', scope: 'NATIONAL', areaUnits: []});
     await waitFor(() => expect(listUrls().length).toBeGreaterThan(inainte));
 });
 

@@ -119,7 +119,7 @@ final class SeoShellController
         ] : null;
 
         return $this->shell->render([
-            'title' => $subject->getTitle(),
+            'title' => self::titleWithPlace($subject),
             'description' => $description,
             'path' => $canonical,
             'ogType' => 'article',
@@ -136,6 +136,7 @@ final class SeoShellController
                     'dateModified' => $subject->getUpdatedAt()->format(\DATE_ATOM),
                     'mainEntityOfPage' => $this->shell->url($canonical),
                     'publisher' => ['@type' => 'Organization', 'name' => 'VALIDEZ', 'url' => $this->shell->url('/')],
+                    ...self::spatialCoverage($subject),
                 ],
             ],
         ], $this->twig->render('seo/subject.html.twig', [
@@ -177,5 +178,45 @@ final class SeoShellController
             $this->twig->render('seo/not_found.html.twig'),
             Response::HTTP_NOT_FOUND,
         );
+    }
+
+    /** G.3: denumirea SIRUTA (majuscule) în formă de citit, scurtă („MUNICIPIUL DEJ” → „Dej”, „CLUJ-NAPOCA” → „Cluj-Napoca”). */
+    private static function shortPlace(string $name): string
+    {
+        return self::pretty(preg_replace('/^(Municipiul|Orașul|Oraș|Comuna|Județul|Sectorul)\s+/iu', '', $name) ?? $name);
+    }
+
+    private static function pretty(string $name): string
+    {
+        return mb_convert_case(mb_strtolower($name), \MB_CASE_TITLE);
+    }
+
+    /** G.3: „Titlu — Dej” când subiectul LOCAL/COUNTY are exact o unitate în aria efectivă și titlul n-o conține deja. */
+    private static function titleWithPlace(CivicSubject $subject): string
+    {
+        $title = $subject->getTitle();
+        $area = array_values(array_filter($subject->effectiveArea(), static fn (array $u) => $u['level'] !== 'COUNTRY'));
+        if (\count($area) !== 1) {
+            return $title;
+        }
+        $place = self::shortPlace($area[0]['name']);
+        if ($place === '' || mb_stripos($title, $place) !== false) {
+            return $title;
+        }
+
+        return $title.' — '.($area[0]['level'] === 'COUNTY' ? 'județul '.$place : $place);
+    }
+
+    /** G.3: aria efectivă în JSON-LD (schema.org spatialCoverage). @return array<string, mixed> */
+    private static function spatialCoverage(CivicSubject $subject): array
+    {
+        $places = array_map(static fn (array $u): array => match ($u['level']) {
+            'COUNTRY' => ['@type' => 'Country', 'name' => $u['name']],
+            'COUNTY' => ['@type' => 'AdministrativeArea', 'name' => 'Județul '.self::shortPlace($u['name']), 'containedInPlace' => ['@type' => 'Country', 'name' => 'România']],
+            default => ['@type' => 'AdministrativeArea', 'name' => self::pretty($u['name']),
+                ...($u['county'] === null ? [] : ['containedInPlace' => ['@type' => 'AdministrativeArea', 'name' => 'Județul '.self::shortPlace($u['county'])]])],
+        }, $subject->effectiveArea());
+
+        return $places === [] ? [] : ['spatialCoverage' => \count($places) === 1 ? $places[0] : $places];
     }
 }

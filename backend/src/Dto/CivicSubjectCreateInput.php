@@ -37,6 +37,10 @@ final class CivicSubjectCreateInput
     public ?array $pollOptions;
     public ?string $pollClosesAt;
 
+    /** ADR-0012 p.5 (G.3): LOCAL | COUNTY | NATIONAL, obligatoriu; unitățile declarate = coduri SIRUTA. Validat în SubjectArea. */
+    public ?string $scope;
+    public ?array $areaUnits;
+
     /** @return list<string> */
     public static function types(): array
     {

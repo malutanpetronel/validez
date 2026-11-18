@@ -78,7 +78,7 @@ final class SubjectRevisionTest extends WebTestCase
 
     private function create(string $who, string $type, array $extra = []): string
     {
-        $r = $this->call('POST', '/api/civic_subjects', ['node' => $this->node->getId()->toBase32(), 'type' => $type, 'title' => 'Titlu', 'description' => 'Descriere'] + $extra, $who);
+        $r = $this->call('POST', '/api/civic_subjects', ['scope' => 'NATIONAL', 'node' => $this->node->getId()->toBase32(), 'type' => $type, 'title' => 'Titlu', 'description' => 'Descriere'] + $extra, $who);
         self::assertSame(201, $this->code(), json_encode($r));
 
         return $r['id'];

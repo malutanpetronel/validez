@@ -43,6 +43,10 @@ final class CivicSubjectUpdateInput
     public ?array $pollOptions;
     public ?string $pollClosesAt;
 
+    /** ADR-0012 p.5 (G.3): lipsă = neschimbat; schimbarea face revizie nouă (reconfirmarea voturilor). */
+    public ?string $scope;
+    public ?array $areaUnits;
+
     /** @return list<string> */
     public static function stages(): array
     {

@@ -18,6 +18,7 @@ const fillProposal = () => {
     fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', {name: 'Propunere'}));
     fireEvent.change(screen.getByLabelText(/Titlu/), {target: {value: 'Parcare inteligentă'}});
     fireEvent.change(screen.getByLabelText(/Descriere/), {target: {value: 'Descriere publică'}});
+    fireEvent.click(screen.getByRole('radio', {name: 'Național'}));
 };
 beforeEach(() => {
     window.localStorage.clear();
@@ -62,7 +63,8 @@ test('nota se salvează separat; reîncercarea după eșec nu creează un duplic
     login();
     let attempts = 0;
     global.fetch = routedFetch([
-        [(url, opts) => opts.method === 'POST', (url, opts) => res(proposal(JSON.parse(opts.body)))],
+        // Ca serverul: aria salvată revine ca `area` (G.3), deci reîncercarea nu retrimite subiectul.
+        [(url, opts) => opts.method === 'POST', (url, opts) => { const b = JSON.parse(opts.body); return res(proposal({...b, area: {scope: b.scope, units: [], effective: []}})); }],
         [(url, opts) => opts.method === 'PUT', (url, opts) => ++attempts === 1 ? res({detail: 'Eroare temporară'}, 503) : res(JSON.parse(opts.body))],
     ]);
     const saved = jest.fn();
