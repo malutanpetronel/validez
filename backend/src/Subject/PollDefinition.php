@@ -68,9 +68,19 @@ final class PollDefinition
      */
     public static function assertUnlockedContent(CivicSubject $subject, array $before): void
     {
-        if ($subject->isPoll() && $subject->isTypeLocked() && SubjectRevisions::snapshot($subject) !== $before) {
-            throw new ConflictHttpException('Întrebarea și variantele sondajului nu se mai pot schimba după primul vot. Închide sondajul și creează altul.');
+        if (!$subject->isPoll() || !$subject->isTypeLocked()) {
+            return;
         }
+        $after = SubjectRevisions::comparable(SubjectRevisions::snapshot($subject), $before);
+        $changed = array_keys(array_filter($after, static fn ($v, $k) => ($before[$k] ?? null) !== $v, \ARRAY_FILTER_USE_BOTH));
+        if ($changed === []) {
+            return;
+        }
+        // Mesajul spune exact ce e blocat. Pinul sondajului nu e blocat (varianta 2), deci nu apare aici.
+        if (array_diff($changed, ['scope', 'areaUnits']) === []) {
+            throw new ConflictHttpException('Aria unui sondaj nu se mai poate schimba după primul vot: face parte din versiunea votată. (O arie nespecificată se poate completa o singură dată.)');
+        }
+        throw new ConflictHttpException('Întrebarea și variantele sondajului nu se mai pot schimba după primul vot. Închide sondajul și creează altul.');
     }
 
     /** @return list<string> */

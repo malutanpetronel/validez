@@ -207,6 +207,10 @@ class CivicSubject
     #[ORM\InverseJoinColumn(name: 'unit_id', referencedColumnName: 'id', onDelete: 'RESTRICT')]
     private Collection $areaUnits;
 
+    /** Varianta A (18.11.2026): momentul primei completări a ariei unui subiect vechi, fără revizie nouă. */
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $areaCompletedAt = null;
+
     public function __construct(TreeNode $node, User $author, SubjectType $type, string $title, string $description)
     {
         $this->id = new Ulid();
@@ -484,6 +488,8 @@ class CivicSubject
 
     public function getScope(): ?SubjectScope { return $this->scope; }
 
+    public function markAreaCompleted(): void { $this->areaCompletedAt = new \DateTimeImmutable(); }
+
     /** @return list<AdministrativeUnit> unitățile declarate, ordonate după cod (instantaneu stabil) */
     public function getAreaUnits(): array
     {
@@ -549,7 +555,8 @@ class CivicSubject
         }
         $effective = $this->effectiveArea();
 
-        return ['scope' => $this->scope->value, 'units' => array_values(array_filter($effective, static fn (array $u) => !$u['fromPin'] && $u['level'] !== 'COUNTRY')), 'effective' => $effective];
+        return ['scope' => $this->scope->value, 'units' => array_values(array_filter($effective, static fn (array $u) => !$u['fromPin'] && $u['level'] !== 'COUNTRY')), 'effective' => $effective,
+            'completedAt' => $this->areaCompletedAt?->format(\DATE_ATOM)];
     }
 
     /**

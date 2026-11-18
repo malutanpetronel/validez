@@ -272,7 +272,7 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                     {!proposal && subject?.type === 'PROPOSAL' && <Alert severity="info">Nota și estimarea sunt păstrate, dar devin indisponibile pentru acest tip de subiect.</Alert>}
                     <LocationPicker value={location} disabled={saving}
                                     onChange={(next) => { if (!samePoint(next, location)) setLocationConfirmed(false); setLocation(next); }}/>
-                    {editing && locationChanged && initialLocation && subject.typeLocked && (
+                    {editing && locationChanged && initialLocation && subject.typeLocked && subject.type !== 'POLL' && (
                         <Alert severity="warning">Mutarea sau scoaterea pinului creează o revizie nouă: cei care au votat vor fi rugați să-și reconfirme votul.</Alert>
                     )}
                     {isAdmin && editing && location && (
@@ -280,8 +280,12 @@ export default function SubjectForm({node, subject, onClose, onSaved}) {
                                           label="Loc confirmat de administrator (nu creează revizie)"/>
                     )}
                     <AreaPicker value={area} onChange={setArea} pinUnit={pinUnit} disabled={saving} legacy={editing && !subject.area}/>
-                    {editing && areaChanged && subject.typeLocked && (
+                    {/* Prima completare a unei arii nespecificate nu face revizie (decizie 18.11.2026, varianta A). */}
+                    {editing && areaChanged && subject.typeLocked && subject.area && (
                         <Alert severity="warning">Schimbarea ariei creează o revizie nouă: cei care au votat vor fi rugați să-și reconfirme votul.</Alert>
+                    )}
+                    {editing && areaChanged && !subject.area && area.scope && (
+                        <Typography variant="body2" color="text.secondary">Completarea ariei nu creează o revizie nouă și nu cere reconfirmarea voturilor.</Typography>
                     )}
                     {isAdmin && editing && (
                         <Stack direction={{xs: 'column', sm: 'row'}} spacing={2}>

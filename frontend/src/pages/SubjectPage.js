@@ -185,6 +185,7 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
                         {subject.area && (
                             <Typography variant="body2" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>
                                 Arie: <Box component="span" sx={{color: 'primary.main'}}>{areaText(subject.area)}</Box>
+                                {subject.area.completedAt && <> · completată ulterior, pe {formatDate(subject.area.completedAt)}</>}
                             </Typography>
                         )}
                         {subject.location && (

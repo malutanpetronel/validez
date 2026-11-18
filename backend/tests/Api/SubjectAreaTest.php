@@ -199,7 +199,31 @@ final class SubjectAreaTest extends WebTestCase
         $this->patch($id, ['areaUnits' => ['54975']]);
         self::assertSame(422, $this->code(), 'unități fără arie');
         $r = $this->patch($id, ['scope' => 'COUNTY', 'areaUnits' => ['127']]);
-        self::assertSame([200, 'COUNTY'], [$this->code(), $r['area']['scope']]);
+        self::assertSame([200, 'COUNTY', 2], [$this->code(), $r['area']['scope'], $r['revisionNumber']], 'prima completare nu face revizie (varianta A; 2 = editarea titlului)');
+        self::assertNotNull($r['area']['completedAt']);
+        $r = $this->patch($id, ['scope' => 'NATIONAL']);
+        self::assertSame([200, 3], [$this->code(), $r['revisionNumber']], 'schimbarea ulterioară face revizie');
+    }
+
+    public function testSondajulCuVoturiPrimesteAriaODataIarPinulSeScoateFaraRevizie(): void
+    {
+        $r = $this->create(['scope' => 'NATIONAL', 'type' => 'POLL', 'title' => 'Ce alegi?', 'pollOptions' => ['A', 'B'],
+            'pollClosesAt' => (new \DateTimeImmutable('+7 days'))->format(\DATE_ATOM), 'location' => $this->point(580500, 325500)]);
+        self::assertSame(201, $this->code(), json_encode($r));
+        $id = $r['id'];
+        $this->db->executeStatement('UPDATE civic_subject SET scope = NULL, first_voted_at = now()');
+        $this->db->executeStatement('DELETE FROM subject_administrative_unit');
+
+        $r = $this->patch($id, ['scope' => 'COUNTY', 'areaUnits' => ['127']]);
+        self::assertSame([200, 1], [$this->code(), $r['revisionNumber']], 'completarea ariei e permisă și la sondajul votat');
+        $this->patch($id, ['scope' => 'NATIONAL']);
+        self::assertSame(409, $this->code(), 'a doua schimbare a ariei e blocată');
+        $r = $this->patch($id, ['location' => null]);
+        self::assertSame([200, null, 1], [$this->code(), $r['location'], $r['revisionNumber']], 'pinul sondajului se scoate fără revizie (varianta 2)');
+        $this->patch($id, ['scope' => 'NATIONAL']);
+        self::assertStringContainsString('Aria unui sondaj', json_decode((string) $this->client->getResponse()->getContent(), true)['detail'] ?? '');
+        $r = $this->patch($id, ['pollOptions' => ['A', 'C']]);
+        self::assertStringContainsString('Întrebarea și variantele', $r['detail'] ?? '');
     }
 
     public function testCautareaUnitatilor(): void

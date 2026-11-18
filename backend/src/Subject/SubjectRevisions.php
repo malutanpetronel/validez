@@ -46,6 +46,37 @@ final class SubjectRevisions
             + $subject->storedEstimate() + $subject->storedLocation() + ['pollOptions' => $subject->storedPollOptions()] + $subject->storedArea();
     }
 
+    /**
+     * Instantaneul pentru comparare. Decizie Petro (18.11.2026, varianta A): prima completare a ariei unui subiect
+     * vechi (scope NULL → setat) e o clasificare, nu o schimbare de sens — nu face revizie, nu cere reconfirmarea
+     * voturilor și e permisă și la sondajele cu voturi. Orice schimbare ulterioară a ariei face revizie.
+     *
+     * @param array<string, mixed> $snapshot
+     * @param array<string, mixed> $before
+     * @return array<string, mixed>
+     */
+    public static function comparable(array $snapshot, array $before): array
+    {
+        if (($before['scope'] ?? null) === null) {
+            $snapshot = array_diff_key($snapshot, ['scope' => 0, 'areaUnits' => 0]);
+        }
+        // Decizie Petro (18.11.2026, varianta 2): la sondaje pinul arată doar unde s-a făcut fotografia, nu sensul
+        // întrebării — se scoate sau se mută oricând, fără revizie nouă și fără reconfirmarea voturilor.
+        if (($before['type'] ?? null) === SubjectType::POLL) {
+            $snapshot = array_diff_key($snapshot, ['locationLat' => 0, 'locationLng' => 0]);
+        }
+
+        return $snapshot;
+    }
+
+    /** Prima completare a ariei: momentul se notează pe subiect (afișat în istoric), fără revizie. */
+    public static function noteAreaCompletion(CivicSubject $subject, array $before): void
+    {
+        if (($before['scope'] ?? null) === null && $subject->getScope() !== null) {
+            $subject->markAreaCompleted();
+        }
+    }
+
     /** Tipul se blochează după primul vot înregistrat vreodată (ADR-0007 §3); fără excepție pentru admin. */
     public static function assertTypeChangeAllowed(CivicSubject $subject, ?SubjectType $requested): void
     {
@@ -57,7 +88,8 @@ final class SubjectRevisions
     /** @param array<string, mixed> $before instantaneul luat după lock, înaintea modificărilor */
     public function recordIfChanged(CivicSubject $subject, array $before, User $editor): ?SubjectRevision
     {
-        if (self::snapshot($subject) === $before) {
+        self::noteAreaCompletion($subject, $before);
+        if (self::comparable(self::snapshot($subject), $before) === self::comparable($before, $before)) {
             return null;
         }
         $revision = new SubjectRevision($subject, $subject->advanceRevision(), $editor);

@@ -11,7 +11,7 @@ use Doctrine\Migrations\AbstractMigration;
  * G.3 (ADR-0012 p.4–5, p.7): aria declarată a subiectului (`scope` + unitățile declarate) și instantaneul geografic
  * al reviziei. Subiectele și reviziile existente rămân cu scope NULL („arie nespecificată”), vizibile și votabile.
  */
-final class Version20261118191351 extends AbstractMigration
+final class Version20261118210000 extends AbstractMigration
 {
     public function getDescription(): string
     {
@@ -26,6 +26,7 @@ final class Version20261118191351 extends AbstractMigration
         $this->addSql('ALTER TABLE subject_administrative_unit ADD CONSTRAINT FK_EB047D2923EDC87 FOREIGN KEY (subject_id) REFERENCES civic_subject (id) ON DELETE CASCADE NOT DEFERRABLE');
         $this->addSql('ALTER TABLE subject_administrative_unit ADD CONSTRAINT FK_EB047D29F8BD700D FOREIGN KEY (unit_id) REFERENCES administrative_unit (id) ON DELETE RESTRICT NOT DEFERRABLE');
         $this->addSql('ALTER TABLE civic_subject ADD scope VARCHAR(16) DEFAULT NULL');
+        $this->addSql('ALTER TABLE civic_subject ADD area_completed_at TIMESTAMP(0) WITH TIME ZONE DEFAULT NULL');
         $this->addSql('ALTER TABLE subject_revision ADD scope VARCHAR(16) DEFAULT NULL');
         $this->addSql('ALTER TABLE subject_revision ADD area_units JSONB DEFAULT NULL');
         $this->addSql('ALTER TABLE subject_revision ADD pin_admin JSONB DEFAULT NULL');
@@ -42,6 +43,7 @@ final class Version20261118191351 extends AbstractMigration
         $this->addSql('ALTER TABLE subject_administrative_unit DROP CONSTRAINT FK_EB047D29F8BD700D');
         $this->addSql('DROP TABLE subject_administrative_unit');
         $this->addSql('ALTER TABLE civic_subject DROP scope');
+        $this->addSql('ALTER TABLE civic_subject DROP area_completed_at');
         $this->addSql('ALTER TABLE subject_revision DROP scope');
         $this->addSql('ALTER TABLE subject_revision DROP area_units');
         $this->addSql('ALTER TABLE subject_revision DROP pin_admin');
