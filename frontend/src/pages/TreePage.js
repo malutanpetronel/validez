@@ -603,6 +603,7 @@ export default function TreePage() {
                                      '& .MuiSvgIcon-root:not(.MuiRating-icon .MuiSvgIcon-root)': {color: 'inherit'},
                                      '& .MuiSvgIcon-root[data-hidden="true"]': {color: 'error.main'},
                                      '&:hover': {bgcolor: 'primary.dark'},
+                                     '& .tree-count': {bgcolor: 'primary.contrastText', color: 'primary.main'},
                                  },
                              }}>
                             <Tree
@@ -621,7 +622,11 @@ export default function TreePage() {
                                     <Box component="span" sx={{display: 'flex', flexDirection: 'column', gap: 0.25, minWidth: 0}}>
                                     <Typography component="span" variant="body2" sx={{fontWeight: !node.kind && !node.parentId ? 650 : 400,
                                         color: node.kind === 'all' || node.kind === 'add' ? 'primary.main' : 'inherit', whiteSpace: 'normal'}}>
-                                        {node.title}{!node.kind && node.subjectCount > 0 && <Tooltip title="Total subiecte în această ramură, inclusiv subnivelurile"><Box component="span" sx={{ml: 0.75, color: 'text.secondary', fontWeight: 500}}>· {node.subjectCount}</Box></Tooltip>}
+                                        {node.title}{!node.kind && node.subjectCount > 0 && <Tooltip title="Total subiecte în această ramură, inclusiv subnivelurile"><Box component="span" className="tree-count" sx={{
+                                            ml: 0.75, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', verticalAlign: 'middle',
+                                            minWidth: 20, height: 20, px: 0.5, borderRadius: 10, boxSizing: 'border-box',
+                                            bgcolor: 'primary.main', color: 'primary.contrastText',
+                                            fontSize: 11, fontWeight: 700, lineHeight: 1}}>{node.subjectCount > 99 ? '99+' : node.subjectCount}</Box></Tooltip>}
                                     </Typography>
                                     {node.kind === 'subject' && <TreeVoteSummary subjectId={node.subject.id}/>}
                                     </Box>
