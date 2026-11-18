@@ -276,6 +276,9 @@ Regulă: o funcționalitate nouă care atinge date personale, plăți sau tracki
 - [ ] **L.2b** — bifa „Accept Termenii” la înregistrare, cu versiunea acceptată salvată (FE + BE), ca la acordul de vot.
 - [ ] **L.3** — decizie: versiune nouă a acordului de vot din cauza sondajelor (cere acordul din nou) sau doar completarea textului.
 - [ ] **L.4** — textele L.1/L.2 trimise la verificarea juridică de specialitate.
+- [x] **L.5** (18.11.2026) — `PrivacyPage`: secțiunea „Ștergerea contului” la `/privacy?section=stergere-cont` (linkul cerut de Google Play): cerere pe email de pe adresa contului, rezolvare în cel mult 30 de zile; se șterg contul, acordul și voturile, istoricul privat, notele, propunerile de categorii neanalizate; contribuțiile publicate rămân cu autorul „Cont șters” (decizie Petro 18.11.2026); ștergerea se reaplică după restaurarea unei copii. Test în `PrivacyPage.test.js`.
+- [ ] **L.5b** — procedura din spatele textului L.5, înaintea primei cereri reale: comandă BE `app:user:erase <email>` (anonimizează autorul contribuțiilor, șterge contul și datele private, retrage acordul de vot ca în ADR-0007) cu înregistrare în registrul de ștergeri, ca să se reaplice după restore (`app:erasures:reapply`); teste.
+- [ ] **L.5c** — opțional, pentru Production pe Play: butonul „Șterge contul” în aplicație, peste aceeași procedură.
 
 ## Step T — filtru pe tipul subiectelor (16.11.2026)
 

@@ -9,8 +9,9 @@
     <access origin="*" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
-    <preference name="android-targetSdkVersion" value="34" />
-    <preference name="android-minSdkVersion" value="23" />
+    <preference name="android-targetSdkVersion" value="36" />
+    <preference name="android-compileSdkVersion" value="36" />
+    <preference name="android-minSdkVersion" value="24" />
     <!-- Scheme http -> origin http://localhost in WebView (inclus in CORS_ALLOW_ORIGIN pe BE) -->
     <preference name="Scheme" value="http" />
     <!-- Ecran de pornire (Android 12+ SplashScreen API, cordova-android 12): sigla rotundă pe fundal alb.

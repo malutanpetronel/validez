@@ -1,6 +1,8 @@
 # Generate de Cordova
 /platforms/
 /plugins/
+# Semnarea release-ului Android (Deploy.md I.2): calea keystore-ului de pe laptop; repository-ul e public.
+/build.json
 # www/ = copia build-ului React pentru Cordova (npm run build); pastram doar folderul
 /www/*
 !/www/.gitkeep

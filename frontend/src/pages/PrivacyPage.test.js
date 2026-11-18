@@ -25,3 +25,14 @@ test('acoperă fotografiile, localizarea cu OpenStreetMap și sondajele', () => 
     expect(screen.getByText(/OpenStreetMap Foundation, care primesc adresa IP/)).toBeInTheDocument();
     expect(screen.getByRole('region', {name: 'Voturi'})).toHaveTextContent('La un sondaj alegi o singură variantă');
 });
+
+test('ștergerea contului: link direct pentru Google Play, termen, contribuțiile rămân ca „Cont șters”', () => {
+    const scroll = jest.fn();
+    Element.prototype.scrollIntoView = scroll;
+    render(<MemoryRouter initialEntries={['/privacy?section=stergere-cont']}><PrivacyPage/></MemoryRouter>);
+    const heading = screen.getByRole('heading', {name: 'Ștergerea contului'});
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(scroll.mock.instances[0]).toContainElement(heading);
+    expect(screen.getByText(/rezolvăm cererea în cel mult 30 de zile/)).toHaveTextContent('autorul apare ca „Cont șters”');
+    expect(screen.getByRole('heading', {name: 'Sugestii AI din fotografii'})).toBeInTheDocument();
+});
