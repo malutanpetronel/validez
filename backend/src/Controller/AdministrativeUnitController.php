@@ -18,6 +18,8 @@ use Symfony\Component\Routing\Attribute\Route;
 final class AdministrativeUnitController extends AbstractController
 {
     private const LIMIT = 20;
+    /** Toate cele 42 de județe (inclusiv București) încap în listă, ca selectorul să le arate fără căutare. */
+    private const COUNTY_LIMIT = 50;
     private const FOLD = "translate(lower(u.display_name), 'ăâîșşțţ', 'aaissttt')";
 
     #[Route('/api/administrative_units', methods: ['GET'])]
@@ -36,8 +38,8 @@ final class AdministrativeUnitController extends AbstractController
             'SELECT u.code, u.display_name AS name, u.level, p.display_name AS county
                FROM administrative_unit u LEFT JOIN administrative_unit p ON p.id = u.parent_id
               WHERE u.level = :level AND u.retired_at IS NULL AND '.self::FOLD.' LIKE :like
-              ORDER BY ('.self::FOLD.' LIKE :start OR '.self::FOLD.' LIKE :word) DESC, length(u.display_name), u.display_name
-              LIMIT '.self::LIMIT,
+              ORDER BY ('.self::FOLD.' LIKE :start OR '.self::FOLD.' LIKE :word) DESC, '.($needle === '' ? '' : 'length(u.display_name), ').self::FOLD.'
+              LIMIT '.($level === 'COUNTY' ? self::COUNTY_LIMIT : self::LIMIT),
             ['level' => $level, 'like' => "%$needle%", 'start' => "$needle%", 'word' => "% $needle%"],
         );
         $items = array_map(static fn (array $r): array => ['code' => $r['code'], 'name' => $r['name'], 'level' => $r['level'],

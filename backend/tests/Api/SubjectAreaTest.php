@@ -211,6 +211,17 @@ final class SubjectAreaTest extends WebTestCase
         self::assertSame(['54975', '55008'], array_column($items, 'code'), 'fără unitatea retrasă');
         $items = $this->call('GET', '/api/administrative_units?level=COUNTY&q=TEST', null, false)['items'];
         self::assertSame([['127', null]], array_map(static fn ($u) => [$u['code'], $u['county']], $items));
+        // Fără text: toate județele, alfabetic (nu doar primele 20 după lungimea numelui).
+        $ro = $this->db->fetchOne("SELECT id FROM administrative_unit WHERE level = 'COUNTRY'");
+        foreach (range(1, 25) as $i) {
+            $this->db->executeStatement("INSERT INTO administrative_unit (id, code, siruta, level, parent_id, path, official_name, display_name, external_ids, created_at, updated_at)
+                SELECT gen_random_uuid(), :c, :s, 'COUNTY', id, path || :seg, :n, :n, '{}', now(), now() FROM administrative_unit WHERE id = :ro",
+                ['c' => (string) (900 + $i), 's' => 900 + $i, 'seg' => 'c'.$i, 'n' => \sprintf('JUDEȚUL Z%02d', $i), 'ro' => $ro]);
+        }
+        $this->db->executeStatement("UPDATE administrative_unit SET display_name = 'JUDEȚUL BISTRIȚA-NĂSĂUD-FOARTE-LUNG' WHERE code = '127'");
+        $names = array_column($this->call('GET', '/api/administrative_units?level=COUNTY&q=', null, false)['items'], 'name');
+        self::assertCount(26, $names);
+        self::assertSame('JUDEȚUL BISTRIȚA-NĂSĂUD-FOARTE-LUNG', $names[0]);
         $this->call('GET', '/api/administrative_units?level=COUNTRY', null, false);
         self::assertSame(400, $this->code());
     }
