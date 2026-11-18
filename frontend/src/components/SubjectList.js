@@ -5,6 +5,7 @@ import {
     Paper, Select, Skeleton, Stack, Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import ScheduleIcon from '@mui/icons-material/Schedule';
 import {alpha} from '@mui/material/styles';
 import {BRAND} from '../theme';
 import {useAuth} from '../auth/AuthContext';
@@ -44,7 +45,7 @@ function SubjectCover({subject}) {
  * Cu `type` + `onTypeChange` tipul vine din afară (Step T: filtrul paginii principale / `?tip=`); fără, e local.
  */
 export default function SubjectList({node, scope = '', navigationState, perPage = PER_PAGE, page: controlledPage, onPageChange, footer, showFilters = true,
-    type: controlledType, onTypeChange}) {
+    type: controlledType, onTypeChange, showHeading = true}) {
     const {user} = useAuth();
     const location = useLocation();
     const [filters, setFilters] = useState({type: '', stage: ''});
@@ -99,9 +100,9 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
             <Stack spacing={1.5} sx={{mb: 2, pb: 2, borderBottom: 1, borderColor: 'divider'}}>
                 <Box ref={headingRef} sx={{minWidth: 0, scrollMarginTop: 16}}>
                     {node && <Typography variant="overline" color="text.secondary">Subiectele categoriei</Typography>}
-                    <Typography variant="h6" component="h2" sx={{fontWeight: 700, lineHeight: 1.35, overflowWrap: 'anywhere'}}>
+                    {showHeading && <Typography variant="h6" component="h2" sx={{fontWeight: 700, lineHeight: 1.35, overflowWrap: 'anywhere'}}>
                         {node ? node.name : recentTitle(activeType)}
-                    </Typography>
+                    </Typography>}
                 </Box>
                 <Stack direction="row" spacing={1} sx={{alignItems: 'center', justifyContent: 'space-between'}}>
                     <Typography variant="body2" color="text.secondary" aria-live="polite">
@@ -165,16 +166,21 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                                 <Typography component="span" variant="caption" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>
                                     {scope === 'direct' ? '' : `în ${s.nodeName} · `}{s.authorName} · {formatDate(s.createdAt)}
                                 </Typography>
-                            </Stack>
-                            {/* Coperta rămâne decorativă pentru cititoarele de ecran; textul linkului conține informațiile utile. */}
-                            <SubjectCover subject={s}/>
-                            <Stack spacing={1} sx={{px: TEXT_PX, minWidth: 0}}>
-                                <Stack direction="row" spacing={0.75} useFlexGap sx={{flexWrap: 'wrap'}}>
+                                <Stack direction="row" spacing={0.75} useFlexGap sx={{flexWrap: 'wrap', pt: 0.75}}>
                                     <Chip size="small" label={TYPE_LABELS[s.type] ?? s.type} variant="outlined" sx={CHIP}/>
                                     <Chip size="small" label={STAGE_LABELS[s.stage] ?? s.stage} color={STAGE_COLORS[s.stage] ?? 'default'} sx={CHIP}/>
                                     {s.visibility === 'HIDDEN' && <Chip size="small" label="Ascuns" color="error" variant="outlined" sx={CHIP}/>}
                                     {s.visibility === 'PENDING' && <Chip size="small" label="În așteptarea aprobării" color="warning" variant="outlined" sx={CHIP}/>}
                                 </Stack>
+                                {s.pollClosesAt && <Typography component="span" variant="caption" color="text.secondary"
+                                    sx={{display: 'flex', alignItems: 'center', gap: 0.5, pt: 0.5, overflowWrap: 'anywhere'}}>
+                                    <ScheduleIcon sx={{fontSize: '1rem'}} aria-hidden/>
+                                    {s.pollClosed ? `Încheiat pe ${formatDate(s.pollClosesAt)}` : `Se încheie pe ${formatDate(s.pollClosesAt)}`}
+                                </Typography>}
+                            </Stack>
+                            {/* Coperta rămâne decorativă pentru cititoarele de ecran; textul linkului conține informațiile utile. */}
+                            <SubjectCover subject={s}/>
+                            <Stack spacing={1} sx={{px: TEXT_PX, minWidth: 0}}>
                                 {s.description && <Typography component="span" variant="body2" color="text.secondary"
                                     sx={{overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflowWrap: 'anywhere'}}>
                                     {s.description}

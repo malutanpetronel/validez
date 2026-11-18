@@ -16,6 +16,6 @@ export default function SubjectsPage() {
     return <Stack spacing={2}>
         <div><Button component={RouterLink} to={type ? `/?tip=${type}` : '/'} state={location.state} startIcon={<ArrowBackIcon/>}>Înapoi la arbore</Button></div>
         <Typography variant="h5" component="h1">{title}</Typography>
-        <SubjectList node={null} type={type} onTypeChange={changeType}/>
+        <SubjectList node={null} type={type} onTypeChange={changeType} showHeading={false}/>
     </Stack>;
 }
