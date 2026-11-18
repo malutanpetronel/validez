@@ -126,6 +126,7 @@ final class CivicSubjectProvider implements ProviderInterface
             $base = $cover === null ? null : '/api/media/'.$cover->getId()->toBase32();
             $subject->attachCoverThumbUrl($base === null ? null : $base.'/thumb');
             $subject->attachCoverDisplayUrl($base === null ? null : $base.'/display');
+            $subject->attachCoverCardUrl($base === null ? null : $base.'/card');
         }
     }
 

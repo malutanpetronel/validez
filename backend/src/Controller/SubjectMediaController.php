@@ -167,7 +167,7 @@ final class SubjectMediaController extends AbstractController
                 $status = $policy->canPublish($user) ? MediaStatus::PUBLISHED : MediaStatus::PENDING;
                 $item = SubjectMedia::photo($subject, $user, $status, $this->media->nextPosition($subject), $image->width, $image->height, \strlen($image->display));
                 $this->em->persist($item);
-                foreach (['display' => $image->display, 'thumb' => $image->thumb, 'og' => $image->og] as $variant => $bytes) {
+                foreach (['display' => $image->display, 'card' => $image->card, 'thumb' => $image->thumb, 'og' => $image->og] as $variant => $bytes) {
                     $this->storage->write($item->storageKey($variant), $bytes);
                     $written[] = $item->storageKey($variant);
                 }
@@ -225,7 +225,7 @@ final class SubjectMediaController extends AbstractController
         return $this->noStore($this->json(['items' => $items]));
     }
 
-    #[Route('/api/media/{id}/{variant}', methods: ['GET'], requirements: ['variant' => 'display|thumb'])]
+    #[Route('/api/media/{id}/{variant}', methods: ['GET'], requirements: ['variant' => 'display|card|thumb'])]
     public function serve(string $id, string $variant): Response
     {
         $item = $this->visibleMedia($id);
@@ -233,6 +233,10 @@ final class SubjectMediaController extends AbstractController
             throw $this->createNotFoundException('Fotografia nu există.');
         }
         \assert(\in_array($variant, SubjectMedia::VARIANTS, true));
+        // Fotografiile urcate înainte de varianta `card` (până la app:media:card-backfill): varianta de afișare.
+        if ($variant === 'card' && !$this->storage->exists($item->storageKey('card'))) {
+            $variant = 'display';
+        }
 
         // Corpul îl trimite nginx din locația internal; aici doar decidem dacă are voie.
         return new Response('', 200, [
@@ -381,6 +385,7 @@ final class SubjectMediaController extends AbstractController
             'height' => $m->getHeight(),
             'byteSize' => $m->getByteSize(),
             'displayUrl' => "/api/media/$id/display",
+            'cardUrl' => "/api/media/$id/card",
             'thumbUrl' => "/api/media/$id/thumb",
         ];
     }

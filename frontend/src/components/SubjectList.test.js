@@ -51,7 +51,7 @@ test('paginare: 45 subiecte -> 3 pagini; pagina 2 cere ?page=2', async () => {
 
 test('card: coperta pe toata latimea (srcset thumb/afisare), tipul si stadiul dedesubt; fara fotografie, nicio coperta', async () => {
     global.fetch = routedFetch([[(u) => u.includes('/civic_subjects'), () => res({
-        member: [subject({coverThumbUrl: '/api/media/01MEDIA/thumb', coverDisplayUrl: '/api/media/01MEDIA/display', voterCount: 24, linkCount: 3, photoCount: 1}),
+        member: [subject({coverThumbUrl: '/api/media/01MEDIA/thumb', coverDisplayUrl: '/api/media/01MEDIA/display', coverCardUrl: '/api/media/01MEDIA/card', voterCount: 24, linkCount: 3, photoCount: 1}),
             subject({id: '01S2', title: 'Fara poza'})], totalItems: 2,
     })]]);
     renderList(null);
@@ -59,7 +59,8 @@ test('card: coperta pe toata latimea (srcset thumb/afisare), tipul si stadiul de
     const covers = screen.getAllByTestId('subject-cover');
     expect(covers).toHaveLength(1);
     expect(covers[0].getAttribute('src')).toMatch(/\/api\/media\/01MEDIA\/thumb$/);
-    expect(covers[0].getAttribute('srcset')).toMatch(/01MEDIA\/thumb 400w, .*01MEDIA\/display 1600w$/);
+    expect(covers[0].getAttribute('srcset')).toMatch(/01MEDIA\/thumb 400w, .*01MEDIA\/card 1200w$/);
+    expect(covers[0]).toHaveAttribute('loading', 'eager'); // prima copertă: LCP
     const card = screen.getByText('Gropi pe DN1').closest('a');
     expect(within(card).getByText('Problemă')).toBeInTheDocument();
     expect(within(card).getByText('Deschis')).toBeInTheDocument();

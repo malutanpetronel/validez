@@ -10,8 +10,9 @@ import {alpha, useTheme} from '@mui/material/styles';
 import {BRAND} from '../theme';
 import {useAuth} from '../auth/AuthContext';
 import {fetchSubjects, PER_PAGE} from '../api/subjects';
-import {formatDate, recentTitle, STAGE_COLORS, STAGE_LABELS, TYPE_COLORS, TYPE_LABELS, TYPE_PLURALS} from '../subjects/labels';
+import {formatDate, recentTitle, STAGE_COLORS, STAGE_LABELS, TYPE_LABELS, TYPE_PLURALS} from '../subjects/labels';
 import {areaShort} from '../subjects/area';
+import {CHIP, typeChip, typeTint} from '../subjects/tint';
 import SubjectForm from './LazySubjectForm';
 import SubjectEstimate from './SubjectEstimate';
 import SubjectStats from './SubjectStats';
@@ -27,25 +28,16 @@ const BLEED = {xs: -2, sm: 0};
 const TEXT_PX = {xs: 2, sm: 0};
 // Chenar neutru: gri pe luminos, albastrul brandului atenuat pe întunecat.
 const CARD_BORDER = (t) => (t.palette.mode === 'dark' ? alpha(BRAND.albastru, 0.45) : t.palette.grey[300]);
-const CHIP = {maxWidth: '100%', fontSize: '0.72rem', '& .MuiChip-label': {px: 1, overflow: 'hidden', textOverflow: 'ellipsis'}};
-// Tipul dă culoarea: fundal transparent peste background.paper (gradient, ca să rămână și hover-ul) + chenar atenuat.
-const typeTint = (type) => (t) => {
-    const c = TYPE_COLORS[type];
-    if (!c) return {};
-    const a = alpha(c, t.palette.mode === 'dark' ? 0.1 : 0.07);
-    return {backgroundImage: `linear-gradient(${a}, ${a})`, borderColor: alpha(c, t.palette.mode === 'dark' ? 0.5 : 0.45)};
-};
-const typeChip = (type) => (t) => {
-    const c = TYPE_COLORS[type];
-    return c ? {...CHIP, borderColor: c, bgcolor: alpha(c, t.palette.mode === 'dark' ? 0.18 : 0.12)} : CHIP;
-};
+// Tipul dă culoarea cardului și a chip-ului: subjects/tint.js (aceleași pe pagina subiectului).
 
 /** Coperta subiectului (prima fotografie publicată), pe toată lățimea; fără fotografie nu se afișează nimic. */
-function SubjectCover({subject}) {
+function SubjectCover({subject, priority}) {
     if (!subject.coverThumbUrl) return null;
     // Subiect ascuns / în așteptare (îl văd doar autorul și adminii): thumb-ul cere autorizare.
-    return <MediaImage item={{thumbUrl: subject.coverThumbUrl, displayUrl: subject.coverDisplayUrl}} isPublic={subject.visibility === 'PUBLISHED'} alt=""
-        sizes="(min-width: 600px) 700px, 100vw" data-testid="subject-cover" sx={COVER}/>;
+    // Prima copertă e de obicei cea mai mare imagine vizibilă la deschidere (LCP): fără lazy, cu prioritate.
+    return <MediaImage item={{thumbUrl: subject.coverThumbUrl, cardUrl: subject.coverCardUrl, displayUrl: subject.coverDisplayUrl}}
+        isPublic={subject.visibility === 'PUBLISHED'} alt="" sizes="(min-width: 600px) 700px, 100vw" data-testid="subject-cover" sx={COVER}
+        {...(priority ? {loading: 'eager', fetchpriority: 'high'} : {})}/>;
 }
 
 /**
@@ -165,7 +157,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
             </Stack>}
             <List disablePadding aria-label="Lista subiectelor" aria-busy={loading}
                 sx={{display: 'grid', gap: {xs: 1, sm: 1.25}, opacity: loading ? 0.6 : 1}}>
-                {data.items.map((s) => (
+                {data.items.map((s, index) => (
                     <Box component="li" key={s.id} sx={{listStyle: 'none', minWidth: 0, mx: BLEED}}>
                         <ListItemButton component={RouterLink} to={s.canonicalPath ?? `/subiecte/${s.id}`} state={navigationState ?? location.state}
                             sx={{flexDirection: 'column', alignItems: 'stretch', gap: 1.25, px: {xs: 0, sm: 2}, py: {xs: 1.5, sm: 2},
@@ -195,7 +187,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                                 </Typography>}
                             </Stack>
                             {/* Coperta rămâne decorativă pentru cititoarele de ecran; textul linkului conține informațiile utile. */}
-                            <SubjectCover subject={s}/>
+                            <SubjectCover subject={s} priority={index === 0}/>
                             <Stack spacing={1} sx={{px: TEXT_PX, minWidth: 0}}>
                                 {s.description && <Typography component="span" variant="body2" color="text.secondary"
                                     sx={{overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflowWrap: 'anywhere'}}>

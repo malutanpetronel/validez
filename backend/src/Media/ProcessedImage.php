@@ -13,6 +13,8 @@ final class ProcessedImage
         public readonly string $og,
         public readonly int $width,
         public readonly int $height,
+        /** WebP 1200 px, compresie mai mare — coperta din liste și din pagina subiectului (audit viteză 18.11.2026). */
+        public readonly string $card = '',
     ) {
     }
 }

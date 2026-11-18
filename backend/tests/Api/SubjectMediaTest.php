@@ -568,4 +568,27 @@ final class SubjectMediaTest extends WebTestCase
         self::assertSame([1200, 630, 'image/jpeg'], [$info[0], $info[1], $info['mime']]);
         self::assertFileExists($this->ogFile($other));
     }
+
+    public function testVariantaCardSeGenereazaSiCadePeAfisareCatLipseste(): void
+    {
+        $m = $this->upload('vlad', 'vlad');
+        $card = $this->mediaDir.'/'.$m['subjectId'].'/'.$m['id'].'-card.webp';
+        self::assertFileExists($card, 'se generează la upload');
+        $info = getimagesize($card);
+        self::assertSame('image/webp', $info['mime']);
+        self::assertLessThanOrEqual(1200, max($info[0], $info[1]));
+
+        $this->call('GET', '/api/media/'.$m['id'].'/card', 'vlad');
+        self::assertSame(200, $this->code());
+        self::assertStringEndsWith('-card.webp', (string) $this->client->getResponse()->headers->get('X-Accel-Redirect'));
+
+        unlink($card); // fotografie urcată înainte de varianta `card`
+        $this->call('GET', '/api/media/'.$m['id'].'/card', 'vlad');
+        self::assertStringEndsWith('-display.webp', (string) $this->client->getResponse()->headers->get('X-Accel-Redirect'));
+
+        $tester = new \Symfony\Component\Console\Tester\CommandTester((new \Symfony\Bundle\FrameworkBundle\Console\Application(static::$kernel))->find('app:media:card-backfill'));
+        self::assertSame(0, $tester->execute([]));
+        self::assertStringContainsString('Generate: 1, aveau deja: 0, eșuate: 0', $tester->getDisplay());
+        self::assertFileExists($card);
+    }
 }

@@ -17,6 +17,9 @@ final class ImageProcessor
     public const MAX_PIXELS = 40_000_000;
     public const DISPLAY_SIZE = 1600;
     public const THUMB_SIZE = 400;
+    /** Coperta din liste și din pagina subiectului; 1600 px rămâne doar pentru vizualizator (click pe poză). */
+    public const CARD_SIZE = 1200;
+    public const CARD_QUALITY = 72;
     public const OG_WIDTH = 1200;
     public const OG_HEIGHT = 630;
 
@@ -66,8 +69,10 @@ final class ImageProcessor
             $this->fit($thumb, self::THUMB_SIZE);
             // Din varianta de afișare (1600 px): aceeași sursă ca la backfill (app:media:og-backfill).
             $og = $this->og(clone $image);
+            // La fel pentru `card` (app:media:card-backfill).
+            $card = $this->cardImage(clone $image);
 
-            return new ProcessedImage($this->webp($image, 80), $this->webp($thumb, 75), $og, $image->getImageWidth(), $image->getImageHeight());
+            return new ProcessedImage($this->webp($image, 80), $this->webp($thumb, 75), $og, $image->getImageWidth(), $image->getImageHeight(), $card);
         } catch (\ImagickException) {
             throw new InvalidImageException('Fotografia nu poate fi citită.');
         }
@@ -84,6 +89,26 @@ final class ImageProcessor
         } catch (\ImagickException) {
             throw new InvalidImageException('Fotografia nu poate fi citită.');
         }
+    }
+
+    /** Varianta `card` dintr-o variantă de afișare deja salvată - pentru fotografiile vechi. */
+    public function cardFromDisplay(string $displayBytes): string
+    {
+        try {
+            $image = new \Imagick();
+            $image->readImageBlob($displayBytes);
+
+            return $this->cardImage($image);
+        } catch (\ImagickException) {
+            throw new InvalidImageException('Fotografia nu poate fi citită.');
+        }
+    }
+
+    private function cardImage(\Imagick $image): string
+    {
+        $this->fit($image, self::CARD_SIZE);
+
+        return $this->webp($image, self::CARD_QUALITY);
     }
 
     private function og(\Imagick $image): string

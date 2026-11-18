@@ -42,10 +42,10 @@ export default function Layout() {
                              borderRadius: 1.5, py: 0.25, flexShrink: 0,
                              '&:focus-visible': {outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 3}}}>
                         <Box sx={{position: 'relative', width: {xs: 130, sm: 158}, maxWidth: '100%', flexShrink: 0}}>
-                            <Box component="img" src={`${process.env.PUBLIC_URL}/logo-sus.png`} alt=""
+                            <Box component="img" src={`${process.env.PUBLIC_URL}/logo-sus.webp`} alt=""
                                  sx={{display: 'block', width: '100%', height: 'auto',
                                      filter: mode === 'dark' ? 'brightness(0) invert(1)' : 'none'}}/>
-                            {mode === 'dark' && <Box component="img" src={`${process.env.PUBLIC_URL}/logo-sus.png`} alt="" aria-hidden="true"
+                            {mode === 'dark' && <Box component="img" src={`${process.env.PUBLIC_URL}/logo-sus.webp`} alt="" aria-hidden="true"
                                  sx={{position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none',
                                      clipPath: 'polygon(22.5% 23.9%, 15.9375% 54.35%, 14.0625% 67.39%, 12.1875% 55.43%, 17.5% 36.96%)'}}/>}
                         </Box>

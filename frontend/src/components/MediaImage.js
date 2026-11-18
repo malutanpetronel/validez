@@ -5,12 +5,16 @@ import {absoluteMediaUrl, fetchProtectedImage} from '../api/media';
 /**
  * Imaginea unei fotografii: publică (subiect publicat, media aprobată) direct prin <img>, cu cache; altfel cu
  * autorizare, ca blob URL - <img> nu trimite tokenul JWT.
- * Cu `sizes` + `item.displayUrl` (doar publice): `srcset` thumb 400w / afișare 1600w - browserul alege după ecran.
+ * Variante (audit viteză 18.11.2026): `thumb` 400 px, `card` 1200 px (coperta din liste și din pagina subiectului),
+ * `display` 1600 px doar în vizualizator (click pe poză). Cu `sizes` (doar publice): `srcset` thumb 400w / card 1200w.
+ * Fără `cardUrl` (răspuns vechi), `card` cade pe `display`.
  */
 export default function MediaImage({item, variant = 'thumb', isPublic, alt, sizes, sx, ...imgProps}) {
-    const path = variant === 'thumb' ? item.thumbUrl : item.displayUrl;
-    const srcSet = isPublic && sizes && variant === 'thumb' && item.displayUrl
-        ? `${absoluteMediaUrl(item.thumbUrl)} 400w, ${absoluteMediaUrl(item.displayUrl)} 1600w` : undefined;
+    const cardUrl = item.cardUrl ?? item.displayUrl;
+    const path = variant === 'thumb' ? item.thumbUrl : variant === 'card' ? cardUrl : item.displayUrl;
+    // Fără `cardUrl` (răspuns vechi) descriptorul rămâne lățimea reală a variantei de afișare.
+    const srcSet = isPublic && sizes && variant !== 'display' && item.thumbUrl && cardUrl
+        ? `${absoluteMediaUrl(item.thumbUrl)} 400w, ${absoluteMediaUrl(cardUrl)} ${item.cardUrl ? 1200 : 1600}w` : undefined;
     const [src, setSrc] = useState(isPublic ? absoluteMediaUrl(path) : null);
     const [failed, setFailed] = useState(false);
     useEffect(() => {

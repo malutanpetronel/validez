@@ -25,7 +25,7 @@ class SubjectMedia
     public const KIND_PHOTO = 'PHOTO';
     public const KIND_LINK = 'LINK';
     /** Variantele unei fotografii pe disc (MediaStorage); scoaterea și reaplicarea ștergerilor le parcurg pe toate. */
-    public const VARIANTS = ['display', 'thumb', 'og'];
+    public const VARIANTS = ['display', 'card', 'thumb', 'og'];
 
     #[ORM\Id]
     #[ORM\Column(type: UlidType::NAME)]

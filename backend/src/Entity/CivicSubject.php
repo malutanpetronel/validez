@@ -263,6 +263,14 @@ class CivicSubject
 
     public function attachCoverDisplayUrl(?string $url): void { $this->coverDisplayUrl = $url; }
 
+    /** Varianta `card` (1200 px, mai comprimată) a aceleiași coperte - cea folosită de liste (audit viteză 18.11.2026). */
+    private ?string $coverCardUrl = null;
+
+    #[Groups(['subject:read'])]
+    public function getCoverCardUrl(): ?string { return $this->coverCardUrl; }
+
+    public function attachCoverCardUrl(?string $url): void { $this->coverCardUrl = $url; }
+
     /**
      * Indicatori agregați pentru liste (rândul „persoane au votat · linkuri · fotografii”); completați de
      * CivicSubjectProvider, nu sunt coloane. Doar numere - fără rezultate de vot, fără identificatori.

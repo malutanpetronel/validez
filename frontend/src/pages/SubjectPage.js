@@ -12,6 +12,7 @@ import {canEditSubject, formatDate, locationConfirmationText, STAGE_COLORS, STAG
 import SubjectForm from '../components/LazySubjectForm';
 import PinAdministrative from '../components/PinAdministrative';
 import {areaText} from '../subjects/area';
+import {CHIP, typeChip, typeTint} from '../subjects/tint';
 import SubjectEstimate from '../components/SubjectEstimate';
 import AuthorPublishing from '../components/AuthorPublishing';
 import SubjectPrivateNote from '../components/SubjectPrivateNote';
@@ -146,14 +147,15 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
             {error && <Alert severity="warning">{error}</Alert>}
             {!ready && <SubjectSkeleton header={header}/>}
             {ready && subject && (
-                <Paper sx={{p: {xs: 2, sm: 3}}}>
+                // Aceeași nuanță după tip ca în cardurile din liste.
+                <Paper sx={(theme) => ({p: {xs: 2, sm: 3}, border: 1, borderColor: 'divider', ...typeTint(subject.type)(theme)})}>
                     <Stack spacing={1.5}>
                         {header}
                         <Stack direction="row" spacing={0.75} useFlexGap sx={{flexWrap: 'wrap'}}>
-                            <Chip size="small" label={TYPE_LABELS[subject.type] ?? subject.type} variant="outlined"/>
-                            <Chip size="small" label={STAGE_LABELS[subject.stage] ?? subject.stage} color={STAGE_COLORS[subject.stage] ?? 'default'}/>
-                            {subject.visibility === 'HIDDEN' && <Chip size="small" label="Ascuns" color="error" variant="outlined"/>}
-                            {subject.visibility === 'PENDING' && <Chip size="small" label="În așteptarea aprobării" color="warning" variant="outlined"/>}
+                            <Chip size="small" label={TYPE_LABELS[subject.type] ?? subject.type} variant="outlined" sx={typeChip(subject.type)}/>
+                            <Chip size="small" label={STAGE_LABELS[subject.stage] ?? subject.stage} color={STAGE_COLORS[subject.stage] ?? 'default'} sx={CHIP}/>
+                            {subject.visibility === 'HIDDEN' && <Chip size="small" label="Ascuns" color="error" variant="outlined" sx={CHIP}/>}
+                            {subject.visibility === 'PENDING' && <Chip size="small" label="În așteptarea aprobării" color="warning" variant="outlined" sx={CHIP}/>}
                         </Stack>
                         <Typography ref={titleRef} tabIndex={-1} variant="h5" component="h1"
                                     sx={{wordBreak: 'break-word', scrollMarginTop: 80, outline: 'none'}}>{subject.title}</Typography>
@@ -173,7 +175,8 @@ export default function SubjectPage({subjectId, embedded = false, meta = false, 
                                      aria-label={media.photos.length > 1 ? `Deschide fotografiile (${media.photos.length})` : 'Deschide fotografia'}
                                      sx={{p: 0, border: 0, display: 'block', width: '100%', cursor: 'zoom-in', borderRadius: 2,
                                          overflow: 'hidden', position: 'relative', bgcolor: 'transparent'}}>
-                                    <MediaImage key={cover.id} item={cover} variant="display" isPublic={isPublicPhoto(subject, cover)}
+                                    {/* Coperta: varianta `card` (1200 px); 1600 px doar în vizualizator, la click. */}
+                                    <MediaImage key={cover.id} item={cover} variant="card" isPublic={isPublicPhoto(subject, cover)} loading="eager"
                                                 alt={`Fotografie la „${subject.title}”`} sx={{width: '100%', aspectRatio: '16 / 9', maxHeight: 420}}/>
                                     {media.photos.length > 1 && <Chip size="small" icon={<PhotoLibraryIcon/>} label={`${media.photos.length} fotografii`}
                                                                       sx={{position: 'absolute', right: 8, bottom: 8, color: '#fff', bgcolor: 'rgba(0,0,0,0.6)', '& .MuiChip-icon': {color: '#fff'}}}/>}
