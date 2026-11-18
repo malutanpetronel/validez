@@ -74,6 +74,8 @@ export default function Layout() {
                                 {isAdmin && <MenuItem component={RouterLink} to="/setari-ai" onClick={closeUserMenu}>Setări AI</MenuItem>}
                                 {isAdmin && <MenuItem component={RouterLink} to="/check-api" onClick={closeUserMenu}>Check API</MenuItem>}
                                 <MenuItem onClick={() => { closeUserMenu(); logout(); }}>Ieși</MenuItem>
+                                {!isAdmin && <Divider/>}
+                                {!isAdmin && <MenuItem component={RouterLink} to="/sterge-cont" onClick={closeUserMenu} sx={{color: 'error.main'}}>Șterge-mi contul</MenuItem>}
                             </Menu>
                         </>
                     ) : (

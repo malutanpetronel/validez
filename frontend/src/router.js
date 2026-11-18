@@ -12,6 +12,7 @@ import HelpPage from './pages/HelpPage';
 import CategorySuggestionsPage from './pages/CategorySuggestionsPage';
 import ModerationPage from './pages/ModerationPage';
 import AiSettingsPage from './pages/AiSettingsPage';
+import DeleteAccountPage, {DeleteAccountConfirmPage} from './pages/DeleteAccountPage';
 import CheckApiPage from './pages/CheckApiPage';
 import MyVotesPage from './pages/MyVotesPage';
 import LegacyCategoryRedirect from './pages/LegacyCategoryRedirect';
@@ -33,6 +34,8 @@ export const routes = [
             {path: 'categorii-propuse', element: <CategorySuggestionsPage/>},
             {path: 'moderare', element: <ModerationPage/>},
             {path: 'setari-ai', element: <AiSettingsPage/>},
+            {path: 'sterge-cont', element: <DeleteAccountPage/>},
+            {path: 'sterge-cont/confirmare', element: <DeleteAccountConfirmPage/>},
             {path: 'check-api', element: <CheckApiPage/>},
             {path: 'am-uitat-parola', element: <ForgotPasswordPage/>},
             {path: 'login', element: <LoginPage/>},

@@ -33,6 +33,6 @@ test('ștergerea contului: link direct pentru Google Play, termen, contribuțiil
     const heading = screen.getByRole('heading', {name: 'Ștergerea contului'});
     expect(scroll).toHaveBeenCalledTimes(1);
     expect(scroll.mock.instances[0]).toContainElement(heading);
-    expect(screen.getByText(/rezolvăm cererea în cel mult 30 de zile/)).toHaveTextContent('autorul apare ca „Cont șters”');
+    expect(screen.getByText(/link de confirmare, valabil o oră/)).toHaveTextContent('autorul apare ca „Cont șters”');
     expect(screen.getByRole('heading', {name: 'Sugestii AI din fotografii'})).toBeInTheDocument();
 });
