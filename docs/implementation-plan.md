@@ -205,7 +205,7 @@ Build-ul mobil este verificat încă din Step 1 și la integrarea funcționalit�
   - Servire: `validez.webnou.ro/media/og/{id}.jpg` (nginx FE → BE, ca `/categorie`), pentru că BE-ul are robots `Disallow: /` și Twitterbot respectă robots.txt; doar fotografii publicate ale subiectelor publicate, `Cache-Control: public, max-age=3600`.
   - Verificat: BE 151 teste (ordonare, drepturi, 422 la listă incompletă/duplicate/linkuri, og doar după aprobare, backfill, meta în shell), FE 145; pe dev backfill 3/3 și `/media/og/` prin nginx-ul BE → 200 `image/jpeg` 1200×630; `nginx -t` pe `nginx.prod.conf`.
 - [x] **M.4c — încărcarea paginii** (16.10.2026, cod; deploy: `Deploy.md` secțiunea L): ecran de încărcare în `public/index.html` (logo + bară, fundalul temei), peste rezumatul SEO nestilizat; îl ascunde pagina când are datele (`src/splash.js`: arborele, sau subiectul cu lista de fotografii; celelalte pagini imediat; limită de siguranță 5 s). Cardul subiectului apare o singură dată, după subiect și fotografii, cu schelet (`Skeleton`) până atunci - coperta nu mai împinge descrierea. Breadcrumb-ul categoriei e în card (subiect) sau într-un card propriu (categorie), deci panoul din dreapta pornește la nivelul arborelui. Titlul „Tematici” scos vizual (rămâne `h1` pentru cititoarele de ecran cât nu e deschis un subiect). FE 148 teste, build fără avertismente.
-- [ ] **M.5 — informare:** pagina de confidențialitate (fotografii, metadate, localizare, OpenStreetMap) și dosarul pentru specialist.
+- [x] **M.5 — informare:** pagina de confidențialitate (fotografii, metadate, localizare, OpenStreetMap) și dosarul pentru specialist. Acoperit de L.1 (16.11.2026).
 - [ ] **M.6 — verificare:** browser și Android (cameră, galerie, locație, permisiuni refuzate), apoi producție.
 
 ## Step 3G — geografie administrativă (ADR-0012)
@@ -265,7 +265,7 @@ Decizii (03.11.2026): sondajele le creează doar adminii; un singur răspuns per
 - [x] **P.3** — FE admin: tipul Sondaj în formular, editorul de variante (adăugare, ștergere, sus/jos), data de închidere; responsive.
 - [x] **P.4** — FE vot: listă verticală de variante + „Votează”, bare cu procent după vot, „Se închide pe …”/„Închis pe …”; etichetele CHOICE din subiect.
 - [x] **P.4b** (18.11.2026) — FE: variantele sondajului sunt vizibile și pentru cine nu poate vota acum (vizitator, votare închisă), ca listă de citit, cât rezultatele sunt ascunse sau nu există voturi; test în `SubjectVotes.test.js`.
-- [ ] **P.5** — deploy BE+FE (Deploy.md, secțiune nouă) și un sondaj de test pe producție.
+- [x] **P.5** — deploy BE+FE și sondaje pe producție (verificat pe validez.webnou.ro/?tip=POLL, 18.11.2026: 6 sondaje deschise, din 4–5 nov. 2026).
 
 ## Step L — documente legale înaintea codului nou (16.11.2026)
 
@@ -273,8 +273,8 @@ Regulă: o funcționalitate nouă care atinge date personale, plăți sau tracki
 
 - [x] **L.1** (16.11.2026) — `PrivacyPage`: fotografii și linkuri (eliminarea metadatelor, scoatere, persoane terțe), localizare (pin explicit, locația dispozitivului doar cu permisiune, OpenStreetMap ca terț), ALTCHA pe server, copii de siguranță pentru fotografii, sondaje în secțiunea Voturi, pinul și aria în versiunea subiectului; data actualizării 16.11.2026. Versiunea acordului de vot rămâne 13.10.2026 (vezi L.3).
 - [x] **L.2** (16.11.2026) — `TermsPage` la `/terms` (link în subsol): vârstă minimă 16 ani, licență neexclusivă pe conținut, moderare, rezultate nereprezentative statistic, Validez nu e instituție și nu ține loc de petiție (OG 27/2002).
-- [ ] **L.2b** — bifa „Accept Termenii” la înregistrare, cu versiunea acceptată salvată (FE + BE), ca la acordul de vot.
-- [ ] **L.3** — decizie: versiune nouă a acordului de vot din cauza sondajelor (cere acordul din nou) sau doar completarea textului.
+- [x] **L.2b** (18.11.2026) — bifa „Am cel puțin 16 ani și accept Termenii și condițiile” la înregistrare; BE cere `termsVersion` egal cu `TERMS_VERSION` (422 altfel), salvează `terms_accepted_version`/`terms_accepted_at` (migrarea `Version20261118200000`), golite la ștergerea contului; `PrivacyPage` („Ce date folosim”) menționează păstrarea versiunii acceptate. Conturile vechi rămân NULL (reacceptarea lor, dacă va fi nevoie, e pas separat). Detalii în [înregistrare și autentificare](registration-and-login.md).
+- [x] **L.3** (18.11.2026) — decizie Petro: varianta (a), doar completarea textului — votul în sondaj e prelucrat identic (aceleași tabele și garanții), acordul menționa deja opiniile politice; `VoteConsentDialog` spune acum „inclusiv răspunsul la un sondaj”, secțiunea „Sondaje” din privacy exista deja. Versiunea acordului rămâne `2026-10-13`, nimeni nu e întrebat din nou.
 - [ ] **L.4** — textele L.1/L.2 trimise la verificarea juridică de specialitate.
 - [x] **L.5** (18.11.2026) — `PrivacyPage`: secțiunea „Ștergerea contului” la `/privacy?section=stergere-cont` (linkul cerut de Google Play): cerere pe email de pe adresa contului, rezolvare în cel mult 30 de zile; se șterg contul, acordul și voturile, istoricul privat, notele, propunerile de categorii neanalizate; contribuțiile publicate rămân cu autorul „Cont șters” (decizie Petro 18.11.2026); ștergerea se reaplică după restaurarea unei copii. Test în `PrivacyPage.test.js`.
 - [x] **L.5b** (18.11.2026) — BE `AccountErasureService` + `AccountDeletionController`: `POST /api/account/deletion-request` (cont logat, nu admin; link pe email valabil o oră, doar hash-ul HMAC în DB, o cerere nouă îl anulează pe cel vechi; 3/oră) și `POST /api/account/deletion-confirm` (token; 15/oră per IP): retrage acordul de vot (voturi + istoric privat, ADR-0007), șterge notele, propunerile de categorii neanalizate și sesiunile, golește rândul contului („Cont șters”, email `sters-…@cont-sters.invalid`, parolă imposibilă, fără roluri, `credentialVersion`+1, `deleted_at`), email final pe adresa veche; registrul de ștergeri are acțiunea `account_erased`, reaplicată de `app:votes:reapply-erasures`. Migrarea `Version20261118140000`. `AccountDeletionTest` 4/4, suita BE 200/200.
@@ -289,7 +289,7 @@ Decizii: dropdown pe rândul „Vezi subiectele / Alege o tematică” (Toate, P
 - [x] **T.3** (16.11.2026) — FE `TreePage`: dropdown, `?tip=`, reîncărcarea ramurilor la schimbare, estompare, chip; tipul trece și în `treeReturn`.
 - [x] **T.4** (16.11.2026) — FE `/subiecte?tip=`: titlu și filtru sincronizate; „Vezi toate sondajele”.
 - [x] **T.5a** (16.11.2026) — eslint OK, FE 167/167 teste, BE CivicSubject + AuthAndPermissions 27/27.
-- [ ] **T.5b** — verificare vizuală (telefon + desktop) și deploy BE+FE.
+- [x] **T.5b** — verificare vizuală și deploy BE+FE (filtrul „Sondaje” + „Sondaje recente” live pe validez.webnou.ro, 18.11.2026).
 
 Tot pe 16.11.2026: margine sus unică pentru toate paginile — `Container main` din `Layout.js` are `pt: 1` (8px, valoarea folosită înainte doar la subiect); padding-ul local din `TreePage` scos, hero-ul de pe `/` cu padding redus, iar Stack-ul rădăcină cu `useFlexGap` (titlul ascuns „Tematici” nu mai adaugă 16px în categorie).
 

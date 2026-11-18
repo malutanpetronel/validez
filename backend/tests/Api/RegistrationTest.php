@@ -45,7 +45,23 @@ final class RegistrationTest extends WebTestCase
 
     private function register(array $extra = []): array
     {
-        return $this->request('/register', array_replace(['email' => self::EMAIL, 'displayName' => 'Utilizator Nou', 'password' => self::PASSWORD], $extra), true);
+        return $this->request('/register', array_replace(['email' => self::EMAIL, 'displayName' => 'Utilizator Nou', 'password' => self::PASSWORD, 'termsVersion' => '2026-11-16'], $extra), true);
+    }
+
+    public function testTermenii(): void
+    {
+        $r = $this->register(['termsVersion' => null]);
+        self::assertSame(422, $this->httpStatus());
+        self::assertStringContainsString('accepți Termenii', $r['detail'] ?? '');
+        $r = $this->register(['termsVersion' => '2020-01-01']);
+        self::assertSame(422, $this->httpStatus());
+        self::assertStringContainsString('s-au actualizat', $r['detail'] ?? '');
+        self::assertSame(1, (int) $this->db->fetchOne('SELECT count(*) FROM app_user'));
+        $this->register();
+        self::assertSame(200, $this->httpStatus());
+        $row = $this->db->fetchAssociative('SELECT terms_accepted_version, terms_accepted_at FROM app_user WHERE email = ?', [self::EMAIL]);
+        self::assertSame('2026-11-16', $row['terms_accepted_version']);
+        self::assertNotNull($row['terms_accepted_at']);
     }
 
     private function emailCode(): string

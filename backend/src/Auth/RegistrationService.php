@@ -22,6 +22,7 @@ final class RegistrationService
         private readonly MailerInterface $mailer,
         private readonly string $secret,
         private readonly string $sender,
+        private readonly string $termsVersion,
     ) {}
 
     public static function email(array $data): string
@@ -40,7 +41,11 @@ final class RegistrationService
         $password = is_string($data['password'] ?? null) ? $data['password'] : '';
         if (mb_strlen($name) < 3 || mb_strlen($name) > 120) throw new UnprocessableEntityHttpException('Numele trebuie să aibă între 3 și 120 de caractere.');
         if (mb_strlen($password) < 10 || strlen($password) > 72) throw new UnprocessableEntityHttpException('Parola trebuie să aibă minimum 10 caractere și maximum 72 de octeți.');
-        $this->em->wrapInTransaction(function () use ($email, $name, $password): void {
+        // L.2b: acceptarea Termenilor e obligatorie și trebuie să fie pe versiunea curentă.
+        $terms = $data['termsVersion'] ?? null;
+        if (!is_string($terms) || $terms === '') throw new UnprocessableEntityHttpException('Trebuie să accepți Termenii și condițiile.');
+        if ($terms !== $this->termsVersion) throw new UnprocessableEntityHttpException('Termenii s-au actualizat. Reîncarcă pagina și citește versiunea nouă.');
+        $this->em->wrapInTransaction(function () use ($email, $name, $password, $terms): void {
             $this->lock($email);
             $user = $this->users->loadUserByIdentifier($email);
             // Never overwrite an active account, grant roles or disclose whether it exists.
@@ -53,6 +58,7 @@ final class RegistrationService
             }
             $user->setDisplayName($name);
             $user->setPassword($this->hasher->hashPassword($user, $password));
+            $user->acceptTerms($terms);
             $this->issueCode($user);
         });
     }

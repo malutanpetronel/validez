@@ -1,10 +1,11 @@
 import {useEffect, useState} from 'react';
 import {Link as RouterLink, useLocation, useNavigate} from 'react-router-dom';
-import {Alert, Box, Button, Paper, Stack, TextField, Typography} from '@mui/material';
+import {Alert, Box, Button, Checkbox, FormControlLabel, Link, Paper, Stack, TextField, Typography} from '@mui/material';
 import AltchaVerification from '../components/AltchaVerification';
 import {confirmRegistration, register, resendRegistrationCode} from '../api/registration';
 import {useAuth} from '../auth/AuthContext';
 import usePageMeta from '../seo/usePageMeta';
+import {TERMS_VERSION} from './TermsPage';
 
 export default function RegisterPage() {
     usePageMeta({title: 'Creează un cont', noindex: true});
@@ -17,6 +18,7 @@ export default function RegisterPage() {
     const [displayName, setDisplayName] = useState('');
     const [password, setPassword] = useState('');
     const [passwordAgain, setPasswordAgain] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
     const [code, setCode] = useState('');
     const [altcha, setAltcha] = useState('');
     const [captchaVersion, setCaptchaVersion] = useState(0);
@@ -32,7 +34,7 @@ export default function RegisterPage() {
 
     const resetVerification = () => { setAltcha(''); setCaptchaVersion((value) => value + 1); };
     const valid = /\S+@\S+\.\S+/.test(email.trim()) && displayName.trim().length >= 3
-        && password.length >= 10 && password === passwordAgain && Boolean(altcha);
+        && password.length >= 10 && password === passwordAgain && termsAccepted && Boolean(altcha);
     const submit = async (event) => {
         event.preventDefault();
         if (busy || (step === 'form' ? !valid : !/^\d{6}$/.test(code))) return;
@@ -40,7 +42,7 @@ export default function RegisterPage() {
         setError(null);
         try {
             if (step === 'form') {
-                const result = await register({email: email.trim(), displayName: displayName.trim(), password, altcha});
+                const result = await register({email: email.trim(), displayName: displayName.trim(), password, altcha, termsVersion: TERMS_VERSION});
                 setStep('code');
                 setPassword(''); setPasswordAgain('');
                 setCooldown(result.retryAfter || 60);
@@ -88,6 +90,10 @@ export default function RegisterPage() {
                         inputProps={{maxLength: 72}} helperText="Minimum 10 caractere."/>
                     <TextField label="Repetă parola" type="password" autoComplete="new-password" required value={passwordAgain} onChange={(event) => setPasswordAgain(event.target.value)}
                         error={Boolean(passwordAgain && passwordAgain !== password)} helperText={passwordAgain && passwordAgain !== password ? 'Parolele nu coincid.' : ''}/>
+                    <FormControlLabel sx={{alignItems: 'flex-start', mr: 0}}
+                        control={<Checkbox checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} sx={{pt: 0}}/>}
+                        label={<Typography variant="body2" sx={{overflowWrap: 'anywhere'}}>Am cel puțin 16 ani și accept{' '}
+                            <Link component={RouterLink} to="/terms" target="_blank" rel="noopener">Termenii și condițiile</Link>.</Typography>}/>
                     <AltchaVerification key={captchaVersion} onVerified={setAltcha}/>
                     <Button type="submit" variant="contained" disabled={!valid || busy || cooldown > 0}>{busy ? 'Se trimite…' : 'Creează contul'}</Button>
                     {cooldown > 0 && <Typography variant="body2" color="text.secondary">Poți reîncerca peste {cooldown} secunde.</Typography>}

@@ -31,7 +31,7 @@ Parola publică are minimum 10 caractere și maximum 72 de octeți, compatibil c
 | Endpoint | Rol |
 |---|---|
 | `GET /api/captcha/challenge` | Challenge ALTCHA nou, expiră în 10 minute. |
-| `POST /api/register` | Primește `displayName`, `email`, `password`, `altcha`; pregătește contul și trimite codul. |
+| `POST /api/register` | Primește `displayName`, `email`, `password`, `altcha`, `termsVersion`; pregătește contul și trimite codul. |
 | `POST /api/register/confirm` | Primește `email`, `code`; confirmă adresa și returnează `token`, `refresh_token`. |
 | `POST /api/register/resend` | Primește `email`, `altcha`; retrimite codul pentru un cont neconfirmat. |
 | `POST /api/auth` | Login-ul existent, cu `email`, `password` și suplimentar `altcha`. |
@@ -40,6 +40,8 @@ Parola publică are minimum 10 caractere și maximum 72 de octeți, compatibil c
 Înregistrarea și retrimiterea returnează `status: code_sent` și `retryAfter: 60`, fără codul propriu-zis și fără a indica existența unui cont activ. Conturile active nu sunt modificate de o nouă cerere de înregistrare. Pentru conturile neconfirmate, o nouă înregistrare după cooldown actualizează numele și parola și emite un cod nou.
 
 Erorile sunt afișate în română. `Retry-After` este expus prin CORS pentru cooldown-ul interfeței. Widgetul ALTCHA este resetat după o încercare eșuată, deoarece soluția poate fi deja consumată.
+
+**Termenii (L.2b, 18.11.2026):** formularul are bifa „Am cel puțin 16 ani și accept Termenii și condițiile” (link la `/terms`, tab nou), nebifată inițial; fără ea butonul e inactiv. `termsVersion` lipsă → 422 „Trebuie să accepți Termenii și condițiile.”; diferit de versiunea curentă (`TERMS_VERSION`, implicit `2026-11-16` în `config/services.yaml`, egal cu `TERMS_VERSION` din `frontend/src/pages/TermsPage.js`) → 422 „Termenii s-au actualizat…”. Validarea are loc înaintea căutării contului, deci nu dezvăluie existența lui. Versiunea și momentul se salvează pe `app_user` (`terms_accepted_version`, `terms_accepted_at`), inclusiv la reînregistrarea unui cont neconfirmat; conturile mai vechi rămân NULL. Ștergerea contului golește ambele câmpuri.
 
 ## Reguli de acces și protecție
 

@@ -30,7 +30,7 @@ export default function VoteConsentDialog({outdated = false, onCancel, onAccept}
             <DialogContent>
                 <Stack spacing={1.5}>
                     {outdated && <Alert severity="info">Voturile tale existente rămân. Pentru a vota din nou, citește versiunea actualizată și confirmă acordul.</Alert>}
-                    <Typography variant="body2">Votul tău poate dezvălui opinii, inclusiv politice. De aceea îl prelucrăm doar cu acordul tău explicit:</Typography>
+                    <Typography variant="body2">Votul tău, inclusiv răspunsul la un sondaj, poate dezvălui opinii, chiar și politice. De aceea îl prelucrăm doar cu acordul tău explicit:</Typography>
                     <Typography component="ul" variant="body2" sx={{pl: 2.5, m: 0}}>
                         <li>votul tău individual rămâne privat: nu e afișat altor utilizatori sau administratorilor; public sunt doar rezultatele agregate;</li>
                         <li>votul e legat de versiunea subiectului; dacă subiectul se modifică, îl poți revedea, reconfirma sau retrage;</li>

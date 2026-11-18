@@ -97,6 +97,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public const DELETED_NAME = 'Cont șters';
 
+    /** L.2b: versiunea Termenilor acceptată la înregistrare și momentul acceptării (NULL la conturile mai vechi). */
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $termsAcceptedVersion = null;
+
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $termsAcceptedAt = null;
+
+    public function getTermsAcceptedVersion(): ?string { return $this->termsAcceptedVersion; }
+    public function getTermsAcceptedAt(): ?\DateTimeImmutable { return $this->termsAcceptedAt; }
+
+    public function acceptTerms(string $version): void
+    {
+        $this->termsAcceptedVersion = $version;
+        $this->termsAcceptedAt = new \DateTimeImmutable();
+    }
+
     public function getCredentialVersion(): int { return $this->credentialVersion; }
     public function getPasswordResetCodeHash(): ?string { return $this->passwordResetCodeHash; }
     public function getPasswordResetRequestedAt(): ?\DateTimeImmutable { return $this->passwordResetRequestedAt; }
@@ -153,6 +169,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->passwordResetAttempts = 0;
         $this->accountDeletionTokenHash = null;
         $this->accountDeletionRequestedAt = null;
+        $this->termsAcceptedVersion = null;
+        $this->termsAcceptedAt = null;
         $this->deletedAt = $at;
     }
 

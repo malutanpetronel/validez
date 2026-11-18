@@ -31,9 +31,11 @@ test('înregistrarea cere ALTCHA; confirmarea salvează sesiunea și revine la a
     renderPage(); fill();
     expect(screen.getByRole('button', {name: 'Creează contul'})).toBeDisabled();
     fireEvent.click(screen.getByRole('button', {name: 'Verifică ALTCHA'}));
+    expect(screen.getByRole('button', {name: 'Creează contul'})).toBeDisabled();
+    fireEvent.click(screen.getByRole('checkbox', {name: /accept Termenii/}));
     fireEvent.click(screen.getByRole('button', {name: 'Creează contul'}));
     await screen.findByLabelText(/Cod de confirmare/);
-    expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toEqual({email: 'petru@validez.test', displayName: 'Petru', password: 'parola-tare-123', altcha: 'solutie-altcha'});
+    expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toEqual({email: 'petru@validez.test', displayName: 'Petru', password: 'parola-tare-123', altcha: 'solutie-altcha', termsVersion: '2026-11-16'});
     expect(screen.getByRole('button', {name: /Retrimite codul/})).toBeDisabled();
     fireEvent.change(screen.getByLabelText(/Cod de confirmare/), {target: {value: '012345'}});
     fireEvent.click(screen.getByRole('button', {name: 'Confirmă contul'}));
@@ -54,6 +56,7 @@ test('parolele diferite sunt explicate și împiedică înregistrarea', () => {
 test('eroarea la înregistrare invalidează soluția ALTCHA pentru următoarea încercare', async () => {
     global.fetch = jest.fn(() => res({detail: 'Adresă invalidă'}, 422));
     renderPage(); fill();
+    fireEvent.click(screen.getByRole('checkbox', {name: /accept Termenii/}));
     fireEvent.click(screen.getByRole('button', {name: 'Verifică ALTCHA'}));
     fireEvent.click(screen.getByRole('button', {name: 'Creează contul'}));
     expect(await screen.findByText('Adresă invalidă')).toBeInTheDocument();

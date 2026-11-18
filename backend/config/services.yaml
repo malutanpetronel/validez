@@ -9,6 +9,8 @@
 parameters:
     altcha_cost_default: 1500
     registration_sender_default: 'noreply@validez.webnou.ro'
+    # L.2b: versiunea Termenilor acceptată la înregistrare; egală cu TERMS_VERSION din frontend/src/pages/TermsPage.js.
+    terms_version_default: '2026-11-16'
     # ADR-0008, S.3: adresa publica a site-ului (canonical, 301) si sablonul shell-ului SEO (index.html al FE,
     # copiat de ansible la deploy-ul FE si montat read-only in containerul PHP).
     site_url_default: 'https://validez.webnou.ro'
@@ -43,6 +45,7 @@ services:
         arguments:
             $secret: '%env(APP_SECRET)%'
             $sender: '%env(default:registration_sender_default:MAILER_FROM_ADDRESS)%'
+            $termsVersion: '%env(default:terms_version_default:TERMS_VERSION)%'
 
     App\Auth\PasswordResetService:
         arguments:
