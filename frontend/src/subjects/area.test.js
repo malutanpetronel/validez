@@ -1,4 +1,4 @@
-import {areaKey, areaText, placeName, unitLabel} from './area';
+import {areaKey, areaShort, areaText, placeName, unitLabel} from './area';
 
 test('denumirile SIRUTA devin lizibile', () => {
     expect(placeName('MUNICIPIUL CLUJ-NAPOCA')).toBe('Municipiul Cluj-Napoca');
@@ -12,4 +12,12 @@ test('textul ariei și cheia de comparare', () => {
     expect(areaText({scope: 'LOCAL', units: [], effective: [{code: '55008', name: 'MUNICIPIUL DEJ', fromPin: true}]})).toBe('Local — Municipiul Dej');
     expect(areaKey({scope: 'LOCAL', units: [{code: '2'}, {code: '1'}]})).toBe(areaKey({scope: 'LOCAL', units: [{code: '1'}, {code: '2'}]}));
     expect(areaKey(null)).not.toBe(areaKey({scope: 'NATIONAL', units: []}));
+});
+
+test('eticheta scurtă din cardurile listelor', () => {
+    expect(areaShort(null)).toBeNull();
+    expect(areaShort({scope: 'NATIONAL', effective: [{code: 'RO', name: 'România'}]})).toBe('🇷🇴 Național');
+    expect(areaShort({scope: 'COUNTY', effective: [{name: 'JUDEȚUL CLUJ'}, {name: 'JUDEȚUL BISTRIȚA-NĂSĂUD'}]})).toBe('Jud. Cluj, Bistrița-Năsăud');
+    expect(areaShort({scope: 'LOCAL', effective: [{name: 'MUNICIPIUL DEJ'}, {name: 'MUNICIPIUL GHERLA'}, {name: 'COMUNA CUZDRIOARA'}, {name: 'SECTORUL 3'}]}))
+        .toBe('Dej, Gherla +2');
 });

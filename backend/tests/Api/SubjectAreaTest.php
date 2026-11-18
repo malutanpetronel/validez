@@ -138,6 +138,11 @@ final class SubjectAreaTest extends WebTestCase
         $r = $this->create(['scope' => 'NATIONAL']);
         self::assertSame([201, [['code' => 'RO', 'name' => 'România', 'level' => 'COUNTRY', 'county' => null, 'fromPin' => false]], []],
             [$this->code(), $r['area']['effective'], $r['area']['units']]);
+
+        // Lista (cardurile) are aria fiecărui subiect, cu județul UAT-urilor (preîncărcare într-o singură interogare).
+        $items = $this->call('GET', '/api/civic_subjects', null, false, 'application/ld+json')['member'];
+        $scopes = array_map(static fn ($s) => [$s['area']['scope'], array_column($s['area']['effective'], 'county')], $items);
+        self::assertEqualsCanonicalizing([['LOCAL', ['JUDEȚUL TEST', 'JUDEȚUL TEST']], ['COUNTY', [null]], ['NATIONAL', [null]]], $scopes);
     }
 
     public function testPinulIntraInAriaLocalaDoarCandEIncadrat(): void

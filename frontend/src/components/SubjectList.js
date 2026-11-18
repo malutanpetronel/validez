@@ -11,6 +11,7 @@ import {BRAND} from '../theme';
 import {useAuth} from '../auth/AuthContext';
 import {fetchSubjects, PER_PAGE} from '../api/subjects';
 import {formatDate, recentTitle, STAGE_COLORS, STAGE_LABELS, TYPE_COLORS, TYPE_LABELS, TYPE_PLURALS} from '../subjects/labels';
+import {areaShort} from '../subjects/area';
 import SubjectForm from './SubjectForm';
 import SubjectEstimate from './SubjectEstimate';
 import SubjectStats from './SubjectStats';
@@ -179,6 +180,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                                 <Typography component="span" variant="subtitle1" sx={{fontWeight: 700, lineHeight: 1.35, overflowWrap: 'anywhere'}}>{s.title}</Typography>
                                 <Typography component="span" variant="caption" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>
                                     {scope === 'direct' ? '' : `în ${s.nodeName} · `}{s.authorName} · {formatDate(s.createdAt)}
+                                    {areaShort(s.area) && <> · <Box component="strong" sx={{fontWeight: 600, color: 'text.primary'}}>{areaShort(s.area)}</Box></>}
                                 </Typography>
                                 <Stack direction="row" spacing={0.75} useFlexGap sx={{flexWrap: 'wrap', pt: 0.75}}>
                                     <Chip size="small" label={TYPE_LABELS[s.type] ?? s.type} variant="outlined" sx={typeChip(s.type)}/>

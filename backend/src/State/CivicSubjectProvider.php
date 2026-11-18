@@ -18,6 +18,7 @@ use App\Seo\SlugRegistry;
 use App\Subject\SubjectStage;
 use App\Subject\SubjectType;
 use App\Subject\SubjectVisibility;
+use Doctrine\DBAL\ArrayParameterType;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -86,8 +87,30 @@ final class CivicSubjectProvider implements ProviderInterface
         [$items, $total] = $this->subjects->findVisiblePage($node, $type, $stage, $viewer, $isAdmin, $page, $perPage, $visibility, ($f['scope'] ?? '') === 'direct');
         $this->attachCovers($items);
         $this->attachStats($items);
+        $this->preloadAreas($items);
 
         return new TraversablePaginator(new \ArrayIterator($items), $page, $perPage, $total);
+    }
+
+    /**
+     * G.3: aria (unitățile declarate + UAT-ul pinului și județele lor) apare în fiecare card din listă; o singură
+     * interogare pentru toată pagina, în loc de câte una per subiect. Entitățile ajung în identity map.
+     *
+     * @param list<CivicSubject> $subjects
+     */
+    private function preloadAreas(array $subjects): void
+    {
+        $withArea = array_values(array_filter($subjects, static fn (CivicSubject $s) => $s->getScope() !== null));
+        if ($withArea === []) {
+            return;
+        }
+        $this->subjects->createQueryBuilder('s')
+            ->addSelect('u', 'up', 'pu', 'pp')
+            ->leftJoin('s.areaUnits', 'u')->leftJoin('u.parent', 'up')
+            ->leftJoin('s.pinAdminUnit', 'pu')->leftJoin('pu.parent', 'pp')
+            // ULID-urile ca UUID (formatul coloanei); entitățile ar fi trimise în base32.
+            ->where('s.id IN (:ids)')->setParameter('ids', array_map(static fn (CivicSubject $s) => $s->getId()->toRfc4122(), $withArea), ArrayParameterType::STRING)
+            ->getQuery()->getResult();
     }
 
     /**

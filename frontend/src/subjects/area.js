@@ -24,3 +24,16 @@ export const areaText = (area) => {
 
 /** Pentru compararea reviziilor: aceeași arie = același scope și aceleași coduri declarate. */
 export const areaKey = (area) => (area ? `${area.scope}:${(area.units ?? []).map((u) => u.code).sort().join(',')}` : '');
+
+/** „MUNICIPIUL DEJ” → „Dej”, „JUDEȚUL BISTRIȚA-NĂSĂUD” → „Bistrița-Năsăud” (sectoarele rămân „Sectorul 3”). */
+export const shortPlace = (name) => placeName((name ?? '').replace(/^(MUNICIPIUL|ORAȘUL|ORAŞUL|ORAȘ|COMUNA|JUDEȚUL|JUDEŢUL)\s+/iu, ''));
+
+/** Eticheta scurtă din cardurile listelor: „🇷🇴 Național”, „Jud. Cluj”, „Dej, Gherla +2”; null = arie nespecificată. */
+export const areaShort = (area, max = 2) => {
+    if (!area) return null;
+    if (area.scope === 'NATIONAL') return '🇷🇴 Național';
+    const names = (area.effective ?? []).map((u) => shortPlace(u.name));
+    if (!names.length) return null;
+    const shown = names.slice(0, max).join(', ') + (names.length > max ? ` +${names.length - max}` : '');
+    return area.scope === 'COUNTY' ? `Jud. ${shown}` : shown;
+};
