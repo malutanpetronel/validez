@@ -19,6 +19,7 @@ Deciziile de arhitectură ale proiectului Validez, formalizate ca ADR-uri. Numă
 | [0011](0011-subject-media-links-and-location.md) | Subject media, links and location | Accepted |
 | [0012](0012-administrative-geography-as-separate-dimension.md) | Administrative geography as a separate dimension (SIRUTA, derived from pin) | Accepted |
 | [0013](0013-polls.md) | Polls with per-subject answer options | Accepted |
+| [0014](0014-ai-subject-from-photo.md) | AI-suggested issue from a photo (admins only) | Accepted |
 
 ## Template
 

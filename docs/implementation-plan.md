@@ -264,6 +264,7 @@ Decizii (03.11.2026): sondajele le creează doar adminii; un singur răspuns per
 - [x] **P.2** — BE reguli: validarea variantelor (2–20, ≤120, unice), întrebare/variante blocate la primul vot (409), POLL nu se transformă în alt tip și invers, vot refuzat după `closesAt`/CLOSED, rezultatele CHOICE ascunse până la vot sau închidere; teste pentru vizitator, utilizator fără vot, votant, admin, după închidere.
 - [x] **P.3** — FE admin: tipul Sondaj în formular, editorul de variante (adăugare, ștergere, sus/jos), data de închidere; responsive.
 - [x] **P.4** — FE vot: listă verticală de variante + „Votează”, bare cu procent după vot, „Se închide pe …”/„Închis pe …”; etichetele CHOICE din subiect.
+- [x] **P.4b** (18.11.2026) — FE: variantele sondajului sunt vizibile și pentru cine nu poate vota acum (vizitator, votare închisă), ca listă de citit, cât rezultatele sunt ascunse sau nu există voturi; test în `SubjectVotes.test.js`.
 - [ ] **P.5** — deploy BE+FE (Deploy.md, secțiune nouă) și un sondaj de test pe producție.
 
 ## Step L — documente legale înaintea codului nou (16.11.2026)
@@ -288,3 +289,17 @@ Decizii: dropdown pe rândul „Vezi subiectele / Alege o tematică” (Toate, P
 - [ ] **T.5b** — verificare vizuală (telefon + desktop) și deploy BE+FE.
 
 Tot pe 16.11.2026: margine sus unică pentru toate paginile — `Container main` din `Layout.js` are `pt: 1` (8px, valoarea folosită înainte doar la subiect); padding-ul local din `TreePage` scos, hero-ul de pe `/` cu padding redus, iar Stack-ul rădăcină cu `useFlexGap` (titlul ascuns „Tematici” nu mai adaugă 16px în categorie).
+
+## Step AI — subiect de tip Problemă propus de AI din fotografie (ADR-0014)
+
+Decizii (18.11.2026): doar adminii au acces deocamdată; setările celor 2 furnizori (Anthropic, OpenAI) și promptul de recunoaștere se editează din admin, ca la ArtaNFT; cheile doar în env; modelele fixe (`claude-haiku-5-5`, `gpt-6-luna`); furnizor implicit Anthropic; plafoane inițiale 30 de cereri / admin / zi, 30 de cereri și 1 USD / zi global, 10 USD / lună; locul vine din EXIF citit în browser, nu din AI.
+
+- [x] **AI.0** (18.11.2026) — documente legale: ADR-0014; `PrivacyPage` — secțiunea „Sugestii AI din fotografii” (furnizor AI ca împuternicit, copie redusă fără metadate, persoane terțe, jurnal fără fotografie), coordonatele din fotografie citite doar în browser (Localizare), furnizorul AI în „Cine poate primi datele”; data actualizării 18.11.2026.
+- [x] **AI.1** (18.11.2026) — BE nucleu `src/Ai/`: `ImageAnalyzer`, `HttpAnalyzer`, `AnthropicAnalyzer`, `OpenAiAnalyzer`, `AiAnalyzers`, `AiException`, `AiRefusedException`, `AiResult`; `symfony/http-client` adăugat. La AI pleacă varianta de afișare din `ImageProcessor` (WebP 1600 px, fără metadate).
+- [x] **AI.2** (18.11.2026) — BE `AiSettings` (rând unic, `GET/PATCH /api/admin/ai-settings`, doar admin; cheile doar ca „configurată da/nu”, modelele refuzate la PATCH) + `AiRequest` (jurnal, DBAL) + `AiQuotaChecker` (comutator, plafoane zi/lună, limita pe admin) + migrarea `Version20261118120000`; `LocationSource::PHOTO`.
+- [x] **AI.3** (18.11.2026) — BE `POST /api/ai/subject-suggestion` (multipart `file`, `node`, `takenAt` opțional): `SubjectSuggestionService` — categorii c1…c80 din subarbore, validare și normalizare, cache pe hash 24 h (nu consumă din limite), răspunsurile mai vechi de 24 h golite. `AiSuggestionTest` 7/7, suita BE 196/196.
+- [x] **AI.4** (18.11.2026) — FE `/setari-ai` (`AiSettingsPage`, meniul contului, doar admin): comutator, furnizor, chei „configurată ✓ / lipsă”, prompt cu „Resetează la implicit” (salvat ca NULL), limbă, limite, prețuri, consumul zilei/lunii; responsive.
+- [x] **AI.5** (18.11.2026) — FE `AiPhotoSuggestion` în `SubjectForm` (doar admin, la creare): „Fă o poză” / „Din galerie” (pe Android prin `cordova-plugin-camera`), EXIF citit cu `exifr` din fișierul original → pin `PHOTO` și data, `prepareImage` înainte de trimitere, sugestia completează doar câmpurile goale („Folosește titlul și descrierea propuse” le înlocuiește), categoria propusă cu „Mută aici”, indicii de loc, avertismente (pericol, persoane/numere), fotografia încărcată după salvare (o singură dată și la reîncercare).
+- [ ] **AI.6** — teste: BE `AiSuggestionTest` 7/7 (suita 196/196), FE `SubjectFormAi.test.js` + `AiSettingsPage.test.js` (suita 173/173), eslint pe fișierele atinse OK. Rămâne verificarea pe telefon (Android Cordova, camera) și desktop, făcută de Petro.
+- [x] **AI.7** (18.11.2026) — `Deploy.md` secțiunea O: chei în `/var/www/validez-be/shared/backend/.env`, budget limit în consolele furnizorilor, migrarea, runtime-check, FE, pornirea din „Setări AI”.
+- [ ] **AI.8** — opțional, amânat: geocodarea indiciilor de loc (Nominatim) ca al doilea pin propus.
