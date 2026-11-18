@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\Pagination\TraversablePaginator;
 use ApiPlatform\State\ProviderInterface;
 use App\Entity\CivicSubject;
+use App\Entity\SubjectMedia;
 use App\Entity\User;
 use App\Repository\CivicSubjectRepository;
 use App\Repository\SubjectMediaRepository;
@@ -62,6 +63,7 @@ final class CivicSubjectProvider implements ProviderInterface
                 return null;
             }
             $this->attachCovers([$subject]);
+            $this->attachStats([$subject]);
 
             return $subject;
         }
@@ -83,6 +85,7 @@ final class CivicSubjectProvider implements ProviderInterface
 
         [$items, $total] = $this->subjects->findVisiblePage($node, $type, $stage, $viewer, $isAdmin, $page, $perPage, $visibility, ($f['scope'] ?? '') === 'direct');
         $this->attachCovers($items);
+        $this->attachStats($items);
 
         return new TraversablePaginator(new \ArrayIterator($items), $page, $perPage, $total);
     }
@@ -97,7 +100,24 @@ final class CivicSubjectProvider implements ProviderInterface
         $covers = $this->media->findFirstPublishedPhotos($subjects);
         foreach ($subjects as $subject) {
             $cover = $covers[$subject->getId()->toBase32()] ?? null;
-            $subject->attachCoverThumbUrl($cover === null ? null : '/api/media/'.$cover->getId()->toBase32().'/thumb');
+            $base = $cover === null ? null : '/api/media/'.$cover->getId()->toBase32();
+            $subject->attachCoverThumbUrl($base === null ? null : $base.'/thumb');
+            $subject->attachCoverDisplayUrl($base === null ? null : $base.'/display');
+        }
+    }
+
+    /**
+     * Rândul de indicatori din liste: persoane care au votat revizia curentă, linkuri și fotografii publicate.
+     *
+     * @param list<CivicSubject> $subjects
+     */
+    private function attachStats(array $subjects): void
+    {
+        $voters = $this->subjects->countVotersOnCurrentRevision($subjects);
+        $media = $this->media->countPublishedByKind($subjects);
+        foreach ($subjects as $subject) {
+            $id = $subject->getId()->toBase32();
+            $subject->attachStats($voters[$id] ?? 0, $media[$id][SubjectMedia::KIND_LINK] ?? 0, $media[$id][SubjectMedia::KIND_PHOTO] ?? 0);
         }
     }
 

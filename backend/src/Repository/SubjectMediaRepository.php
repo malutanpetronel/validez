@@ -124,4 +124,30 @@ final class SubjectMediaRepository extends ServiceEntityRepository
 
         return $first;
     }
+
+    /**
+     * Media publicate (nescoase) pe tip, pentru toată pagina dintr-o interogare.
+     *
+     * @param list<CivicSubject> $subjects
+     *
+     * @return array<string, array<string, int>> id base32 => [kind => număr]
+     */
+    public function countPublishedByKind(array $subjects): array
+    {
+        if ($subjects === []) {
+            return [];
+        }
+        $rows = $this->createQueryBuilder('m')
+            ->select('IDENTITY(m.subject) AS sid', 'm.kind AS kind', 'COUNT(m.id) AS n')
+            ->where('m.subject IN (:subjects)')->andWhere('m.removedAt IS NULL')->andWhere('m.status = :published')
+            ->setParameter('subjects', array_map(static fn (CivicSubject $s) => $s->getId()->toRfc4122(), $subjects))
+            ->setParameter('published', MediaStatus::PUBLISHED->value)
+            ->groupBy('m.subject', 'm.kind')->getQuery()->getArrayResult();
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[\Symfony\Component\Uid\Ulid::fromString((string) $row['sid'])->toBase32()][$row['kind']] = (int) $row['n'];
+        }
+
+        return $counts;
+    }
 }

@@ -72,4 +72,31 @@ class CivicSubjectRepository extends ServiceEntityRepository
 
         return [$items, $total];
     }
+
+    /**
+     * Persoane distincte care au votat revizia curentă a fiecărui subiect (orice tip de vot), dintr-o interogare.
+     * Citește tabelul privat `vote`, dar întoarce doar numărul agregat (ADR-0007) - nu rezultatul, nu identificatori.
+     *
+     * @param list<CivicSubject> $subjects
+     *
+     * @return array<string, int> id base32 => număr
+     */
+    public function countVotersOnCurrentRevision(array $subjects): array
+    {
+        if ($subjects === []) {
+            return [];
+        }
+        $rows = $this->getEntityManager()->createQueryBuilder()
+            ->select('IDENTITY(v.subject) AS sid', 'COUNT(DISTINCT v.user) AS n')
+            ->from(\App\Entity\Vote::class, 'v')->join('v.revision', 'r')->join('v.subject', 's')
+            ->where('v.subject IN (:subjects)')->andWhere('r.number = s.revisionNumber')
+            ->setParameter('subjects', array_map(static fn (CivicSubject $s) => $s->getId()->toRfc4122(), $subjects))
+            ->groupBy('v.subject')->getQuery()->getArrayResult();
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[\Symfony\Component\Uid\Ulid::fromString((string) $row['sid'])->toBase32()] = (int) $row['n'];
+        }
+
+        return $counts;
+    }
 }

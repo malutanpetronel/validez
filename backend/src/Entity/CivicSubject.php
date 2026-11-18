@@ -232,6 +232,37 @@ class CivicSubject
 
     public function attachCoverThumbUrl(?string $url): void { $this->coverThumbUrl = $url; }
 
+    /** Varianta de afișare (1600 px) a aceleiași coperte - pentru `srcset` în listele cu poza pe toată lățimea. */
+    private ?string $coverDisplayUrl = null;
+
+    #[Groups(['subject:read'])]
+    public function getCoverDisplayUrl(): ?string { return $this->coverDisplayUrl; }
+
+    public function attachCoverDisplayUrl(?string $url): void { $this->coverDisplayUrl = $url; }
+
+    /**
+     * Indicatori agregați pentru liste (rândul „persoane au votat · linkuri · fotografii”); completați de
+     * CivicSubjectProvider, nu sunt coloane. Doar numere - fără rezultate de vot, fără identificatori.
+     */
+    private int $voterCount = 0;
+    private int $linkCount = 0;
+    private int $photoCount = 0;
+
+    /** Persoane distincte care au votat revizia curentă (oricare tip de vot). */
+    #[Groups(['subject:read'])]
+    public function getVoterCount(): int { return $this->voterCount; }
+
+    #[Groups(['subject:read'])]
+    public function getLinkCount(): int { return $this->linkCount; }
+
+    #[Groups(['subject:read'])]
+    public function getPhotoCount(): int { return $this->photoCount; }
+
+    public function attachStats(int $voters, int $links, int $photos): void
+    {
+        [$this->voterCount, $this->linkCount, $this->photoCount] = [$voters, $links, $photos];
+    }
+
     public function getDescription(): string { return $this->description; }
     public function getVisibility(): SubjectVisibility { return $this->visibility; }
     public function getStage(): SubjectStage { return $this->stage; }

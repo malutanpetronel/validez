@@ -390,6 +390,9 @@ final class SubjectMediaTest extends WebTestCase
         self::assertNull($covers['Groapa ion']);
         self::assertNull($covers['Groapa vlad-aprobat-1']);
         self::assertSame($first['thumbUrl'], $this->getLd('/'.$this->s['vlad']->getId()->toBase32())['coverThumbUrl']);
+        $displays = array_column($this->getLd('')['member'], 'coverDisplayUrl', 'title');
+        self::assertSame($first['displayUrl'], $displays['Groapa vlad']);
+        self::assertNull($displays['Groapa ion']);
 
         // 5 subiecte publice (cel ascuns nu): perPage mic paginează, unul prea mare rămâne plafonat la 20.
         self::assertCount(2, $this->getLd('?perPage=2&page=2')['member']);
@@ -404,6 +407,28 @@ final class SubjectMediaTest extends WebTestCase
         self::assertSame(200, $this->code());
 
         return json_decode((string) $this->client->getResponse()->getContent(), true);
+    }
+
+    /** Rândul de indicatori din liste: doar media publicate și nescoase; fotografiile autorilor sub moderare abia după aprobare. */
+    public function testIndicatoriiNumaraDoarMediaPublicate(): void
+    {
+        $this->upload('vlad', 'vlad');
+        $scoasa = $this->upload('vlad', 'vlad');
+        $this->link('vlad', 'vlad', 'https://example.com/a');
+        $this->link('vlad', 'vlad', 'https://example.com/b');
+        $this->call('DELETE', '/api/media/'.$scoasa['id'], 'vlad');
+        $pending = $this->upload('ion', 'ion');
+
+        $stats = static fn (array $list) => array_combine(array_column($list, 'title'),
+            array_map(static fn (array $s) => [$s['photoCount'], $s['linkCount']], $list));
+        $before = $stats($this->getLd('')['member']);
+        self::assertSame([1, 2], $before['Groapa vlad']);
+        self::assertSame([0, 0], $before['Groapa ion']);
+        $item = $this->getLd('/'.$this->s['vlad']->getId()->toBase32());
+        self::assertSame([1, 2, 0], [$item['photoCount'], $item['linkCount'], $item['voterCount']]);
+
+        $this->call('POST', '/api/media/'.$pending['id'].'/approve', 'admin');
+        self::assertSame([1, 0], $stats($this->getLd('')['member'])['Groapa ion']);
     }
 
     public function testSubiectAscunsNuIsiExpuneMedia(): void

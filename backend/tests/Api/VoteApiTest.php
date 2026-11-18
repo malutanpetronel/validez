@@ -187,6 +187,24 @@ final class VoteApiTest extends WebTestCase
         self::assertSame([true, true], array_column($revisions['revisions'], 'byAuthor'), 'adminul e și autorul aici');
     }
 
+    /** Rândul de indicatori: persoane distincte pe revizia curentă (nu suma pe tipuri), fără rezultatul votului. */
+    public function testSubjectExposesVoterCountOnCurrentRevisionOnly(): void
+    {
+        $id = $this->subject();
+        $voters = fn () => $this->call('GET', "/api/civic_subjects/$id", null, null, 'application/ld+json')['voterCount'] ?? 'cod '.$this->code();
+        $this->consent('ion');
+        $this->consent('maria');
+        $this->vote($id, 'VALIDITY', 1, 'ion');
+        $this->vote($id, 'IMPORTANCE', 4, 'ion');
+        $this->vote($id, 'VALIDITY', 1, 'maria');
+        self::assertSame(2, $voters());
+
+        $this->call('PATCH', "/api/civic_subjects/$id", ['description' => 'Pe DN1, km 12'], 'admin', 'application/merge-patch+json');
+        self::assertSame(0, $voters(), 'voturile reviziei vechi nu se numără');
+        $this->vote($id, 'VALIDITY', 1, 'ion');
+        self::assertSame(1, $voters());
+    }
+
     public function testRevisionsHideEstimateOnIneligibleTypes(): void
     {
         $id = $this->subject('PROPOSAL');
