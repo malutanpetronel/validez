@@ -35,7 +35,7 @@ export default function CookieNotice() {
         sx={{position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200, bgcolor: 'background.paper', color: 'text.primary',
             borderTop: 1, borderColor: 'divider', boxShadow: 3, px: {xs: 2, sm: 3}, py: 1.5,
             display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1.5}}>
-        <Typography variant="body2" sx={{flex: '1 1 280px'}}>Validez nu folosește cookie-uri de tracking sau analytics. Stocarea locală păstrează sesiunea, tema aleasă și închiderea acestei informări.</Typography>
+        <Typography variant="body2" sx={{flex: '1 1 280px'}}>Validez nu folosește cookie-uri de tracking sau analytics. Stocarea locală păstrează sesiunea, tema aleasă, închiderea acestei informări și subiectele pe care le-ai strâns în liste.</Typography>
         <Stack direction="row" spacing={1}>
             <Button component={RouterLink} to="/privacy" size="small">Confidențialitate</Button>
             <Button variant="outlined" size="small" onClick={dismiss}>Am înțeles</Button>

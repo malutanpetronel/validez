@@ -34,6 +34,32 @@ test('vizitator: vede subiectele (cu nodul fiecaruia), fara buton de creare', as
     expect(listUrls()[0]).toMatch(/\/civic_subjects\?node=01NODE$/);
 });
 
+test('✕ strânge cardul la o bandă (categorie + titlu), ține minte în browser și îl redeschide', async () => {
+    const {unmount} = renderList(null);
+    await screen.findByText('Gropi pe DN1');
+    fireEvent.click(screen.getByRole('button', {name: 'Strânge subiectul: Gropi pe DN1'}));
+    await waitFor(() => expect(screen.queryByRole('link', {name: /Gropi pe DN1/})).not.toBeInTheDocument());
+    expect(screen.getByText('Gropi pe DN1')).toBeInTheDocument(); // titlul rămâne în bandă
+    expect(JSON.parse(window.localStorage.getItem('validez.collapsedSubjects.v1'))).toHaveLength(1);
+
+    unmount();
+    renderList(null);
+    const expand = await screen.findByRole('button', {name: 'Arată subiectul: Gropi pe DN1'});
+    expect(expand).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(expand);
+    expect(await screen.findByRole('link', {name: /Gropi pe DN1/})).toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem('validez.collapsedSubjects.v1'))).toEqual([]);
+
+    // Scurtătura: „· 2 strânse” + „Arată-le pe toate” redeschide cardurile de pe pagină.
+    fireEvent.click(screen.getByRole('button', {name: 'Strânge subiectul: Gropi pe DN1'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Strânge subiectul: Ascuns de admin'}));
+    expect(await screen.findByText(/· 2 strânse/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Arată-le pe toate'}));
+    expect(await screen.findByRole('link', {name: /Ascuns de admin/})).toBeInTheDocument();
+    expect(screen.queryByText(/strânse/)).not.toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem('validez.collapsedSubjects.v1'))).toEqual([]);
+});
+
 test('fara nod selectat: subiectele recente, fara filtru de nod', async () => {
     renderList(null);
     await screen.findByText('Gropi pe DN1');

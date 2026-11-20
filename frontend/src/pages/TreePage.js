@@ -45,8 +45,8 @@ import {
 
 const DIALOG_TITLES = {root: 'Tematică nouă', child: 'Nod copil nou', rename: 'Redenumește nodul'};
 const VISUALLY_HIDDEN = {position: 'absolute', width: 1, height: 1, p: 0, m: '-1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0};
-/** Subiectele recente lângă arbore (pe `/`, fără selecție): câte 3, paginate. */
-const RECENT_PER_PAGE = 3;
+/** Subiectele recente lângă arbore (pe `/`, fără selecție): câte 10, paginate (de la 20.11.2026; înainte 3). */
+const RECENT_PER_PAGE = 10;
 
 /**
  * Plan Step 1.5: creare rădăcină/copil, redenumire, expandare cu încărcare pe ramuri,

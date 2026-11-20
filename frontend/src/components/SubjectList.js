@@ -1,12 +1,15 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Link as RouterLink, useLocation} from 'react-router-dom';
 import {
-    Alert, Avatar, Box, Button, Chip, FormControl, InputLabel, List, ListItemButton, MenuItem,
+    Alert, Avatar, Box, Button, Chip, Collapse, FormControl, IconButton, InputLabel, List, ListItemButton, MenuItem,
     Paper, Select, Skeleton, Stack, Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import useCollapsedSubjects from '../subjects/collapsed';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import {alpha, useTheme} from '@mui/material/styles';
 import {BRAND} from '../theme';
@@ -57,6 +60,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
     type: controlledType, onTypeChange, showHeading = true, area = '', q = '', extraFilters = null}) {
     const {user} = useAuth();
     const theme = useTheme();
+    const {isCollapsed, toggle: toggleCollapsed, expand: expandCollapsed} = useCollapsedSubjects();
     const location = useLocation();
     const [filters, setFilters] = useState({type: '', stage: ''});
     const [localPage, setLocalPage] = useState(1);
@@ -66,6 +70,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
     const typeControlled = typeof onTypeChange === 'function';
     const activeType = typeControlled ? controlledType ?? '' : filters.type;
     const [data, setData] = useState({items: [], total: 0, page: null});
+    const collapsedHere = data.items.filter((s) => isCollapsed(s.id)).map((s) => s.id);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [creating, setCreating] = useState(false);
@@ -115,9 +120,15 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                     </Typography>}
                 </Box>
                 <Stack direction="row" spacing={1} sx={{alignItems: 'center', justifyContent: 'space-between'}}>
-                    <Typography variant="body2" color="text.secondary" aria-live="polite">
-                        {loading ? 'Se încarcă…' : error ? 'Lista nu este disponibilă' : `${data.total} ${data.total === 1 ? 'subiect' : 'subiecte'}`}
-                    </Typography>
+                    {/* Scurtătura pentru cardurile strânse cu ✕: doar cele de pe pagina curentă. */}
+                    <Stack direction="row" spacing={0.5} useFlexGap sx={{alignItems: 'center', flexWrap: 'wrap', minWidth: 0}}>
+                        <Typography variant="body2" color="text.secondary" aria-live="polite">
+                            {loading ? 'Se încarcă…' : error ? 'Lista nu este disponibilă' : `${data.total} ${data.total === 1 ? 'subiect' : 'subiecte'}`}
+                            {!loading && !error && collapsedHere.length > 0 && ` · ${collapsedHere.length} ${collapsedHere.length === 1 ? 'strâns' : 'strânse'}`}
+                        </Typography>
+                        {!loading && !error && collapsedHere.length > 0 && <Button size="small" sx={{minHeight: 32, py: 0}}
+                            onClick={() => expandCollapsed(collapsedHere)}>{collapsedHere.length === 1 ? 'Arată-l' : 'Arată-le pe toate'}</Button>}
+                    </Stack>
                     {user && node && <Button variant="outlined" size="small" startIcon={<AddIcon/>}
                         sx={{flexShrink: 0, minHeight: 40}} onClick={() => setCreating(true)}>Subiect nou</Button>}
                 </Stack>
@@ -161,10 +172,14 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
             {loading && data.items.length === 0 && <Stack spacing={1} aria-label="Se încarcă subiectele">
                 {[0, 1, 2].map((key) => <Skeleton key={key} variant="rounded" height={150}/>)}
             </Stack>}
+            {/* Pe telefon cardurile sunt despărțite de o bandă gri de 8px pe toată lățimea ecranului (ca feed-ul FB). */}
             <List disablePadding aria-label="Lista subiectelor" aria-busy={loading}
-                sx={{display: 'grid', gap: {xs: 1, sm: 1.25}, opacity: loading ? 0.6 : 1}}>
-                {data.items.map((s, index) => (
-                    <Box component="li" key={s.id} sx={{listStyle: 'none', minWidth: 0, mx: BLEED, overflow: 'hidden',
+                sx={(t) => ({display: 'grid', gap: {xs: 1, sm: 1.25}, opacity: loading ? 0.6 : 1, mx: BLEED,
+                    [t.breakpoints.down('sm')]: {bgcolor: t.palette.mode === 'dark' ? alpha('#000', 0.55) : t.palette.grey[300]}})}>
+                {data.items.map((s, index) => {
+                    const collapsed = isCollapsed(s.id);
+                    return (
+                    <Box component="li" key={s.id} sx={{listStyle: 'none', minWidth: 0, overflow: 'hidden',
                         // Cardul (chenar, nuanța tipului, hover) e pe <li>: antetul stă în afara linkului (va primi butoane).
                         // Grosime separată de culoare: `border` responsiv (shorthand) ar reseta culoarea la cea a textului.
                         borderStyle: 'solid', borderWidth: {xs: 0, sm: 1}, borderColor: CARD_BORDER, borderRadius: {xs: 0, sm: 2.5},
@@ -174,20 +189,33 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                         '&:hover': {borderColor: 'primary.main', transform: {xs: 'none', sm: 'translateY(-2px)'}}}}>
                         {/* Antet ca la FB (decizie 20.11.2026): categoria e „numele”, dedesubt autor · dată · zonă.
                             În lista unei categorii (scope=direct) categoria e aceeași peste tot, deci antetul arată autorul. */}
-                        <Stack direction="row" spacing={1.25} sx={{alignItems: 'center', px: 2, pt: {xs: 1.5, sm: 2}, minWidth: 0}}>
-                            <Avatar aria-hidden sx={{width: 40, height: 40, bgcolor: (t) => alpha(t.palette.primary.main, 0.12), color: 'primary.main'}}>
+                        {/* ✕ strânge cardul la o bandă (categorie + titlu); un click pe bandă îl redeschide. Starea: subjects/collapsed.js. */}
+                        <Stack direction="row" spacing={1.25} onClick={collapsed ? () => toggleCollapsed(s.id) : undefined}
+                            sx={{alignItems: 'center', pl: 2, pr: 1, pt: collapsed ? 1 : {xs: 1.5, sm: 2}, pb: collapsed ? 1 : 0, minWidth: 0,
+                                cursor: collapsed ? 'pointer' : 'default'}}>
+                            <Avatar aria-hidden sx={{width: collapsed ? 32 : 40, height: collapsed ? 32 : 40,
+                                bgcolor: (t) => alpha(t.palette.primary.main, 0.12), color: 'primary.main', transition: 'width 160ms, height 160ms'}}>
                                 {scope === 'direct' ? <PersonOutlineIcon/> : <FolderOutlinedIcon/>}
                             </Avatar>
                             <Box sx={{minWidth: 0, flex: 1}}>
                                 <Typography component="div" variant="subtitle2" sx={{fontWeight: 700, lineHeight: 1.3, overflowWrap: 'anywhere'}}>
                                     {scope === 'direct' ? s.authorName : s.nodeName}
                                 </Typography>
-                                <Typography component="div" variant="caption" color="text.secondary" sx={{lineHeight: 1.35, overflowWrap: 'anywhere'}}>
+                                {collapsed ? <Typography component="div" variant="caption" color="text.secondary"
+                                    sx={{lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{s.title}</Typography>
+                                : <Typography component="div" variant="caption" color="text.secondary" sx={{lineHeight: 1.35, overflowWrap: 'anywhere'}}>
                                     {scope === 'direct' ? '' : `${s.authorName} · `}{formatDate(s.createdAt)}
                                     {areaShort(s.area) && <> · <Box component="strong" sx={{fontWeight: 600, color: 'text.primary'}}>{areaShort(s.area)}</Box></>}
-                                </Typography>
+                                </Typography>}
                             </Box>
+                            <IconButton size="small" aria-expanded={!collapsed}
+                                aria-label={collapsed ? `Arată subiectul: ${s.title}` : `Strânge subiectul: ${s.title}`}
+                                onClick={(e) => { e.stopPropagation(); toggleCollapsed(s.id); }}
+                                sx={{alignSelf: collapsed ? 'center' : 'flex-start', color: 'text.secondary'}}>
+                                {collapsed ? <ExpandMoreIcon fontSize="small"/> : <CloseIcon fontSize="small"/>}
+                            </IconButton>
                         </Stack>
+                        <Collapse in={!collapsed} unmountOnExit timeout={200}>
                         <ListItemButton component={RouterLink} to={s.canonicalPath ?? `/subiecte/${s.id}`} state={navigationState ?? location.state}
                             sx={{flexDirection: 'column', alignItems: 'stretch', gap: 1.25, px: {xs: 0, sm: 2}, pt: 1.25, pb: {xs: 1.5, sm: 2},
                                 '&:hover': {bgcolor: 'action.hover'},
@@ -218,8 +246,10 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                                 <Typography component="span" variant="body2" sx={{color: 'primary.main', fontWeight: 700, pt: 0.25}}>Vezi subiectul →</Typography>
                             </Stack>
                         </ListItemButton>
+                        </Collapse>
                     </Box>
-                ))}
+                    );
+                })}
             </List>
             {!error && <Paginare pagina={page} totalPagini={pages} onChange={changePage}/>}
             {footer}
