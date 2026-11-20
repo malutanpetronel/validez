@@ -1,0 +1,4 @@
+{# Rândurile subiectelor în shell-ul SEO (pagina principală, /subiecte): titlu cu link, tip, stadiu, categorie, zonă. #}
+{% if subjects %}<ul>{% for s in subjects %}<li><a href="{{ s.url }}">{{ s.title }}</a> — {{ s.type }}, {{ s.stage }} · {{ s.category }}{% if s.area %} · {{ s.area }}{% endif %}</li>{% endfor %}</ul>
+{% else %}<p>Nu există încă subiecte publicate.</p>
+{% endif %}

@@ -162,6 +162,55 @@ final class SeoShellTest extends WebTestCase
         self::assertSame([1, 2, 3], array_column($crumbs['itemListElement'], 'position'));
     }
 
+    /** 20.11.2026: pagina principală are shell — tematici și subiecte publice cu linkuri, WebSite + SearchAction. */
+    public function testPaginaPrincipala(): void
+    {
+        $this->subject('Ascuns de admin', 'x', SubjectVisibility::HIDDEN);
+        $this->subject('În așteptare', 'x', SubjectVisibility::PENDING);
+        $this->em->flush();
+
+        $html = $this->get('/');
+        self::assertSame(200, $this->code());
+        self::assertSame(1, substr_count($html, '<title>'));
+        self::assertStringContainsString('<title>Subiectele comunității, mai ușor de descoperit — VALIDEZ</title>', $html);
+        self::assertStringContainsString('<link rel="canonical" href="https://validez.test/"/>', $html);
+        self::assertStringContainsString('platformă civică', $html, 'descriere reală, nu doar sloganul');
+        self::assertStringNotContainsString('noindex', $html);
+        self::assertStringContainsString('src="/static/js/main.test.js"', $html, 'aplicația se încarcă în continuare');
+
+        $root = substr($html, strpos($html, '<div id="root">'));
+        self::assertStringContainsString('<h1>Subiectele comunității, mai ușor de descoperit.</h1>', $root);
+        self::assertStringContainsString('<a href="/categorie/drumuri">Drumuri</a> (1 subiect)', $root, 'tematicile principale, cu numărul de subiecte publice');
+        self::assertStringContainsString('<a href="/categorie/drumuri/cluj/calitate/subiect/gropi-pe-dn1">Gropi pe DN1</a> — Problemă, Deschis · Calitate', $root);
+        self::assertStringNotContainsString('Ascuns de admin', $root);
+        self::assertStringNotContainsString('În așteptare', $root);
+        self::assertStringNotContainsString('Admina', $root, 'fără numele autorilor');
+
+        [$site, $org] = $this->jsonLd($html);
+        self::assertSame(['WebSite', 'https://validez.test/subiecte?cauta={search_term_string}'], [$site['@type'], $site['potentialAction']['target']['urlTemplate']]);
+        self::assertSame('Organization', $org['@type']);
+
+        $this->get('/?zona=127&cauta=groapa');
+        self::assertSame(200, $this->code(), 'filtrele din adresă le aplică React; shell-ul rămâne același');
+    }
+
+    public function testListaSubiectelor(): void
+    {
+        $html = $this->get('/subiecte');
+        self::assertSame(200, $this->code());
+        self::assertStringContainsString('<title>Subiecte recente — VALIDEZ</title>', $html);
+        self::assertStringContainsString('<link rel="canonical" href="https://validez.test/subiecte"/>', $html);
+        self::assertStringNotContainsString('noindex', $html);
+        $root = substr($html, strpos($html, '<div id="root">'));
+        self::assertStringContainsString('1 subiect publicat', $root);
+        self::assertStringContainsString('<a href="/categorie/drumuri/cluj/calitate/subiect/gropi-pe-dn1">Gropi pe DN1</a>', $root);
+
+        $html = $this->get('/subiecte?cauta=groapa&zona=127');
+        self::assertSame(200, $this->code());
+        self::assertStringContainsString('<meta name="robots" content="noindex"/>', $html, 'combinațiile de filtre nu intră în index');
+        self::assertStringNotContainsString('rel="canonical"', $html);
+    }
+
     public function testPaginaSubiectului(): void
     {
         $html = $this->get('/categorie/drumuri/cluj/calitate/subiect/gropi-pe-dn1');

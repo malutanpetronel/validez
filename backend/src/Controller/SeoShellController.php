@@ -16,6 +16,7 @@ use App\Seo\SeoShell;
 use App\Seo\SlugRegistry;
 use App\Subject\SubjectVisibility;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\Ulid;
@@ -30,6 +31,12 @@ use Twig\Environment;
 final class SeoShellController
 {
     private const SUBJECTS_ON_CATEGORY = 50;
+    private const SUBJECTS_ON_HOME = 10;
+    private const SUBJECTS_ON_LIST = 20;
+    /** Textul paginii principale (același ca în TreePage) + ce e Validez, pentru roboții care nu rulează JavaScript. */
+    private const HOME_TITLE = 'Subiectele comunității, mai ușor de descoperit';
+    private const HOME_DESCRIPTION = 'VALIDEZ e o platformă civică unde cetățenii adaugă probleme, propuneri și sondaje din localitatea, județul '
+        .'lor sau de interes național, organizate pe tematici, și votează ce contează.';
 
     public function __construct(
         private readonly SlugRegistry $slugs,
@@ -40,6 +47,103 @@ final class SeoShellController
         private readonly SeoShell $shell,
         private readonly Environment $twig,
     ) {
+    }
+
+    /**
+     * Pagina principală (20.11.2026): fără shell, roboții care nu rulează JavaScript (previzualizări de link, AI)
+     * vedeau doar titlul și mesajul din <noscript>. Tematicile principale și ultimele subiecte publice, cu linkuri.
+     * Filtrele din adresă (?tip=, ?zona=, ?cauta=, ?pagina=) le aplică doar React; canonical rămâne `/`.
+     */
+    #[Route('/', name: 'seo_home', methods: ['GET', 'HEAD'])]
+    public function home(): Response
+    {
+        [$subjects] = $this->subjects->findVisiblePage(null, null, null, null, false, 1, self::SUBJECTS_ON_HOME, SubjectVisibility::PUBLISHED);
+
+        return $this->shell->render([
+            'title' => self::HOME_TITLE,
+            'description' => self::HOME_DESCRIPTION,
+            'path' => '/',
+            'jsonLd' => [
+                [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'WebSite',
+                    'name' => 'VALIDEZ',
+                    'url' => $this->shell->url('/'),
+                    'description' => self::HOME_DESCRIPTION,
+                    'inLanguage' => 'ro',
+                    'potentialAction' => [
+                        '@type' => 'SearchAction',
+                        'target' => ['@type' => 'EntryPoint', 'urlTemplate' => $this->shell->url('/subiecte?cauta={search_term_string}')],
+                        'query-input' => 'required name=search_term_string',
+                    ],
+                ],
+                [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'Organization',
+                    'name' => 'VALIDEZ',
+                    'url' => $this->shell->url('/'),
+                    'logo' => $this->shell->url('/logo-splash.svg'),
+                ],
+            ],
+        ], $this->twig->render('seo/home.html.twig', [
+            'title' => self::HOME_TITLE,
+            'description' => self::HOME_DESCRIPTION,
+            // withChildrenFlags numără doar subiectele vizibile vizitatorului anonim (PUBLISHED).
+            'topics' => $this->nodes->withChildrenFlags($this->nodes->findChildren(null)),
+            'subjects' => $this->subjectRows($subjects),
+        ]));
+    }
+
+    /** Lista subiectelor: primele 20 publice; cu filtre în adresă pagina e noindex (fără mii de combinații în index). */
+    #[Route('/subiecte', name: 'seo_subjects', methods: ['GET', 'HEAD'])]
+    public function subjectsList(Request $request): Response
+    {
+        $filtered = array_intersect(['tip', 'zona', 'cauta', 'pagina'], $request->query->keys()) !== [];
+        [$subjects, $total] = $this->subjects->findVisiblePage(null, null, null, null, false, 1, self::SUBJECTS_ON_LIST, SubjectVisibility::PUBLISHED);
+
+        return $this->shell->render([
+            'title' => 'Subiecte recente',
+            'description' => 'Cele mai noi probleme, propuneri și sondaje publicate pe VALIDEZ, din toate tematicile.',
+            'path' => '/subiecte',
+            'noindex' => $filtered,
+        ], $this->twig->render('seo/subjects.html.twig', [
+            'subjects' => $this->subjectRows($subjects),
+            'total' => $total,
+        ]));
+    }
+
+    /**
+     * Rândurile din listele shell-ului: titlu, tip, stadiu, categorie, zonă. Fără autor (nu-l expunem roboților).
+     *
+     * @param list<CivicSubject> $subjects
+     *
+     * @return list<array{url: string, title: string, type: string, stage: string, category: string, area: ?string}>
+     */
+    private function subjectRows(array $subjects): array
+    {
+        return array_map(static fn (CivicSubject $s): array => [
+            'url' => $s->getCanonicalPath(),
+            'title' => $s->getTitle(),
+            'type' => Labels::TYPES[$s->getType()->value] ?? $s->getType()->value,
+            'stage' => Labels::STAGES[$s->getStage()->value] ?? $s->getStage()->value,
+            'category' => $s->getNode()->getName(),
+            'area' => self::areaLabel($s),
+        ], $subjects);
+    }
+
+    /** „Național”, „județul Cluj”, „Dej, Gherla”; null = arie nespecificată. */
+    private static function areaLabel(CivicSubject $subject): ?string
+    {
+        $area = $subject->effectiveArea();
+        if ($area === []) {
+            return null;
+        }
+        if ($area[0]['level'] === 'COUNTRY') {
+            return 'Național';
+        }
+        $names = implode(', ', array_map(static fn (array $u): string => self::shortPlace($u['name']), $area));
+
+        return $area[0]['level'] === 'COUNTY' ? 'județul '.$names : $names;
     }
 
     #[Route('/categorie/{path}', name: 'seo_shell', requirements: ['path' => '.*'], defaults: ['path' => ''], methods: ['GET', 'HEAD'])]

@@ -1,0 +1,7 @@
+{# Rezumatul /subiecte in #root (React il inlocuieste la pornire): primele subiecte publice, cu linkuri. #}
+<main>
+<p><a href="/">VALIDEZ</a></p>
+<h1>Subiecte recente</h1>
+<p>{{ total }} {{ total == 1 ? 'subiect publicat' : (total % 100 >= 20 or (total > 0 and total % 100 == 0) ? 'de subiecte publicate' : 'subiecte publicate') }}, cele mai noi primele.</p>
+{% include 'seo/_subject_rows.html.twig' with {subjects: subjects} %}
+</main>

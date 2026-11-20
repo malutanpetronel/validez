@@ -1,0 +1,19 @@
+{# Rezumatul paginii principale in #root (React il inlocuieste la pornire); linkuri reale pentru roboti. #}
+<main>
+<p>VEZI. VERIFICĂ. VALIDEAZĂ.</p>
+<h1>{{ title }}.</h1>
+<p>Explorează probleme, propuneri și sondaje. Citește contextul, vezi opiniile celorlalți și participă.</p>
+<p>{{ description }}</p>
+<h2>Tematici</h2>
+{% if topics %}<ul>
+{% for t in topics %}
+{% set n = t.subjectCount %}
+<li>{% if t.slugPath %}<a href="/categorie/{{ t.slugPath }}">{{ t.name }}</a>{% else %}{{ t.name }}{% endif %}{% if n > 0 %} ({{ n }} {{ n == 1 ? 'subiect' : (n % 100 >= 20 or n % 100 == 0 ? 'de subiecte' : 'subiecte') }}){% endif %}</li>
+{% endfor %}
+</ul>
+{% else %}<p>Nu există încă tematici.</p>
+{% endif %}
+<h2>Subiecte recente</h2>
+{% include 'seo/_subject_rows.html.twig' with {subjects: subjects} %}
+<p><a href="/subiecte">Toate subiectele</a></p>
+</main>
