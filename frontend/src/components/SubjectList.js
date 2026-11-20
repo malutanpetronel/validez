@@ -1,10 +1,12 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Link as RouterLink, useLocation} from 'react-router-dom';
 import {
-    Alert, Box, Button, Chip, FormControl, InputLabel, List, ListItemButton, MenuItem,
+    Alert, Avatar, Box, Button, Chip, FormControl, InputLabel, List, ListItemButton, MenuItem,
     Paper, Select, Skeleton, Stack, Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import {alpha, useTheme} from '@mui/material/styles';
 import {BRAND} from '../theme';
@@ -162,22 +164,36 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
             <List disablePadding aria-label="Lista subiectelor" aria-busy={loading}
                 sx={{display: 'grid', gap: {xs: 1, sm: 1.25}, opacity: loading ? 0.6 : 1}}>
                 {data.items.map((s, index) => (
-                    <Box component="li" key={s.id} sx={{listStyle: 'none', minWidth: 0, mx: BLEED}}>
-                        <ListItemButton component={RouterLink} to={s.canonicalPath ?? `/subiecte/${s.id}`} state={navigationState ?? location.state}
-                            sx={{flexDirection: 'column', alignItems: 'stretch', gap: 1.25, px: {xs: 0, sm: 2}, py: {xs: 1.5, sm: 2},
-                                // Grosime separată de culoare: `border` responsiv (shorthand) ar reseta culoarea la cea a textului.
-                                borderStyle: 'solid', borderWidth: {xs: 0, sm: 1}, borderColor: CARD_BORDER, borderRadius: {xs: 0, sm: 2.5},
-                                bgcolor: 'background.paper',
-                                ...typeTint(s.type)(theme),
-                                transition: 'border-color 160ms, background-color 160ms, transform 160ms',
-                                '&:hover': {borderColor: 'primary.main', bgcolor: 'action.hover', transform: {xs: 'none', sm: 'translateY(-2px)'}},
-                                '&.Mui-focusVisible': {outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2}}}>
-                            <Stack spacing={0.25} sx={{px: TEXT_PX, minWidth: 0}}>
-                                <Typography component="span" variant="subtitle1" sx={{fontWeight: 700, lineHeight: 1.35, overflowWrap: 'anywhere'}}>{s.title}</Typography>
-                                <Typography component="span" variant="caption" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>
-                                    {scope === 'direct' ? '' : `în ${s.nodeName} · `}{s.authorName} · {formatDate(s.createdAt)}
+                    <Box component="li" key={s.id} sx={{listStyle: 'none', minWidth: 0, mx: BLEED, overflow: 'hidden',
+                        // Cardul (chenar, nuanța tipului, hover) e pe <li>: antetul stă în afara linkului (va primi butoane).
+                        // Grosime separată de culoare: `border` responsiv (shorthand) ar reseta culoarea la cea a textului.
+                        borderStyle: 'solid', borderWidth: {xs: 0, sm: 1}, borderColor: CARD_BORDER, borderRadius: {xs: 0, sm: 2.5},
+                        bgcolor: 'background.paper',
+                        ...typeTint(s.type)(theme),
+                        transition: 'border-color 160ms, background-color 160ms, transform 160ms',
+                        '&:hover': {borderColor: 'primary.main', transform: {xs: 'none', sm: 'translateY(-2px)'}}}}>
+                        {/* Antet ca la FB (decizie 20.11.2026): categoria e „numele”, dedesubt autor · dată · zonă.
+                            În lista unei categorii (scope=direct) categoria e aceeași peste tot, deci antetul arată autorul. */}
+                        <Stack direction="row" spacing={1.25} sx={{alignItems: 'center', px: 2, pt: {xs: 1.5, sm: 2}, minWidth: 0}}>
+                            <Avatar aria-hidden sx={{width: 40, height: 40, bgcolor: (t) => alpha(t.palette.primary.main, 0.12), color: 'primary.main'}}>
+                                {scope === 'direct' ? <PersonOutlineIcon/> : <FolderOutlinedIcon/>}
+                            </Avatar>
+                            <Box sx={{minWidth: 0, flex: 1}}>
+                                <Typography component="div" variant="subtitle2" sx={{fontWeight: 700, lineHeight: 1.3, overflowWrap: 'anywhere'}}>
+                                    {scope === 'direct' ? s.authorName : s.nodeName}
+                                </Typography>
+                                <Typography component="div" variant="caption" color="text.secondary" sx={{lineHeight: 1.35, overflowWrap: 'anywhere'}}>
+                                    {scope === 'direct' ? '' : `${s.authorName} · `}{formatDate(s.createdAt)}
                                     {areaShort(s.area) && <> · <Box component="strong" sx={{fontWeight: 600, color: 'text.primary'}}>{areaShort(s.area)}</Box></>}
                                 </Typography>
+                            </Box>
+                        </Stack>
+                        <ListItemButton component={RouterLink} to={s.canonicalPath ?? `/subiecte/${s.id}`} state={navigationState ?? location.state}
+                            sx={{flexDirection: 'column', alignItems: 'stretch', gap: 1.25, px: {xs: 0, sm: 2}, pt: 1.25, pb: {xs: 1.5, sm: 2},
+                                '&:hover': {bgcolor: 'action.hover'},
+                                '&.Mui-focusVisible': {outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2}}}>
+                            <Stack spacing={0.25} sx={{px: TEXT_PX, minWidth: 0}}>
+                                <Typography component="span" variant="subtitle1" sx={{fontWeight: 700, lineHeight: 1.35, overflowWrap: 'anywhere'}}>{s.title}</Typography>
                                 <Stack direction="row" spacing={0.75} useFlexGap sx={{flexWrap: 'wrap', pt: 0.75}}>
                                     <Chip size="small" label={TYPE_LABELS[s.type] ?? s.type} variant="outlined" sx={typeChip(s.type)}/>
                                     <Chip size="small" label={STAGE_LABELS[s.stage] ?? s.stage} color={STAGE_COLORS[s.stage] ?? 'default'} sx={CHIP}/>

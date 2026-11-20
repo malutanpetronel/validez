@@ -25,7 +25,9 @@ beforeEach(() => {
 test('vizitator: vede subiectele (cu nodul fiecaruia), fara buton de creare', async () => {
     renderList({id: '01NODE', name: 'Drumuri'});
     expect(await screen.findByText('Gropi pe DN1')).toBeInTheDocument();
-    expect(screen.getByText(/în DN1 · Ion/)).toBeInTheDocument();
+    // Antet ca la FB: categoria e „numele”, dedesubt autorul · data.
+    expect(screen.getByText('DN1')).toBeInTheDocument();
+    expect(screen.getAllByText(/^Ion · /).length).toBeGreaterThan(0);
     expect(screen.getByText('Ascuns')).toBeInTheDocument();
     expect(screen.queryByRole('button', {name: /Subiect nou/})).not.toBeInTheDocument();
     expect(screen.getByRole('link', {name: /Intră în cont/})).toBeInTheDocument();
