@@ -191,6 +191,7 @@ final class SubjectAreaTest extends WebTestCase
         self::assertSame(['localA'], $list('q=GROAPA'), 'fără majuscule și diacritice');
         self::assertSame(['judet'], $list('q=dj%20109'), 'și în descriere');
         self::assertSame([], $list('q=groapa&area=RO'));
+        self::assertSame(['localA'], $list('q=groapa&area=127'), 'căutarea se combină cu zona');
         $this->call('GET', '/api/civic_subjects?area=99999', null, false, 'application/ld+json');
         self::assertSame(400, $this->code(), 'zonă necunoscută');
 

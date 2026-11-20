@@ -49,9 +49,10 @@ function SubjectCover({subject, priority}) {
  * (lângă arbore: `?pagina=`); după schimbarea paginii lista derulează la titlul ei când vin datele noi.
  * Cu `type` + `onTypeChange` tipul vine din afară (Step T: filtrul paginii principale / `?tip=`); fără, e local.
  * `area` (zona) și `q` (căutarea în titlu/descriere) vin din pagina principală; cu `q` titlul devine „Rezultate pentru …”.
+ * `extraFilters` = câmpuri puse pe același rând după Tip și Stadiu (pe /subiecte: Zonă și Caută).
  */
 export default function SubjectList({node, scope = '', navigationState, perPage = PER_PAGE, page: controlledPage, onPageChange, footer, showFilters = true,
-    type: controlledType, onTypeChange, showHeading = true, area = '', q = ''}) {
+    type: controlledType, onTypeChange, showHeading = true, area = '', q = '', extraFilters = null}) {
     const {user} = useAuth();
     const theme = useTheme();
     const location = useLocation();
@@ -125,21 +126,23 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
             </Typography>}
             {user && !node && <Typography variant="body2" color="text.secondary" sx={{mb: 1.5}}>Selectează un nod din arbore ca să adaugi un subiect.</Typography>}
 
-            {showFilters && <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5} sx={{mb: 2}}>
-                <FormControl size="small" fullWidth>
+            {/* Un rând pe desktop; pe telefon fiecare filtru pe rândul lui. */}
+            {showFilters && <Stack direction="row" spacing={1.5} useFlexGap sx={{mb: 2, flexWrap: 'wrap', rowGap: 1.5}}>
+                <FormControl size="small" sx={{minWidth: 0, flex: {xs: '1 1 100%', sm: '1 1 150px'}}}>
                     <InputLabel id="flt-type">Tip</InputLabel>
                     <Select labelId="flt-type" label="Tip" value={activeType} onChange={setFilter('type')}>
                         <MenuItem value="">Toate</MenuItem>
                         {Object.entries(TYPE_LABELS).map(([k, l]) => <MenuItem key={k} value={k}><TypeDot type={k}/>{l}</MenuItem>)}
                     </Select>
                 </FormControl>
-                <FormControl size="small" fullWidth>
+                <FormControl size="small" sx={{minWidth: 0, flex: {xs: '1 1 100%', sm: '1 1 150px'}}}>
                     <InputLabel id="flt-stage">Stadiu</InputLabel>
                     <Select labelId="flt-stage" label="Stadiu" value={filters.stage} onChange={setFilter('stage')}>
                         <MenuItem value="">Toate</MenuItem>
                         {Object.entries(STAGE_LABELS).map(([k, l]) => <MenuItem key={k} value={k}><StageDot stage={k}/>{l}</MenuItem>)}
                     </Select>
                 </FormControl>
+                {extraFilters}
             </Stack>}
 
             {error && <Alert severity="error">{error}</Alert>}

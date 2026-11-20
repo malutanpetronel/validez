@@ -83,11 +83,9 @@ export default function TreePage() {
     typeRef.current = typeFilter;
     const changeType = (type) => {
         setTypeFilter(type);
-        if (type) setSearchInput('');
         if (atRoot) setSearchParams((prev) => {
             const next = new URLSearchParams(prev);
             next.delete('pagina');
-            if (type) next.delete('cauta');
             if (type) next.set('tip', type); else next.delete('tip');
             return next;
         });
@@ -103,11 +101,9 @@ export default function TreePage() {
         const code = option?.code ?? '';
         setAreaFilter(code);
         setAreaName(code ? areaOptionLabel(option) : '');
-        if (code) setSearchInput('');
         if (atRoot) setSearchParams((prev) => {
             const next = new URLSearchParams(prev);
             next.delete('pagina');
-            if (code) next.delete('cauta');
             if (code) next.set('zona', code); else next.delete('zona');
             return next;
         });
@@ -120,7 +116,7 @@ export default function TreePage() {
         if (!zonaParam) setAreaName('');
     }, [atRoot, zonaParam]);
     // Căutarea (ca pe multiblog): titlu sau descriere, orice nivel al arborelui. Pe `/` în adresă (`?cauta=`);
-    // pornirea ei golește tipul și zona, iar alegerea unui tip sau a unei zone golește căutarea.
+    // se combină cu tipul și zona (ex. București + „canalizare”) - decizie 20.11.2026.
     const searchQuery = atRoot ? (searchParams.get('cauta') ?? '').trim() : '';
     const [searchInput, setSearchInput] = useState(searchQuery);
     useEffect(() => {
@@ -131,11 +127,7 @@ export default function TreePage() {
         const timer = setTimeout(() => setSearchParams((prev) => {
             const next = new URLSearchParams(prev);
             next.delete('pagina');
-            if (wanted) {
-                next.set('cauta', wanted);
-                next.delete('tip');
-                next.delete('zona');
-            } else next.delete('cauta');
+            if (wanted) next.set('cauta', wanted); else next.delete('cauta');
             return next;
         }, {replace: true}), 350);
         return () => clearTimeout(timer);
@@ -426,6 +418,10 @@ export default function TreePage() {
 
     const selected = selectedKey ? findNode(treeData, selectedKey) : null;
     const home = !selected && !selectedSubject && !urlError;
+    // Cel mai adânc nivel vizibil (ramuri deschise) → lățimea minimă a arborelui: 240px + 24px pe nivel.
+    const openDepth = (nodes, depth = 0) => (nodes ?? []).reduce((max, n) => Math.max(max,
+        expandedKeys.includes(n.key) && Array.isArray(n.children) ? openDepth(n.children, depth + 1) : depth), depth);
+    const treeMinWidth = 240 + openDepth(treeData) * 24;
     useEffect(() => {
         if (!selected || pendingCategoryTop.current !== selected.slugPath) return;
         pendingCategoryTop.current = null;
@@ -577,21 +573,11 @@ export default function TreePage() {
                 <Typography color="text.secondary" sx={{fontSize: {xs: '1rem', sm: '1.1rem'}, maxWidth: 680, mt: 1.5}}>
                     Explorează probleme, propuneri și sondaje. Citește contextul, vezi opiniile celorlalți și participă.
                 </Typography>
-                <TextField size="small" fullWidth value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
-                    placeholder="Caută în titlurile și descrierile subiectelor"
-                    inputProps={{'aria-label': 'Caută subiecte', maxLength: 100}}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && searchInput.trim().length >= 2) scrollToSection('subiecte-recente'); }}
-                    sx={{maxWidth: 680, mt: 2.5, bgcolor: 'background.paper'}}
-                    InputProps={{
-                        startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small"/></InputAdornment>,
-                        endAdornment: searchInput ? <InputAdornment position="end">
-                            <IconButton size="small" aria-label="Golește căutarea" onClick={() => setSearchInput('')}><ClearIcon fontSize="small"/></IconButton>
-                        </InputAdornment> : null,
-                    }}/>
+                {/* Desktop: un singur rând. Pe telefon fiecare filtru pe rândul lui; între ele (tabletă) se rup fluid. */}
                 <Stack direction="row" spacing={1} useFlexGap sx={{mt: 2.5, flexWrap: 'wrap', alignItems: 'center', rowGap: 2}}>
-                    <Button variant="contained" onClick={() => scrollToSection('subiecte-recente')}>Vezi subiectele</Button>
-                    <Button variant="outlined" onClick={() => scrollToSection('tematici')}>Alege o tematică</Button>
-                    <FormControl size="small" sx={{minWidth: 200, flex: {xs: '1 1 100%', sm: '0 0 auto'}}}>
+                    <Button variant="contained" sx={{flexShrink: 0, whiteSpace: 'nowrap'}} onClick={() => scrollToSection('subiecte-recente')}>Vezi subiectele</Button>
+                    <Button variant="outlined" sx={{flexShrink: 0, whiteSpace: 'nowrap'}} onClick={() => scrollToSection('tematici')}>Alege o tematică</Button>
+                    <FormControl size="small" sx={{minWidth: 0, flex: {xs: '1 1 100%', sm: '0 1 190px'}}}>
                         <InputLabel id="home-type" shrink>Tip subiecte</InputLabel>
                         <Select labelId="home-type" label="Tip subiecte" notched displayEmpty value={typeFilter}
                             onChange={(e) => changeType(e.target.value)}>
@@ -600,11 +586,23 @@ export default function TreePage() {
                         </Select>
                     </FormControl>
                     <AreaFilter value={areaFilter} onChange={changeArea} onResolve={(o) => setAreaName(o.code ? areaOptionLabel(o) : '')}
-                        sx={{minWidth: 240, flex: {xs: '1 1 100%', sm: '0 1 280px'}}}/>
+                        sx={{minWidth: 0, flex: {xs: '1 1 100%', sm: '1 1 220px'}}}/>
+                    <TextField size="small" value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
+                        placeholder="Caută în titluri și descrieri"
+                        inputProps={{'aria-label': 'Caută subiecte', maxLength: 100}}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && searchInput.trim().length >= 2) scrollToSection('subiecte-recente'); }}
+                        sx={{minWidth: 0, flex: {xs: '1 1 100%', sm: '2 1 240px'}, bgcolor: 'background.paper'}}
+                        InputProps={{
+                            startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small"/></InputAdornment>,
+                            endAdornment: searchInput ? <InputAdornment position="end">
+                                <IconButton size="small" aria-label="Golește căutarea" onClick={() => setSearchInput('')}><ClearIcon fontSize="small"/></IconButton>
+                            </InputAdornment> : null,
+                        }}/>
                 </Stack>
             </Box> : !selectedSubject && <Typography component="h1" sx={VISUALLY_HIDDEN}>Tematici</Typography>}
 
-            <Box sx={{display: 'grid', gap: 2, gridTemplateColumns: {xs: '1fr', md: 'minmax(0, 5fr) minmax(0, 7fr)'}, alignItems: 'start'}}>
+            {/* Arborele ~1/3 din lățime (min. 280px); la ramuri adânci face scroll orizontal în panoul lui (vezi treeMinWidth). */}
+            <Box sx={{display: 'grid', gap: 2, gridTemplateColumns: {xs: '1fr', md: 'minmax(280px, 4fr) minmax(0, 8fr)'}, alignItems: 'start'}}>
                 <Paper id="tematici" component="section" aria-label="Tematici" sx={{p: {xs: 2, sm: 2.5}, overflowX: 'auto',
                     scrollMarginTop: 16, order: {xs: home ? 2 : 1, md: 1}}}>
                     {home && <Box sx={{mb: 2, pb: 1.5, borderBottom: 1, borderColor: 'divider'}}>
@@ -660,6 +658,9 @@ export default function TreePage() {
                     {treeData.length > 0 && (
                         <Box onKeyDown={isAdmin ? onTreeKeyDown : undefined}
                              sx={{
+                                 // Lățimea minimă crește cu adâncimea ramurilor deschise (24px/nivel): textul nu se strivește,
+                                 // iar panoul (overflowX: auto) face scroll orizontal doar când chiar e nevoie.
+                                 minWidth: treeMinWidth,
                                  '& .rc-tree-treenode': {display: 'flex', alignItems: 'center', py: 0.4},
                                  '& .rc-tree-indent': {height: 'auto', flexShrink: 0},
                                  '& .rc-tree-indent-unit': {width: 24},
