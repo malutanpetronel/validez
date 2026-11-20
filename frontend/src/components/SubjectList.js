@@ -48,9 +48,10 @@ function SubjectCover({subject, priority}) {
  * Cu `page` + `onPageChange` pagina stă în adresă
  * (lângă arbore: `?pagina=`); după schimbarea paginii lista derulează la titlul ei când vin datele noi.
  * Cu `type` + `onTypeChange` tipul vine din afară (Step T: filtrul paginii principale / `?tip=`); fără, e local.
+ * `area` (zona) și `q` (căutarea în titlu/descriere) vin din pagina principală; cu `q` titlul devine „Rezultate pentru …”.
  */
 export default function SubjectList({node, scope = '', navigationState, perPage = PER_PAGE, page: controlledPage, onPageChange, footer, showFilters = true,
-    type: controlledType, onTypeChange, showHeading = true}) {
+    type: controlledType, onTypeChange, showHeading = true, area = '', q = ''}) {
     const {user} = useAuth();
     const theme = useTheme();
     const location = useLocation();
@@ -71,16 +72,16 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
     const load = useCallback(() => {
         setLoading(true);
         setError(null);
-        return fetchSubjects({node: node?.id ?? null, type: activeType, stage: filters.stage, page, scope, perPage})
+        return fetchSubjects({node: node?.id ?? null, type: activeType, stage: filters.stage, page, scope, perPage, area, q})
             .then((d) => setData({...d, page}))
             .catch((e) => setError(e.message))
             .finally(() => setLoading(false));
-    }, [node?.id, activeType, filters.stage, page, scope, perPage]);
+    }, [node?.id, activeType, filters.stage, page, scope, perPage, area, q]);
 
     useEffect(() => { load(); }, [load]);
     // Filtrele/nodul schimbate pornesc de la prima pagină - nu și la montare (pagina din adresă rămâne), nici la
     // a doua rulare a efectului din StrictMode: comparăm cu valorile anterioare.
-    const listKey = JSON.stringify([node?.id ?? null, activeType, filters.stage]);
+    const listKey = JSON.stringify([node?.id ?? null, activeType, filters.stage, area, q]);
     const previousKey = useRef(listKey);
     useEffect(() => {
         if (previousKey.current === listKey) return;
@@ -107,7 +108,7 @@ export default function SubjectList({node, scope = '', navigationState, perPage 
                 <Box ref={headingRef} sx={{minWidth: 0, scrollMarginTop: 16}}>
                     {node && <Typography variant="overline" color="text.secondary">Subiectele categoriei</Typography>}
                     {showHeading && <Typography variant="h6" component="h2" sx={{fontWeight: 700, lineHeight: 1.35, overflowWrap: 'anywhere'}}>
-                        {node ? node.name : recentTitle(activeType)}
+                        {node ? node.name : q ? `Rezultate pentru „${q}”` : recentTitle(activeType)}
                     </Typography>}
                 </Box>
                 <Stack direction="row" spacing={1} sx={{alignItems: 'center', justifyContent: 'space-between'}}>

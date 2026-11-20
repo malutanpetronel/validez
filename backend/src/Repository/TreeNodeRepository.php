@@ -85,7 +85,7 @@ class TreeNodeRepository extends ServiceEntityRepository
      *
      * @return list<TreeNode>
      */
-    public function withChildrenFlags(array $nodes, ?\App\Subject\SubjectType $type = null): array
+    public function withChildrenFlags(array $nodes, ?\App\Subject\SubjectType $type = null, ?\App\Subject\SubjectListFilter $filter = null): array
     {
         if ($nodes === []) {
             return $nodes;
@@ -110,6 +110,15 @@ class TreeNodeRepository extends ServiceEntityRepository
             $visibility .= ' AND s.type = ?';
             $parameters[] = $type->value;
             $types[] = \Doctrine\DBAL\ParameterType::STRING;
+        }
+        if ($filter !== null) {
+            // Zona din pagina principală: bulinele numără ce ar arăta lista cu aceeași zonă.
+            [$filterSql, $filterParams] = $filter->sql();
+            $visibility .= $filterSql;
+            foreach ($filterParams as $value) {
+                $parameters[] = $value;
+                $types[] = \Doctrine\DBAL\ParameterType::STRING;
+            }
         }
 
         $rows = $this->getEntityManager()->getConnection()->executeQuery(

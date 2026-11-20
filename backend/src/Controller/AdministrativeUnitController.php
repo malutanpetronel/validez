@@ -25,6 +25,23 @@ final class AdministrativeUnitController extends AbstractController
     #[Route('/api/administrative_units', methods: ['GET'])]
     public function search(Request $request, Connection $db): JsonResponse
     {
+        // ?code= : o singură unitate (eticheta filtrului „Zonă” când vine din adresă, ex. /?zona=54975).
+        $code = (string) $request->query->get('code', '');
+        if ($code !== '') {
+            $row = \strlen($code) > 16 ? false : $db->fetchAssociative(
+                "SELECT u.code, u.display_name AS name, u.level, p.display_name AS county
+                   FROM administrative_unit u LEFT JOIN administrative_unit p ON p.id = u.parent_id
+                  WHERE u.code = :code AND u.level IN ('COUNTY', 'UAT')",
+                ['code' => $code],
+            );
+            $items = $row === false ? [] : [['code' => $row['code'], 'name' => $row['name'], 'level' => $row['level'],
+                'county' => $row['level'] === 'UAT' ? $row['county'] : null]];
+            $response = $this->json(['items' => $items]);
+            $response->setPublic();
+            $response->setMaxAge(3600);
+
+            return $response;
+        }
         $level = (string) $request->query->get('level', 'UAT');
         if (!\in_array($level, ['UAT', 'COUNTY'], true)) {
             throw new BadRequestHttpException('level trebuie să fie UAT sau COUNTY.');

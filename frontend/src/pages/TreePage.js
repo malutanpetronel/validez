@@ -1,12 +1,16 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
+import {alpha} from '@mui/material/styles';
 import Tree from 'rc-tree';
 import 'rc-tree/assets/index.css';
 import {
-    Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel,
+    Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputAdornment, InputLabel,
     IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Paper, Select, Snackbar, Stack, TextField, Tooltip, Typography,
     useMediaQuery, useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
+import AreaFilter, {areaOptionLabel} from '../components/AreaFilter';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
@@ -79,13 +83,64 @@ export default function TreePage() {
     typeRef.current = typeFilter;
     const changeType = (type) => {
         setTypeFilter(type);
+        if (type) setSearchInput('');
         if (atRoot) setSearchParams((prev) => {
             const next = new URLSearchParams(prev);
             next.delete('pagina');
+            if (type) next.delete('cauta');
             if (type) next.set('tip', type); else next.delete('tip');
             return next;
         });
     };
+    // Filtrul „Zonă” (decizie 20.11.2026): ca tipul - pe `/` în adresă (`?zona=RO` / cod județ / cod localitate),
+    // în categorie rămâne activ (chip) și trece prin treeReturn. Numără și bulinele din arbore.
+    const zonaParam = searchParams.get('zona') ?? '';
+    const [areaFilter, setAreaFilter] = useState(() => zonaParam || returnContext?.areaFilter || '');
+    const [areaName, setAreaName] = useState(() => returnContext?.areaName ?? '');
+    const areaRef = useRef(areaFilter);
+    areaRef.current = areaFilter;
+    const changeArea = (option) => {
+        const code = option?.code ?? '';
+        setAreaFilter(code);
+        setAreaName(code ? areaOptionLabel(option) : '');
+        if (code) setSearchInput('');
+        if (atRoot) setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete('pagina');
+            if (code) next.delete('cauta');
+            if (code) next.set('zona', code); else next.delete('zona');
+            return next;
+        });
+    };
+    const prevZona = useRef(zonaParam);
+    useEffect(() => {
+        if (!atRoot || prevZona.current === zonaParam) return;
+        prevZona.current = zonaParam;
+        setAreaFilter(zonaParam);
+        if (!zonaParam) setAreaName('');
+    }, [atRoot, zonaParam]);
+    // Căutarea (ca pe multiblog): titlu sau descriere, orice nivel al arborelui. Pe `/` în adresă (`?cauta=`);
+    // pornirea ei golește tipul și zona, iar alegerea unui tip sau a unei zone golește căutarea.
+    const searchQuery = atRoot ? (searchParams.get('cauta') ?? '').trim() : '';
+    const [searchInput, setSearchInput] = useState(searchQuery);
+    useEffect(() => {
+        if (!atRoot) return undefined;
+        const text = searchInput.trim();
+        const wanted = text.length >= 2 ? text : '';
+        if (wanted === searchQuery) return undefined;
+        const timer = setTimeout(() => setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete('pagina');
+            if (wanted) {
+                next.set('cauta', wanted);
+                next.delete('tip');
+                next.delete('zona');
+            } else next.delete('cauta');
+            return next;
+        }, {replace: true}), 350);
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [atRoot, searchInput, searchQuery]);
     // Pe `/`: o adresă nouă (Back/Forward, link cu ?tip=) schimbă filtrul; altfel adresa urmează filtrul (replace).
     const prevTip = useRef(tipParam);
     useEffect(() => {
@@ -142,7 +197,8 @@ export default function TreePage() {
         let active = true;
         const restore = async () => {
             const type = typeRef.current;
-            let tree = (await fetchChildren(null, type)).map(toTreeNode);
+            const area = areaRef.current;
+            let tree = (await fetchChildren(null, type, area)).map(toTreeNode);
             const branches = {};
             const pending = new Set(returnContext?.expandedKeys ?? []);
             if (returnContext?.selectedKey) pending.add(returnContext.selectedKey);
@@ -152,7 +208,7 @@ export default function TreePage() {
                 if (!reachable.length) break;
                 const results = await Promise.all(reachable.map(async (key) => {
                     const [children, subjects] = await Promise.all([
-                        fetchChildren(key, type), fetchSubjects({node: key, scope: 'direct', type}),
+                        fetchChildren(key, type, area), fetchSubjects({node: key, scope: 'direct', type, area}),
                     ]);
                     return {key, children, subjects};
                 }));
@@ -175,7 +231,8 @@ export default function TreePage() {
 
     const loadBranch = useCallback(async (key, refreshCounts = false) => {
         const type = typeRef.current;
-        const [children, subjects] = await Promise.all([fetchChildren(key, type), fetchSubjects({node: key, scope: 'direct', type})]);
+        const area = areaRef.current;
+        const [children, subjects] = await Promise.all([fetchChildren(key, type, area), fetchSubjects({node: key, scope: 'direct', type, area})]);
         setTreeData((t) => setChildren(t, key, children.map(toTreeNode)));
         setSubjectBranches((branches) => ({...branches, [key]: subjects}));
         if (refreshCounts) await reloadLevels([key], indexByKey(treeData));
@@ -194,8 +251,11 @@ export default function TreePage() {
 
     const goTo = (url, replace = false) => {
         lastSyncedUrl.current = url ?? location.pathname;
-        // Spre `/` filtrul pe tip rămâne în adresă.
-        if (url && location.pathname !== url) navigate(url === '/' && typeRef.current ? `/?tip=${encodeURIComponent(typeRef.current)}` : url, {replace});
+        // Spre `/` filtrele pe tip și zonă rămân în adresă.
+        const rootQuery = new URLSearchParams();
+        if (typeRef.current) rootQuery.set('tip', typeRef.current);
+        if (areaRef.current) rootQuery.set('zona', areaRef.current);
+        if (url && location.pathname !== url) navigate(url === '/' && rootQuery.toString() ? `/?${rootQuery}` : url, {replace});
     };
 
     /** Incarca, in ordine de la radacina, copiii si subiectele lipsa ale nodurilor date. */
@@ -209,8 +269,8 @@ export default function TreePage() {
             const needSubjects = !branchesRef.current[key];
             if (!needChildren && !needSubjects) continue;
             const [children, subjects] = await Promise.all([
-                needChildren ? fetchChildren(key, typeRef.current) : null,
-                needSubjects ? fetchSubjects({node: key, scope: 'direct', type: typeRef.current}) : null,
+                needChildren ? fetchChildren(key, typeRef.current, areaRef.current) : null,
+                needSubjects ? fetchSubjects({node: key, scope: 'direct', type: typeRef.current, area: areaRef.current}) : null,
             ]);
             if (children) tree = setChildren(tree, key, children.map(toTreeNode));
             if (subjects) branches[key] = subjects;
@@ -220,26 +280,28 @@ export default function TreePage() {
         setSubjectBranches((b) => ({...b, ...branches}));
     };
 
-    // Step T: la schimbarea tipului se reîncarcă nivelurile deja deschise (numărul „· N”) și subiectele ramurilor.
+    // Step T: la schimbarea tipului sau a zonei se reîncarcă nivelurile deja deschise (bulinele) și subiectele ramurilor.
     // Comparăm cu valoarea anterioară: nu la montare și nici la a doua rulare din StrictMode.
-    const prevType = useRef(typeFilter);
+    const filterKey = `${typeFilter}|${areaFilter}`;
+    const prevFilterKey = useRef(filterKey);
     useEffect(() => {
-        if (prevType.current === typeFilter) return undefined;
-        prevType.current = typeFilter;
+        if (prevFilterKey.current === filterKey) return undefined;
+        prevFilterKey.current = filterKey;
         let active = true;
         const index = indexByKey(treeRef.current);
         const parents = [null, ...[...index.values()].filter((n) => Array.isArray(n.children)).map((n) => n.key)];
         const branchKeys = Object.keys(branchesRef.current);
         Promise.all([
-            Promise.all(parents.map((k) => fetchChildren(k, typeFilter))),
-            Promise.all(branchKeys.map((k) => fetchSubjects({node: k, scope: 'direct', type: typeFilter}))),
+            Promise.all(parents.map((k) => fetchChildren(k, typeFilter, areaFilter))),
+            Promise.all(branchKeys.map((k) => fetchSubjects({node: k, scope: 'direct', type: typeFilter, area: areaFilter}))),
         ]).then(([levels, subjects]) => {
             if (!active) return;
             setTreeData((t) => parents.reduce((acc, k, i) => replaceLevel(acc, k, levels[i], index), t));
             setSubjectBranches(Object.fromEntries(branchKeys.map((k, i) => [k, subjects[i]])));
         }).catch((err) => { if (active) showError(err); });
         return () => { active = false; };
-    }, [typeFilter]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filterKey]);
 
     const clearSelection = () => {
         setSelectedKey(null);
@@ -328,7 +390,7 @@ export default function TreePage() {
             }
         }
         const unique = [...new Set([...parentKeys, ...ancestors])];
-        const levels = await Promise.all(unique.map((k) => fetchChildren(k, typeRef.current)));
+        const levels = await Promise.all(unique.map((k) => fetchChildren(k, typeRef.current, areaRef.current)));
         setTreeData((t) => unique.reduce((acc, k, i) => replaceLevel(acc, k, levels[i], previous), t));
     };
 
@@ -383,7 +445,7 @@ export default function TreePage() {
             current = current.parentId ? findNode(treeData, current.parentId) : null;
         }
         return {treeReturn: {expandedKeys: [...expanded], selectedKey: categoryKey,
-            selectedSubject: categoryKey ? null : selectedSubject, typeFilter}};
+            selectedSubject: categoryKey ? null : selectedSubject, typeFilter, areaFilter, areaName}};
     };
     // Adresa urmeaza calea selectiei si dupa redenumirea/mutarea ei (sau a unui stramos).
     const selectedUrl = selectedSubject ? null : categoryUrl(selected?.slugPath);
@@ -509,12 +571,23 @@ export default function TreePage() {
                     VEZI. VERIFICĂ. VALIDEAZĂ.
                 </Typography>
                 <Typography component="h1" variant="h3" sx={{fontSize: {xs: '2rem', sm: '2.7rem'}, fontWeight: 800,
-                    lineHeight: 1.15, maxWidth: 760, mt: 0.5}}>
+                    lineHeight: 1.15, maxWidth: 760, mt: 0.5, textWrap: 'balance'}}>
                     Subiectele comunității, mai ușor de descoperit.
                 </Typography>
                 <Typography color="text.secondary" sx={{fontSize: {xs: '1rem', sm: '1.1rem'}, maxWidth: 680, mt: 1.5}}>
                     Explorează probleme, propuneri și sondaje. Citește contextul, vezi opiniile celorlalți și participă.
                 </Typography>
+                <TextField size="small" fullWidth value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder="Caută în titlurile și descrierile subiectelor"
+                    inputProps={{'aria-label': 'Caută subiecte', maxLength: 100}}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && searchInput.trim().length >= 2) scrollToSection('subiecte-recente'); }}
+                    sx={{maxWidth: 680, mt: 2.5, bgcolor: 'background.paper'}}
+                    InputProps={{
+                        startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small"/></InputAdornment>,
+                        endAdornment: searchInput ? <InputAdornment position="end">
+                            <IconButton size="small" aria-label="Golește căutarea" onClick={() => setSearchInput('')}><ClearIcon fontSize="small"/></IconButton>
+                        </InputAdornment> : null,
+                    }}/>
                 <Stack direction="row" spacing={1} useFlexGap sx={{mt: 2.5, flexWrap: 'wrap', alignItems: 'center', rowGap: 2}}>
                     <Button variant="contained" onClick={() => scrollToSection('subiecte-recente')}>Vezi subiectele</Button>
                     <Button variant="outlined" onClick={() => scrollToSection('tematici')}>Alege o tematică</Button>
@@ -526,6 +599,8 @@ export default function TreePage() {
                             {Object.entries(TYPE_PLURALS).map(([k, l]) => <MenuItem key={k} value={k}><TypeDot type={k}/>{l}</MenuItem>)}
                         </Select>
                     </FormControl>
+                    <AreaFilter value={areaFilter} onChange={changeArea} onResolve={(o) => setAreaName(o.code ? areaOptionLabel(o) : '')}
+                        sx={{minWidth: 240, flex: {xs: '1 1 100%', sm: '0 1 280px'}}}/>
                 </Stack>
             </Box> : !selectedSubject && <Typography component="h1" sx={VISUALLY_HIDDEN}>Tematici</Typography>}
 
@@ -577,6 +652,8 @@ export default function TreePage() {
                     {loading && <Typography color="text.secondary">Se încarcă…</Typography>}
                     {!home && typeFilter && <Chip size="small" color="primary" variant="outlined" sx={{mb: 1.5, maxWidth: '100%'}}
                         label={`Doar ${TYPE_PLURALS[typeFilter].toLowerCase()}`} onDelete={() => changeType('')}/>}
+                    {!home && areaFilter && <Chip size="small" color="primary" variant="outlined" sx={{mb: 1.5, ml: typeFilter ? 0.75 : 0, maxWidth: '100%'}}
+                        label={`Zonă: ${areaName || areaFilter}`} onDelete={() => changeArea(null)}/>}
                     {!loading && treeData.length === 0 && (
                         <Typography color="text.secondary">{isAdmin ? 'Nu există tematici. Creează prima tematică.' : 'Nu există tematici încă.'}</Typography>
                     )}
@@ -626,7 +703,7 @@ export default function TreePage() {
                                         {node.title}{!node.kind && node.subjectCount > 0 && <Tooltip title="Total subiecte în această ramură, inclusiv subnivelurile"><Box component="span" className="tree-count" sx={{
                                             ml: 0.75, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', verticalAlign: 'middle',
                                             minWidth: 20, height: 20, px: 0.5, borderRadius: 10, boxSizing: 'border-box',
-                                            bgcolor: 'primary.main', color: 'primary.contrastText',
+                                            bgcolor: (t) => alpha(t.palette.primary.main, 0.12), color: 'primary.main',
                                             fontSize: 11, fontWeight: 700, lineHeight: 1}}>{node.subjectCount > 99 ? '99+' : node.subjectCount}</Box></Tooltip>}
                                     </Typography>
                                     {node.kind === 'subject' && <TreeVoteSummary subjectId={node.subject.id}/>}
@@ -665,13 +742,18 @@ export default function TreePage() {
                             </Stack></Paper>
                         )}
                         <SubjectList key={selected.key} node={{id: selected.key, name: selected.title}}
-                            scope="direct" navigationState={navigationState()} type={typeFilter} onTypeChange={changeType}/>
+                            scope="direct" navigationState={navigationState()} type={typeFilter} onTypeChange={changeType} area={areaFilter}/>
                     </Stack> :
                     <Box id="subiecte-recente" sx={{scrollMarginTop: 16, minWidth: 0, order: {xs: home ? 1 : 2, md: 2}}}>
                     <SubjectList node={null} perPage={RECENT_PER_PAGE} page={recentPage} onPageChange={changeRecentPage} showFilters={false}
-                        type={typeFilter} onTypeChange={changeType}
-                        navigationState={navigationState()} footer={<Stack sx={{alignItems: 'center', mt: 1}}>
-                            <Button component={RouterLink} to={typeFilter ? `/subiecte?tip=${typeFilter}` : '/subiecte'} state={navigationState()}>
+                        type={typeFilter} onTypeChange={changeType} area={areaFilter} q={searchQuery}
+                        navigationState={navigationState()} footer={searchQuery ? null : <Stack sx={{alignItems: 'center', mt: 1}}>
+                            <Button component={RouterLink} state={navigationState()} to={`/subiecte${(() => {
+                                const p = new URLSearchParams();
+                                if (typeFilter) p.set('tip', typeFilter);
+                                if (areaFilter) p.set('zona', areaFilter);
+                                return p.toString() ? `?${p}` : '';
+                            })()}`}>
                                 Vezi toate {typeFilter ? TYPE_PLURALS[typeFilter].toLowerCase() : 'subiectele'}
                             </Button>
                         </Stack>}/></Box>}

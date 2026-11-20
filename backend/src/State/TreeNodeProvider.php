@@ -10,7 +10,9 @@ use ApiPlatform\State\ProviderInterface;
 use App\Entity\TreeNode;
 use App\Repository\TreeNodeRepository;
 use App\Seo\SlugRegistry;
+use App\Subject\SubjectListFilter;
 use App\Subject\SubjectType;
+use Doctrine\DBAL\Connection;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Ulid;
@@ -27,6 +29,7 @@ final class TreeNodeProvider implements ProviderInterface
     public function __construct(
         private readonly TreeNodeRepository $repository,
         private readonly SlugRegistry $slugs,
+        private readonly Connection $db,
     ) {
     }
 
@@ -52,7 +55,10 @@ final class TreeNodeProvider implements ProviderInterface
                 }
             }
 
-            return $this->repository->withChildrenFlags($this->repository->findChildren($parent), $type);
+            // ?area= -> bulinele numără doar subiectele din zona aleasă (aceleași reguli ca lista).
+            $filter = SubjectListFilter::fromFilters($context['filters'] ?? [], $this->db);
+
+            return $this->repository->withChildrenFlags($this->repository->findChildren($parent), $type, $filter);
         }
 
         if ($operation->getName() === 'tree_node_by_path') {

@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\CivicSubject;
 use App\Entity\TreeNode;
 use App\Entity\User;
+use App\Subject\SubjectListFilter;
 use App\Subject\SubjectStage;
 use App\Subject\SubjectType;
 use App\Subject\SubjectVisibility;
@@ -27,13 +28,23 @@ class CivicSubjectRepository extends ServiceEntityRepository
     /**
      * Subiectele vizibile pentru `viewer`, opțional sub un nod (nodul + tot subarborele, ltree <@),
      * cele mai noi primele. Vizibilitate: adminul vede tot; ceilalți PUBLISHED + propriile PENDING/HIDDEN.
+     * `filter` = zona și căutarea din pagina principală (SubjectListFilter, aceleași reguli ca bulinele din arbore).
      *
      * @return array{0: list<CivicSubject>, 1: int} [pagina, total]
      */
-    public function findVisiblePage(?TreeNode $node, ?SubjectType $type, ?SubjectStage $stage, ?User $viewer, bool $isAdmin, int $page, int $perPage, ?SubjectVisibility $visibility = null, bool $direct = false): array
+    public function findVisiblePage(?TreeNode $node, ?SubjectType $type, ?SubjectStage $stage, ?User $viewer, bool $isAdmin, int $page, int $perPage, ?SubjectVisibility $visibility = null, bool $direct = false, ?SubjectListFilter $filter = null): array
     {
-        $base = function () use ($node, $type, $stage, $viewer, $isAdmin, $visibility, $direct): QueryBuilder {
+        $matching = null;
+        if ($filter !== null && !$filter->isEmpty()) {
+            // Condițiile de arie/text sunt SQL (subinterogări pe tabela de legătură); id-urile intră apoi în DQL.
+            [$sql, $params] = $filter->sql();
+            $matching = $this->getEntityManager()->getConnection()->fetchFirstColumn('SELECT s.id::text FROM civic_subject s WHERE TRUE'.$sql, $params);
+        }
+        $base = function () use ($node, $type, $stage, $viewer, $isAdmin, $visibility, $direct, $matching): QueryBuilder {
             $qb = $this->createQueryBuilder('s');
+            if ($matching !== null) {
+                $matching === [] ? $qb->andWhere('1 = 0') : $qb->andWhere('s.id IN (:matching)')->setParameter('matching', $matching);
+            }
             if ($node !== null && $direct) {
                 $qb->andWhere('s.node = :node')->setParameter('node', $node->getId()->toRfc4122());
             } elseif ($node !== null) {

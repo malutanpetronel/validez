@@ -162,6 +162,47 @@ final class SubjectAreaTest extends WebTestCase
         self::assertSame(['RO'], array_column($r['area']['effective'], 'code'));
     }
 
+    /** Filtrul „Zonă” din pagina principală (strict, în jos — decizie 20.11.2026) și căutarea ?q=. */
+    public function testFiltrulZonaSiCautarea(): void
+    {
+        $ids = [];
+        foreach ([
+            'localA' => ['scope' => 'LOCAL', 'areaUnits' => ['54975'], 'title' => 'Groapă pe strada Mare'],
+            'pinB' => ['scope' => 'LOCAL', 'location' => $this->point(581500, 325500), 'title' => 'Iluminat stradal'],
+            'judet' => ['scope' => 'COUNTY', 'areaUnits' => ['127'], 'title' => 'Drum județean', 'description' => 'Asfalt pe DJ 109'],
+            'national' => ['scope' => 'NATIONAL', 'title' => 'Lege nouă'],
+        ] as $key => $body) {
+            $r = $this->create($body);
+            self::assertSame(201, $this->code(), json_encode($r));
+            $ids[$r['id']] = $key;
+        }
+        $list = function (string $query) use ($ids): array {
+            $items = $this->call('GET', '/api/civic_subjects?'.$query, null, false, 'application/ld+json')['member'] ?? [];
+            self::assertSame(200, $this->code(), $query);
+
+            return array_map(static fn ($s) => $ids[$s['id']], $items);
+        };
+
+        self::assertEqualsCanonicalizing(['localA', 'pinB', 'judet', 'national'], $list(''));
+        self::assertSame(['national'], $list('area=RO'));
+        self::assertEqualsCanonicalizing(['localA', 'pinB', 'judet'], $list('area=127'), 'județul include localitățile lui (declarate sau din pin)');
+        self::assertSame(['localA'], $list('area=54975'), 'localitatea: strict, fără județ și național');
+        self::assertSame(['pinB'], $list('area=55008'), 'UAT-ul pinului încadrat');
+        self::assertSame(['localA'], $list('q=GROAPA'), 'fără majuscule și diacritice');
+        self::assertSame(['judet'], $list('q=dj%20109'), 'și în descriere');
+        self::assertSame([], $list('q=groapa&area=RO'));
+        $this->call('GET', '/api/civic_subjects?area=99999', null, false, 'application/ld+json');
+        self::assertSame(400, $this->code(), 'zonă necunoscută');
+
+        // Bulinele din arbore numără la fel.
+        $count = function (string $query): int {
+            $nodes = $this->call('GET', '/api/tree_nodes?'.$query, null, false, 'application/ld+json')['member'] ?? [];
+
+            return (int) ($nodes[0]['subjectCount'] ?? -1);
+        };
+        self::assertSame([4, 1, 3, 1], [$count(''), $count('area=RO'), $count('area=127'), $count('area=54975')]);
+    }
+
     public function testScoatereaPinuluiPeSubiectLocalFaraLocalitate(): void
     {
         $onlyPin = $this->create(['scope' => 'LOCAL', 'location' => $this->point(580500, 325500)])['id'];
@@ -233,6 +274,12 @@ final class SubjectAreaTest extends WebTestCase
 
     public function testCautareaUnitatilor(): void
     {
+        // ?code= : eticheta filtrului „Zonă” venit din adresă.
+        self::assertSame([['127', 'COUNTY'], ['54975', 'UAT']], [
+            ...array_map(static fn ($u) => [$u['code'], $u['level']], $this->call('GET', '/api/administrative_units?code=127', null, false)['items']),
+            ...array_map(static fn ($u) => [$u['code'], $u['level']], $this->call('GET', '/api/administrative_units?code=54975', null, false)['items']),
+        ]);
+        self::assertSame([], $this->call('GET', '/api/administrative_units?code=RO', null, false)['items'], 'țara nu e o zonă căutabilă');
         $items = $this->call('GET', '/api/administrative_units?level=UAT&q=barbatesti', null, false)['items'];
         self::assertSame([['code' => '55008', 'name' => 'COMUNA BĂRBĂTEȘTI', 'level' => 'UAT', 'county' => 'JUDEȚUL TEST']], $items, 'fără diacritice');
         self::assertStringContainsString('public', (string) $this->client->getResponse()->headers->get('Cache-Control'));

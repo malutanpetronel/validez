@@ -38,3 +38,8 @@ export const fetchPendingPinClassifications = () => request(`${API_ENDPOINT}/mod
 export const searchAdministrativeUnits = (q, level) => request(
     `${API_ENDPOINT}/administrative_units?level=${encodeURIComponent(level)}&q=${encodeURIComponent(q)}`,
 ).then((body) => body.items);
+
+/** Filtrul „Zonă”: o unitate după cod (județ sau UAT), ori null dacă nu există. */
+export const fetchAdministrativeUnit = (code) => request(
+    `${API_ENDPOINT}/administrative_units?code=${encodeURIComponent(code)}`,
+).then((body) => body.items?.[0] ?? null);

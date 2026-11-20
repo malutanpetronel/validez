@@ -15,10 +15,12 @@ use App\Repository\CivicSubjectRepository;
 use App\Repository\SubjectMediaRepository;
 use App\Repository\TreeNodeRepository;
 use App\Seo\SlugRegistry;
+use App\Subject\SubjectListFilter;
 use App\Subject\SubjectStage;
 use App\Subject\SubjectType;
 use App\Subject\SubjectVisibility;
 use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\DBAL\Connection;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -40,6 +42,7 @@ final class CivicSubjectProvider implements ProviderInterface
         private readonly Security $security,
         private readonly SlugRegistry $slugs,
         private readonly SubjectMediaRepository $media,
+        private readonly Connection $db,
     ) {
     }
 
@@ -80,11 +83,13 @@ final class CivicSubjectProvider implements ProviderInterface
         $type = $this->enumFilter($f, 'type', SubjectType::class);
         $visibility = $this->enumFilter($f, 'visibility', SubjectVisibility::class);
         $stage = $this->enumFilter($f, 'stage', SubjectStage::class);
+        // ?area= (RO / cod județ / cod UAT) și ?q= (titlu sau descriere) - aceleași reguli ca bulinele din arbore.
+        $filter = SubjectListFilter::fromFilters($f, $this->db);
         $page = max(1, (int) ($f['page'] ?? 1));
         // Arborele cere pagini mici (3 subiecte recente lângă arbore); implicit și maxim 20.
         $perPage = isset($f['perPage']) && is_numeric($f['perPage']) ? min(self::PER_PAGE, max(1, (int) $f['perPage'])) : self::PER_PAGE;
 
-        [$items, $total] = $this->subjects->findVisiblePage($node, $type, $stage, $viewer, $isAdmin, $page, $perPage, $visibility, ($f['scope'] ?? '') === 'direct');
+        [$items, $total] = $this->subjects->findVisiblePage($node, $type, $stage, $viewer, $isAdmin, $page, $perPage, $visibility, ($f['scope'] ?? '') === 'direct', $filter);
         $this->attachCovers($items);
         $this->attachStats($items);
         $this->preloadAreas($items);
